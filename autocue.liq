@@ -8,7 +8,7 @@ let settings.protocol.autocue.path =
   settings.make(
     description=
       "Path of the autocue binary.",
-    "cue_file6"
+    "cue_file"
   )
 
 let settings.protocol.autocue.timeout =
