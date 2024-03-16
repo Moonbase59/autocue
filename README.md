@@ -20,6 +20,8 @@ services:
 
 With AzuraCast, you’ll need to change the auto-generated Liquidsoap Configuration to handle my `autocue:` protocol. This can be done by installing @RM-FM’s [`ls-config-replace`](https://github.com/RM-FM/ls-config-replace) plugin, and copying over the `ls-config-replace/liq/10_audodj_next_song_add_autocue` folder into your `/var/azuracast/plugins/ls-config-replace/liq` folder after installing the plugin.
 
+**Note:** Liquidsoap recently introduced a _bultin_ `autocue:` protocol. I had no chance yet to see if that clashes with mine.
+
 ## Command-line interface
 
 ```
