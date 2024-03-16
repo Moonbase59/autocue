@@ -109,3 +109,9 @@ This song works fine in "normal mode", but only a 0.6 second portion (marked) of
 $ cue_file -b "McLachlan, Sarah - Fallen (radio mix).flac" 
 {"duration": "229.00", "liq_duration": "0.60", "liq_cue_in": "2.30", "liq_cue_out": "2.90", "liq_longtail": "false", "liq_cross_duration": "0.10", "liq_loudness": "-8.97 dB", "liq_amplify": "-9.03 dB", "liq_blank_skipped": "true"}
 ```
+
+You can avoid such issues in several ways:
+- Don’t use the `-b`/`--blankstrip` option (default).
+- Lower the silence level: `-s -50`/`--silence -50`.
+- Manually assign a later cue-in point in the AzuraCast UI (user settings here overrule the automatic values).
+
