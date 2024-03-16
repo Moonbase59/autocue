@@ -5,6 +5,21 @@ Work in progress.
 
 Requires Python3 and `ffmpeg` with the _ebur128_ filter.
 
+## Install
+
+Put `cue_file` in your path locally (i.e., into `~/bin`, `~/.local/bin` or `/usr/local/bin`) and `chmod+x` it.
+
+On your AzuraCast host, you can put it into `/var/azuracast/bin` and overlay it into the Docker by adding a line to your `docker-compose.override.yml`, like so:
+
+```yaml
+services:
+  web:
+    volumes:
+      - /var/azuracast/bin/cue_file:/usr/local/bin/cue_file
+```
+
+With AzuraCast, you’ll need to change the auto-generated Liquidsoap Configuration to handle my `autocue:` protocol. This can be done by installing @RM-FM’s [`ls-config-replace`](https://github.com/RM-FM/ls-config-replace) plugin, and copying over the `ls-config-replace/liq/10_audodj_next_song_add_autocue` folder into your `/var/azuracast/plugins/ls-config-replace/liq` folder after installing the plugin.
+
 ## Command-line interface
 
 ```
