@@ -113,5 +113,5 @@ $ cue_file -b "McLachlan, Sarah - Fallen (radio mix).flac"
 You can avoid such issues in several ways:
 - Don’t use the `-b`/`--blankstrip` option (default).
 - Lower the silence level: `-s -50`/`--silence -50`.
-- Manually assign a later cue-in point in the AzuraCast UI (user settings here overrule the automatic values).
+- Manually assign later cue-in/cue-out points in the AzuraCast UI (user settings here overrule the automatic values).
 
