@@ -79,9 +79,7 @@ def analyse(
     # which is a valid float in Python. Usually happens on very silent parts.
     # FIXME: This relies on "I" coming two lines after "M"
     pattern = re.compile(
-        r"frame:.*pts_time:\s*(?P<t>\d+\.?\d*)\s*" \
-        "lavfi\.r128\.M=(?P<M>nan|[+-]?\d+\.?\d*)\s*.*\s*" \
-        "lavfi\.r128\.I=(?P<I>nan|[+-]?\d+\.?\d*)",
+        r"frame:.*pts_time:\s*(?P<t>\d+\.?\d*)\s*lavfi\.r128\.M=(?P<M>nan|[+-]?\d+\.?\d*)\s*.*\s*lavfi\.r128\.I=(?P<I>nan|[+-]?\d+\.?\d*)",
         flags=re.M)
 
     for match in re.finditer(pattern, result):
