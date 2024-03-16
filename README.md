@@ -122,7 +122,11 @@ You can avoid such issues in several ways:
 
 Works, but the code is a little kludgy. I might want the help of the Liquidsoap devs to clean this up a little, especially the parts marked `TODO:` and `FIXME:`.
 
-The protocol is invoked by prefixing a playlist or request with `autocue:`.
+The protocol is invoked by prefixing a playlist or request with `autocue:` like so:
+
+```
+radio = playlist(prefix="autocue:", "/home/matthias/Musik/Playlists/Radio/Classic Rock.m3u")
+```
 
 It offers the following settings (defaults shown):
 
@@ -142,6 +146,7 @@ settings.protocol.autocue.blankskip := false
 - `media:` URIs will be resolved.
 - Works well with smart crossfades.
 - Even when `settings.protocol.autocue.blankskip := true`, hidden jingles (those with a `jingle_mode="true"` annotation) will be _excluded_ from blank detection within the track, because the chance is too high that spoken text gets cut.
+- User settings in the AzuraCast UI ("Edit Song") always "win" over the calculated values.
 - Currently needs a patch to the AzuraCast-generated Liquidsoap code, see above.
 - Currently generates lots of log data, for debugging. But hey, you can see what it does!
 
