@@ -103,7 +103,7 @@ where
 
 ![Auswahl_353](https://github.com/Moonbase59/autocue/assets/3706922/c1085156-5483-4474-afd8-cb437d0d2e4b)
 
-This song works fine in "normal mode", but only a 0.6 second portion (marked) of the beginning is played in "blank detection" mode:
+This song works fine in "normal mode", but only a 0.6 second portion (marked) of the beginning is played in "blank detection" mode when using the default settings:
 
 ```
 $ cue_file -b "McLachlan, Sarah - Fallen (radio mix).flac" 
