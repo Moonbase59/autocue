@@ -14,7 +14,7 @@ def show_meta(m)
 end
 
 # testing
-#settings.protocol.autocue := "cue_file5"
+#settings.protocol.autocue := "cue_file"
 #settings.protocol.autocue.timeout := 60.
 #settings.protocol.autocue.target := -18
 #settings.protocol.autocue.silence := -40
