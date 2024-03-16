@@ -5,6 +5,8 @@ Work in progress.
 
 Requires Python3 and `ffmpeg` with the _ebur128_ filter.
 
+## Command-line interface
+
 ```
 usage: cue_file [-h]
                 [-t {-23,-22,-21,-20,-19,-18,-17,-16,-15,-14,-13,-12,-11,-10,-9,-8,-7,-6,-5,-4,-3,-2,-1,0}]
@@ -46,3 +48,36 @@ options:
   -f, --force           Force re-calculation, even if tags exist (default:
                         False)
 ```
+
+## Example
+
+The well-known _Nirvana_ song _Something in the Way / Endless, Nameless_ from their 1991 album _Nevermind_:
+
+![Auswahl_352](https://github.com/Moonbase59/autocue/assets/3706922/fa7e66e9-ccd8-42f3-8051-fa2fc060a939)
+
+It contains the 3:48 song _Something in the Way_, followed by 10:03 of silence, followed by the "hidden track" _Endless, Nameless_.
+
+**Normal mode (no blank detection):**
+
+```
+$ cue_file "Nirvana - Something in the Way _ Endless, Nameless.mp3" 
+{"duration": "1235.10", "liq_duration": "1231.60", "liq_cue_in": "0.40", "liq_cue_out": "1232.00", "liq_longtail": "false", "liq_cross_duration": "9.80", "liq_loudness": "-10.47 dB", "liq_amplify": "-7.53 dB", "liq_blank_skipped": "false"}
+```
+
+**With blank detection (cue-out at start of silence):**
+
+```
+$ cue_file -b "Nirvana - Something in the Way _ Endless, Nameless.mp3" 
+{"duration": "1235.10", "liq_duration": "227.10", "liq_cue_in": "0.40", "liq_cue_out": "227.50", "liq_longtail": "false", "liq_cross_duration": "3.50", "liq_loudness": "-10.47 dB", "liq_amplify": "-7.53 dB", "liq_blank_skipped": "true"}
+```
+
+where
+- _duration_ — the real file duration (including silence at start/end of song), in seconds
+- _liq_duration_ — the actual playout duration (cue-in to cue-out), in seconds
+- _liq_cue_in_ — cue-in point, in seconds
+- _liq_cue_out_ — cue-out point, in seconds
+- _liq_longtail_ — flag to show if song has a "long tail", i.e. a very long fade-out (true/false)
+- _liq_cross_duration_ — suggested crossing duration for next song, in seconds backwards from cue-out point
+- _liq_loudness_ — song’s EBU R128 loudness, in dB (=LU)
+- _liq_amplify_ — simple "ReplayGain" value, offset to desired loudness target (i.e., -18 LUFS). This is intentionally _not_ called _replaygain_track_gain_, since that tag might already exist and have been calculated using more exact tools like [`loudgain`](https://github.com/Moonbase59/loudgain).
+- _liq_blank_skipped_ — flag to show that we have an early cue-out, caused by silence in the song
