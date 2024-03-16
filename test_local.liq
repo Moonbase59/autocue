@@ -23,6 +23,7 @@ end
 #settings.protocol.autocue.overlay_longtail := -15
 settings.protocol.autocue.blankskip := true
 
+# Use YOUR playlist here
 uri = station_media_dir ^ "/Playlists/Radio/Classic Rock.m3u"
 radio = playlist(prefix="autocue:", uri)
 
