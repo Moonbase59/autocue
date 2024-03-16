@@ -188,6 +188,6 @@ end
 radio = cross(duration=3.0, width=2.0, live_aware_crossfade, radio)
 ```
 
-The 2.5 s fade-out helps tuning long overlap durations down, so they won’t distract the listener by overlaying songs and possibly jingles too long.
+The 2.5 s fade-out helps tuning long overlap durations down, so they won’t distract the listener by overlaying songs and possibly jingles too long. The increased margin (8 dB/LU) helps making the smart crossfades sound much better.
 
 Jingles should not be shorter than the duration specified in `cross`.
