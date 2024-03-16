@@ -98,3 +98,14 @@ where
 - _liq_loudness_ — song’s EBU R128 loudness, in dB (=LU)
 - _liq_amplify_ — simple "ReplayGain" value, offset to desired loudness target (i.e., -18 LUFS). This is intentionally _not_ called _replaygain_track_gain_, since that tag might already exist and have been calculated using more exact tools like [`loudgain`](https://github.com/Moonbase59/loudgain).
 - _liq_blank_skipped_ — flag to show that we have an early cue-out, caused by silence in the song (true/false)
+
+**Note:** Blank detection _within a song_ is experimental. It will most certainly _fail_ on spoken or TTS-generated messages (since spoken text has long pauses), and it can fail on some songs with very smooth beginnings, like _Sarah McLachlan’s Fallen_:
+
+![Auswahl_353](https://github.com/Moonbase59/autocue/assets/3706922/c1085156-5483-4474-afd8-cb437d0d2e4b)
+
+This song works fine in "normal mode", but only a 0.6 second portion (marked) of the beginning is played in "blank detection" mode:
+
+```
+$ cue_file -b "McLachlan, Sarah - Fallen (radio mix).flac" 
+{"duration": "229.00", "liq_duration": "0.60", "liq_cue_in": "2.30", "liq_cue_out": "2.90", "liq_longtail": "false", "liq_cross_duration": "0.10", "liq_loudness": "-8.97 dB", "liq_amplify": "-9.03 dB", "liq_blank_skipped": "true"}
+```
