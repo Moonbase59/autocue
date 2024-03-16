@@ -80,4 +80,4 @@ where
 - _liq_cross_duration_ — suggested crossing duration for next song, in seconds backwards from cue-out point
 - _liq_loudness_ — song’s EBU R128 loudness, in dB (=LU)
 - _liq_amplify_ — simple "ReplayGain" value, offset to desired loudness target (i.e., -18 LUFS). This is intentionally _not_ called _replaygain_track_gain_, since that tag might already exist and have been calculated using more exact tools like [`loudgain`](https://github.com/Moonbase59/loudgain).
-- _liq_blank_skipped_ — flag to show that we have an early cue-out, caused by silence in the song
+- _liq_blank_skipped_ — flag to show that we have an early cue-out, caused by silence in the song (true/false)
