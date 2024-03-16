@@ -5,6 +5,8 @@ Work in progress.
 
 Requires Python3 and `ffmpeg` with the _ebur128_ filter.
 
+Tested on Linux and Mac, with several `ffmpeg` versions ranging from 4.4.2–6.1.1, and running on several stations since a few weeks.
+
 ## Install
 
 Put `cue_file` in your path locally (i.e., into `~/bin`, `~/.local/bin` or `/usr/local/bin`) and `chmod+x` it.
@@ -115,3 +117,72 @@ You can avoid such issues in several ways:
 - Lower the silence level: `-s -50`/`--silence -50`.
 - Manually assign later cue-in/cue-out points in the AzuraCast UI (user settings here overrule the automatic values).
 
+
+## Liquidsoap protocol
+
+Works, but the code is a little kludgy. I might want the help of the Liquidsoap devs to clean this up a little, especially the parts marked `TODO:` and `FIXME:`.
+
+The protocol is invoked by prefixing a playlist or request with `autocue:`.
+
+It offers the following settings (defaults shown):
+
+```
+settings.protocol.autocue := "cue_file"
+settings.protocol.autocue.timeout := 60.
+settings.protocol.autocue.target := -18
+settings.protocol.autocue.silence := -40
+settings.protocol.autocue.overlay := -8
+settings.protocol.autocue.longtail := 15.0
+settings.protocol.autocue.overlay_longtail := -15
+settings.protocol.autocue.blankskip := false
+```
+
+### AzuraCast Notes
+
+- `media:` URIs will be resolved.
+- Works well with smart crossfades.
+- Even when `settings.protocol.autocue.blankskip := true`, hidden jingles (those with a `jingle_mode="true"` annotation) will be _excluded_ from blank detection within the track, because the chance is too high that spoken text gets cut.
+- Currently needs a patch to the AzuraCast-generated Liquidsoap code, see above.
+- Currently generates lots of log data, for debugging. But hey, you can see what it does!
+
+Typical log sample:
+
+```
+2024/03/16 13:39:05 [protocol.autocue:3] /var/azuracast/stations/niteradio/media/Tagged/Dion, Céline/Dion, Céline - Let's Talk About Love/Dion, Céline - Let's Talk About Love.mp3
+2024/03/16 13:39:05 [protocol.autocue:3] ("song_id", "b61044493bcc39e3cbd6df2a1f451cf9")
+2024/03/16 13:39:05 [protocol.autocue:3] ("artist", "Céline Dion")
+2024/03/16 13:39:05 [protocol.autocue:3] ("title", "Let's Talk About Love")
+2024/03/16 13:39:05 [protocol.autocue:3] ("playlist_id", "226")
+2024/03/16 13:39:05 [protocol.autocue:3] ("media_id", "194809")
+2024/03/16 13:39:05 [protocol.autocue:3] ("duration", "312.30")
+2024/03/16 13:39:05 [protocol.autocue:3] ("liq_duration", "304.20")
+2024/03/16 13:39:05 [protocol.autocue:3] ("liq_cue_in", "0.00")
+2024/03/16 13:39:05 [protocol.autocue:3] ("liq_cue_out", "304.20")
+2024/03/16 13:39:05 [protocol.autocue:3] ("liq_longtail", "true")
+2024/03/16 13:39:05 [protocol.autocue:3] ("liq_cross_duration", "8.80")
+2024/03/16 13:39:05 [protocol.autocue:3] ("liq_loudness", "-12.17 dB")
+2024/03/16 13:39:05 [protocol.autocue:3] ("liq_amplify", "-5.83 dB")
+2024/03/16 13:39:05 [protocol.autocue:3] ("liq_blank_skipped", "true")
+```
+
+I currently use these crossfade settings:
+
+```
+def live_aware_crossfade(old, new) =
+    if to_live() then
+        # If going to the live show, play a simple sequence
+        # fade out AutoDJ, do (almost) not fade in streamer
+        sequence([fade.out(duration=2.5,old.source),fade.in(duration=0.1,new.source)])
+    else
+        # Otherwise, use a smart crossfade/overlap/segue
+        log(label="crossfade", "Using custom crossfade")
+        cross.smart(old, new, fade_in=0.1, fade_out=2.5, margin=8.)
+    end
+end
+
+radio = cross(duration=3.0, width=2.0, live_aware_crossfade, radio)
+```
+
+The 2.5 s fade-out helps tuning long overlap durations down, so they won’t distract the listener by overlaying songs and possibly jingles too long.
+
+Jingles should not be shorter than the duration specified in `cross`.
