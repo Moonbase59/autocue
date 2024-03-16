@@ -117,6 +117,15 @@ You can avoid such issues in several ways:
 - Lower the silence level: `-s -50`/`--silence -50`.
 - Manually assign later cue-in/cue-out points in the AzuraCast UI (user settings here overrule the automatic values).
 
+Example result when reducing the silence level to -50 LU below average:
+
+```
+$ cue_file -b -s -50 "McLachlan, Sarah - Fallen (radio mix).flac" 
+{"duration": "229.00", "liq_duration": "221.90", "liq_cue_in": "1.90", "liq_cue_out": "223.80", "liq_longtail": "false", "liq_cross_duration": "8.30", "liq_loudness": "-8.97 dB", "liq_amplify": "-9.03 dB", "liq_blank_skipped": "false"}
+```
+
+Notice the new cue-in and cue-out times as well as the long cross duration with this change!
+
 
 ## Liquidsoap protocol
 
