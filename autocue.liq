@@ -1,5 +1,5 @@
 # autocue.liq
-# 2024-03-16 - Moonbase59
+# 2024-03-17 - Moonbase59
 
 # --- protocol definition begin
 
@@ -157,9 +157,14 @@ def protocol.autocue(~rlog, ~maxtime=settings.protocol.autocue.timeout(), arg) =
     else
       urilocal := uri
     end
+    blankskip = ref(settings.protocol.autocue.blankskip())
     # FIXME: AzuraCast kludge: only skip blanks if not jingle
-    blankskip = list.assoc.mem("jingle_mode", meta()) ? false : (settings.protocol.autocue.blankskip())
-    newmeta := get_data(urilocal(), blankskip=blankskip)
+    blankskip := list.assoc.mem("jingle_mode", meta()) ? false : (settings.protocol.autocue.blankskip())
+    # Handle annotated blankskip
+    if list.assoc.mem("liq_blankskip", m) then
+      blankskip := bool_of_string(default=false, m["liq_blankskip"])
+    end
+    newmeta := get_data(urilocal(), blankskip=blankskip())
   else
     log(level=3, arg)
     urilocal := arg
