@@ -164,7 +164,7 @@ For a `single`, this would look like
 single('autocue:annotate:liq_blankskip="false":/path/to/file.ext')
 ```
 
-This allows for a general protocol-wide setting, but exceptions for special content, like a playlist containing spoken content, which would otherwise be cut.
+This allows for a general protocol-wide setting, but exceptions for special content, like a playlist containing spoken content that would otherwise be cut.
 
 ### AzuraCast Notes
 
