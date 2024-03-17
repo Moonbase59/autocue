@@ -147,8 +147,18 @@ settings.protocol.autocue.silence := -40
 settings.protocol.autocue.overlay := -8
 settings.protocol.autocue.longtail := 15.0
 settings.protocol.autocue.overlay_longtail := -15
+# The following can be overridden by the `liq_blankskip` annotation
+# on a per-request or per-playlist basis
 settings.protocol.autocue.blankskip := false
 ```
+
+You can _override_ the "blankskip" behaviour on a per-request or per-playlist basis using a special `liq_blankskip` annotation like
+
+```
+playlist(prefix='autocue:annotate:liq_blankskip="false":', uri)
+```
+
+This allows for a general protocol-wide setting, but exceptions for special content, like a playlist containing spoken content, which would otherwise be cut.
 
 ### AzuraCast Notes
 
