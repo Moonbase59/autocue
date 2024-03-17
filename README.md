@@ -157,7 +157,7 @@ You can _override_ the "blankskip" behaviour on a per-request or per-playlist ba
 For a `playlist`, you could use its `prefix`, like in
 
 ```
-p = playlist(prefix='autocue:annotate:liq_blankskip="false":', uri)
+p = playlist(prefix='autocue:annotate:liq_blankskip="false":', '/path/to/playlist.ext')
 ```
 
 For a `single`, this would look like
