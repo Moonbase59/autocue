@@ -158,6 +158,12 @@ You can _override_ the "blankskip" behaviour on a per-request or per-playlist ba
 playlist(prefix='autocue:annotate:liq_blankskip="false":', uri)
 ```
 
+For a `single`, this would look like
+
+```
+single('autocue:annotate:liq_blankskip="false":/path/to/file.ext')
+```
+
 This allows for a general protocol-wide setting, but exceptions for special content, like a playlist containing spoken content, which would otherwise be cut.
 
 ### AzuraCast Notes
