@@ -152,16 +152,24 @@ settings.protocol.autocue.overlay_longtail := -15
 settings.protocol.autocue.blankskip := false
 ```
 
-You can _override_ the "blankskip" behaviour on a per-request or per-playlist basis using a special `liq_blankskip` annotation like
+You can _override_ the "blankskip" behaviour on a per-request or per-playlist basis using a special `liq_blankskip` annotation.
+
+For a `playlist`, you could use its `prefix`, like in
 
 ```
-playlist(prefix='autocue:annotate:liq_blankskip="false":', uri)
+p = playlist(prefix='autocue:annotate:liq_blankskip="false":', uri)
 ```
 
 For a `single`, this would look like
 
 ```
-single('autocue:annotate:liq_blankskip="false":/path/to/file.ext')
+s = single('autocue:annotate:liq_blankskip="false":/path/to/file.ext')
+```
+
+Or for a `request` like
+
+```
+r = request.create('autocue:annotate:liq_blankskip="false":/path/to/file.ext')
 ```
 
 This allows for a general protocol-wide setting, but exceptions for special content, like a playlist containing spoken content that would otherwise be cut.
