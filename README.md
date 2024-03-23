@@ -20,9 +20,9 @@ services:
       - /var/azuracast/bin/cue_file:/usr/local/bin/cue_file
 ```
 
-With AzuraCast, you’ll need to change the auto-generated Liquidsoap Configuration to handle my `autocue:` protocol. This can be done by installing @RM-FM’s [`ls-config-replace`](https://github.com/RM-FM/ls-config-replace) plugin, and copying over the `ls-config-replace/liq/10_audodj_next_song_add_autocue` folder into your `/var/azuracast/plugins/ls-config-replace/liq` folder after installing the plugin.
+With AzuraCast, you’ll need to change the auto-generated Liquidsoap Configuration to handle my `autocue2:` protocol. This can be done by installing @RM-FM’s [`ls-config-replace`](https://github.com/RM-FM/ls-config-replace) plugin, and copying over the `ls-config-replace/liq/10_audodj_next_song_add_autocue` folder into your `/var/azuracast/plugins/ls-config-replace/liq` folder after installing the plugin.
 
-**Note:** Liquidsoap recently introduced a _bultin_ `autocue:` protocol. I had no chance yet to see if that clashes with mine.
+**Note:** Liquidsoap recently introduced a _bultin_ `autocue:` protocol. I had to rename my `autocue:` protocol to `autocue2:` so it doesn’t clash with the other one.
 
 ## Command-line interface
 
@@ -34,7 +34,7 @@ usage: cue_file [-h]
                 file
 
 Return cue-in, cue-out, overlay and replaygain data for an audio file as JSON.
-To be used with my Liquidsoap "autocue:" protocol.
+To be used with my Liquidsoap "autocue2:" protocol.
 
 positional arguments:
   file                  File to be processed
@@ -131,25 +131,25 @@ Notice the new cue-in and cue-out times as well as the long cross duration with 
 
 Works, but the code is a little kludgy. I might want the help of the Liquidsoap devs to clean this up a little, especially the parts marked `TODO:` and `FIXME:`.
 
-The protocol is invoked by prefixing a playlist or request with `autocue:` like so:
+The protocol is invoked by prefixing a playlist or request with `autocue2:` like so:
 
 ```
-radio = playlist(prefix="autocue:", "/home/matthias/Musik/Playlists/Radio/Classic Rock.m3u")
+radio = playlist(prefix="autocue2:", "/home/matthias/Musik/Playlists/Radio/Classic Rock.m3u")
 ```
 
 It offers the following settings (defaults shown):
 
 ```
-settings.protocol.autocue := "cue_file"
-settings.protocol.autocue.timeout := 60.
-settings.protocol.autocue.target := -18
-settings.protocol.autocue.silence := -40
-settings.protocol.autocue.overlay := -8
-settings.protocol.autocue.longtail := 15.0
-settings.protocol.autocue.overlay_longtail := -15
+settings.protocol.autocue2 := "cue_file"
+settings.protocol.autocue2.timeout := 60.
+settings.protocol.autocue2.target := -18
+settings.protocol.autocue2.silence := -40
+settings.protocol.autocue2.overlay := -8
+settings.protocol.autocue2.longtail := 15.0
+settings.protocol.autocue2.overlay_longtail := -15
 # The following can be overridden by the `liq_blankskip` annotation
 # on a per-request or per-playlist basis
-settings.protocol.autocue.blankskip := false
+settings.protocol.autocue2.blankskip := false
 ```
 
 You can _override_ the "blankskip" behaviour on a per-request or per-playlist basis using a special `liq_blankskip` annotation.
@@ -157,19 +157,19 @@ You can _override_ the "blankskip" behaviour on a per-request or per-playlist ba
 For a `playlist`, you could use its `prefix`, like in
 
 ```
-p = playlist(prefix='autocue:annotate:liq_blankskip="false":', '/path/to/playlist.ext')
+p = playlist(prefix='autocue2:annotate:liq_blankskip="false":', '/path/to/playlist.ext')
 ```
 
 For a `single`, this would look like
 
 ```
-s = single('autocue:annotate:liq_blankskip="false":/path/to/file.ext')
+s = single('autocue2:annotate:liq_blankskip="false":/path/to/file.ext')
 ```
 
 Or for a `request` like
 
 ```
-r = request.create('autocue:annotate:liq_blankskip="false":/path/to/file.ext')
+r = request.create('autocue2:annotate:liq_blankskip="false":/path/to/file.ext')
 ```
 
 This allows for a general protocol-wide setting, but exceptions for special content, like a playlist containing spoken content that would otherwise be cut.
@@ -178,7 +178,7 @@ This allows for a general protocol-wide setting, but exceptions for special cont
 
 - `media:` URIs will be resolved.
 - Works well with smart crossfades.
-- Even when `settings.protocol.autocue.blankskip := true`, hidden jingles (those with a `jingle_mode="true"` annotation) will be _excluded_ from blank detection within the track, because the chance is too high that spoken text gets cut.
+- Even when `settings.protocol.autocue2.blankskip := true`, hidden jingles (those with a `jingle_mode="true"` annotation) will be _excluded_ from blank detection within the track, because the chance is too high that spoken text gets cut.
 - User settings in the AzuraCast UI ("Edit Song") always "win" over the calculated values.
 - Currently needs a patch to the AzuraCast-generated Liquidsoap code, see above.
 - Currently generates lots of log data, for debugging. But hey, you can see what it does!
@@ -186,21 +186,21 @@ This allows for a general protocol-wide setting, but exceptions for special cont
 Typical log sample:
 
 ```
-2024/03/16 13:39:05 [protocol.autocue:3] /var/azuracast/stations/niteradio/media/Tagged/Dion, Céline/Dion, Céline - Let's Talk About Love/Dion, Céline - Let's Talk About Love.mp3
-2024/03/16 13:39:05 [protocol.autocue:3] ("song_id", "b61044493bcc39e3cbd6df2a1f451cf9")
-2024/03/16 13:39:05 [protocol.autocue:3] ("artist", "Céline Dion")
-2024/03/16 13:39:05 [protocol.autocue:3] ("title", "Let's Talk About Love")
-2024/03/16 13:39:05 [protocol.autocue:3] ("playlist_id", "226")
-2024/03/16 13:39:05 [protocol.autocue:3] ("media_id", "194809")
-2024/03/16 13:39:05 [protocol.autocue:3] ("duration", "312.30")
-2024/03/16 13:39:05 [protocol.autocue:3] ("liq_duration", "304.20")
-2024/03/16 13:39:05 [protocol.autocue:3] ("liq_cue_in", "0.00")
-2024/03/16 13:39:05 [protocol.autocue:3] ("liq_cue_out", "304.20")
-2024/03/16 13:39:05 [protocol.autocue:3] ("liq_longtail", "true")
-2024/03/16 13:39:05 [protocol.autocue:3] ("liq_cross_duration", "8.80")
-2024/03/16 13:39:05 [protocol.autocue:3] ("liq_loudness", "-12.17 dB")
-2024/03/16 13:39:05 [protocol.autocue:3] ("liq_amplify", "-5.83 dB")
-2024/03/16 13:39:05 [protocol.autocue:3] ("liq_blank_skipped", "true")
+2024/03/16 13:39:05 [protocol.autocue2:3] /var/azuracast/stations/niteradio/media/Tagged/Dion, Céline/Dion, Céline - Let's Talk About Love/Dion, Céline - Let's Talk About Love.mp3
+2024/03/16 13:39:05 [protocol.autocue2:3] ("song_id", "b61044493bcc39e3cbd6df2a1f451cf9")
+2024/03/16 13:39:05 [protocol.autocue2:3] ("artist", "Céline Dion")
+2024/03/16 13:39:05 [protocol.autocue2:3] ("title", "Let's Talk About Love")
+2024/03/16 13:39:05 [protocol.autocue2:3] ("playlist_id", "226")
+2024/03/16 13:39:05 [protocol.autocue2:3] ("media_id", "194809")
+2024/03/16 13:39:05 [protocol.autocue2:3] ("duration", "312.30")
+2024/03/16 13:39:05 [protocol.autocue2:3] ("liq_duration", "304.20")
+2024/03/16 13:39:05 [protocol.autocue2:3] ("liq_cue_in", "0.00")
+2024/03/16 13:39:05 [protocol.autocue2:3] ("liq_cue_out", "304.20")
+2024/03/16 13:39:05 [protocol.autocue2:3] ("liq_longtail", "true")
+2024/03/16 13:39:05 [protocol.autocue2:3] ("liq_cross_duration", "8.80")
+2024/03/16 13:39:05 [protocol.autocue2:3] ("liq_loudness", "-12.17 dB")
+2024/03/16 13:39:05 [protocol.autocue2:3] ("liq_amplify", "-5.83 dB")
+2024/03/16 13:39:05 [protocol.autocue2:3] ("liq_blank_skipped", "true")
 ```
 
 I currently use these crossfade settings:
@@ -218,9 +218,14 @@ def live_aware_crossfade(old, new) =
     end
 end
 
-radio = cross(duration=3.0, width=2.0, live_aware_crossfade, radio)
+radio = cross(reconcile_duration=true, duration=3.0, width=2.0, live_aware_crossfade, radio)
 ```
+
+**Note:** The option `reconcile_duration=true` is new since _Liquidsoap 2.2.5+git@4a3770d7a_.
+
+If you have a long `liq_cross_duration` and a jingle following that is _shorter_ than the computed crossing duration, setting this to `true` ensures the jingle can be played correctly by effectively _shifting it to the right within the crossing duration window_, thus playing it _later than originally computed_ and ensuring correct playout for the following track.
 
 The 2.5 s fade-out helps tuning long overlap durations down, so they won’t distract the listener by overlaying songs and possibly jingles too long. The increased margin (8 dB/LU) helps making the smart crossfades sound much better.
 
-Jingles should not be shorter than the duration specified in `cross`.
+~~Jingles should not be shorter than the duration specified in `cross`.~~
+
