@@ -65,7 +65,7 @@ options:
   -s SILENCE, --silence SILENCE
                         LU/dB below integrated track loudness for cue-in &
                         cue-out points (silence removal at beginning & end of
-                        a track) (default: -40.0)
+                        a track) (default: -42.0)
   -o OVERLAY, --overlay OVERLAY
                         LU/dB below integrated track loudness to trigger next
                         track (default: -8.0)
@@ -162,7 +162,7 @@ It offers the following settings (defaults shown):
 settings.protocol.autocue2 := "cue_file"
 settings.protocol.autocue2.timeout := 60.
 settings.protocol.autocue2.target := -18
-settings.protocol.autocue2.silence := -40
+settings.protocol.autocue2.silence := -42
 settings.protocol.autocue2.overlay := -8
 settings.protocol.autocue2.longtail := 15.0
 settings.protocol.autocue2.overlay_longtail := -15
