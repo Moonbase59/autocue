@@ -29,7 +29,7 @@ let settings.protocol.autocue.silence =
   settings.make(
     description=
       "Silence level (for cue points) in LU/dB below track loudness.",
-    -40
+    -42
   )
 
 let settings.protocol.autocue.overlay =

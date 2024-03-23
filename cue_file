@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-# cue_file6
-# 2024-03-16 Moonbase59
+# cue_file
+# 2024-03-23 Moonbase59
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
@@ -26,7 +26,7 @@ import re
 # Default presets
 FFMPEG = "ffmpeg"  # location of the ffmpeg binary
 TARGET_LUFS = -18.0  # Reference Loudness Target
-SILENCE = -40.0  # LU below average for cue-in/cue-out trigger ("silence")
+SILENCE = -42.0  # LU below average for cue-in/cue-out trigger ("silence")
 OVERLAY_LU = -8.0  # LU below average for overlay trigger (start next song)
 # more than LONGTAIL_SECONDS below OVERLAY_LU are considered a "long tail"
 LONGTAIL_SECONDS = 15.0
