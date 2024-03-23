@@ -22,6 +22,25 @@ services:
 
 With AzuraCast, you’ll need to change the auto-generated Liquidsoap Configuration to handle my `autocue2:` protocol. This can be done by installing @RM-FM’s [`ls-config-replace`](https://github.com/RM-FM/ls-config-replace) plugin, and copying over the `ls-config-replace/liq/10_audodj_next_song_add_autocue` folder into your `/var/azuracast/plugins/ls-config-replace/liq` folder after installing the plugin.
 
+Then copy-paste the contents of the `autocue2.liq` file into the second input box in your station’s Liquidsoap Config.
+
+If you want to enable skipping silence _within tracks_, add the following line at the end of this input box:
+
+```
+settings.protocol.autocue2.blankskip := true
+```
+
+**Note:** If you had used ReplayGain adjustment before like so (third input box)
+
+```
+# Be sure to have ReplayGain applied before crossing.
+radio = amplify(1.,override="replaygain_track_gain",radio)
+```
+
+you might want to _delete_ or _comment out_ these lines. The `autocue2:` protocol already calculates a `liq_amplify` value that is recognized by AzuraCast and roughly equals a ReplayGain "track gain". If you would leave _both_ in, you’d get a much too quiet playout.
+
+Save and _Restart Broadcasting_.
+
 **Note:** Liquidsoap recently introduced a _bultin_ `autocue:` protocol. I had to rename my `autocue:` protocol to `autocue2:` so it doesn’t clash with the other one.
 
 ## Command-line interface
