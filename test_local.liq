@@ -3,7 +3,7 @@
 settings.log.level := 3
 
 %include "fake_media_protocol.liq"
-%include "autocue.liq"
+%include "autocue2.liq"
 
 # Use YOUR base media folder here.
 station_media_dir = "/home/matthias/Musik"
@@ -14,18 +14,18 @@ def show_meta(m)
 end
 
 # testing
-#settings.protocol.autocue := "cue_file"
-#settings.protocol.autocue.timeout := 60.
-#settings.protocol.autocue.target := -18
-#settings.protocol.autocue.silence := -40
-#settings.protocol.autocue.overlay := -8
-#settings.protocol.autocue.longtail := 15.0
-#settings.protocol.autocue.overlay_longtail := -15
-settings.protocol.autocue.blankskip := true
+#settings.protocol.autocue2 := "cue_file"
+#settings.protocol.autocue2.timeout := 60.
+#settings.protocol.autocue2.target := -18
+#settings.protocol.autocue2.silence := -40
+#settings.protocol.autocue2.overlay := -8
+#settings.protocol.autocue2.longtail := 15.0
+#settings.protocol.autocue2.overlay_longtail := -15
+settings.protocol.autocue2.blankskip := true
 
 # Use YOUR playlist here
 uri = station_media_dir ^ "/Playlists/Radio/Classic Rock.m3u"
-radio = playlist(prefix="autocue:", uri)
+radio = playlist(prefix="autocue2:", uri)
 
 # Be sure to have ReplayGain applied before crossing.
 radio = amplify(1.,override="liq_amplify",radio)

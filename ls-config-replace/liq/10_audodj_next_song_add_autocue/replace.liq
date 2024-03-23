@@ -7,7 +7,7 @@ def autodj_next_song() =
     if (response == "") or (response == "false") then
         null()
     else
-        r = request.create("autocue:" ^ response)
+        r = request.create("autocue2:" ^ response)
         if request.resolve(r) then
             r
         else

@@ -1,59 +1,59 @@
-# autocue.liq
-# 2024-03-17 - Moonbase59
+# autocue2.liq
+# 2024-03-23 - Moonbase59
 
 # --- protocol definition begin
 
-let settings.protocol.autocue = settings.make.protocol("autocue")
-let settings.protocol.autocue.path =
+let settings.protocol.autocue2 = settings.make.protocol("autocue2")
+let settings.protocol.autocue2.path =
   settings.make(
     description=
-      "Path of the autocue binary.",
+      "Path of the autocue2 binary.",
     "cue_file"
   )
 
-let settings.protocol.autocue.timeout =
+let settings.protocol.autocue2.timeout =
   settings.make(
     description=
-      "Timeout (in seconds) for autocue executions.",
+      "Timeout (in seconds) for autocue2 executions.",
     60.
   )
 
-let settings.protocol.autocue.target =
+let settings.protocol.autocue2.target =
   settings.make(
     description=
       "Loudness target in LUFS.",
     -18
   )
 
-let settings.protocol.autocue.silence =
+let settings.protocol.autocue2.silence =
   settings.make(
     description=
       "Silence level (for cue points) in LU/dB below track loudness.",
     -42
   )
 
-let settings.protocol.autocue.overlay =
+let settings.protocol.autocue2.overlay =
   settings.make(
     description=
       "Start overlay level in LU/dB below track loudness.",
     -8
   )
 
-let settings.protocol.autocue.longtail =
+let settings.protocol.autocue2.longtail =
   settings.make(
     description=
       "More than so many seconds of calculated overlay are considered a long tail.",
     15.0
   )
 
-let settings.protocol.autocue.overlay_longtail =
+let settings.protocol.autocue2.overlay_longtail =
   settings.make(
     description=
       "Extra LU/dB level below overlay loudness, to recalculate songs with long tails.",
     -15
   )
 
-let settings.protocol.autocue.blankskip =
+let settings.protocol.autocue2.blankskip =
   settings.make(
     description=
       'Skip blank (silence) within song (get rid of "hidden tracks".)',
@@ -61,25 +61,25 @@ let settings.protocol.autocue.blankskip =
   )
 
 
-# Register the autocue protocol.
+# Register the autocue2 protocol.
 # @flag hidden
-def protocol.autocue(~rlog, ~maxtime=settings.protocol.autocue.timeout(), arg) =
+def protocol.autocue2(~rlog, ~maxtime=settings.protocol.autocue2.timeout(), arg) =
 
   def log(~level=3, s) =
     #rlog(s)
-    log(label="protocol.autocue", level=level, s)
+    log(label="protocol.autocue2", level=level, s)
   end
   
-  def get_data(f, ~blankskip=settings.protocol.autocue.blankskip()) =
+  def get_data(f, ~blankskip=settings.protocol.autocue2.blankskip()) =
     log('Getting data for "#{f}" ...')
     
     # set up CLI arguments
     args=ref([
-      '-t', string(settings.protocol.autocue.target()),
-      '-s', string(settings.protocol.autocue.silence()),
-      '-o', string(settings.protocol.autocue.overlay()),
-      '-l', string(settings.protocol.autocue.longtail()),
-      '-x', string(settings.protocol.autocue.overlay_longtail()),
+      '-t', string(settings.protocol.autocue2.target()),
+      '-s', string(settings.protocol.autocue2.silence()),
+      '-o', string(settings.protocol.autocue2.overlay()),
+      '-l', string(settings.protocol.autocue2.longtail()),
+      '-x', string(settings.protocol.autocue2.overlay_longtail()),
       f
     ])
     if blankskip then
@@ -89,9 +89,9 @@ def protocol.autocue(~rlog, ~maxtime=settings.protocol.autocue.timeout(), arg) =
     result = list.hd(
       default="",
       process.read.lines(
-        timeout=settings.protocol.autocue.timeout(),
+        timeout=settings.protocol.autocue2.timeout(),
         process.quote.command(
-          settings.protocol.autocue.path(),
+          settings.protocol.autocue2.path(),
           args=args()
         )
       )
@@ -157,9 +157,9 @@ def protocol.autocue(~rlog, ~maxtime=settings.protocol.autocue.timeout(), arg) =
     else
       urilocal := uri
     end
-    blankskip = ref(settings.protocol.autocue.blankskip())
+    blankskip = ref(settings.protocol.autocue2.blankskip())
     # FIXME: AzuraCast kludge: only skip blanks if not jingle
-    blankskip := list.assoc.mem("jingle_mode", meta()) ? false : (settings.protocol.autocue.blankskip())
+    blankskip := list.assoc.mem("jingle_mode", meta()) ? false : (settings.protocol.autocue2.blankskip())
     # Handle annotated blankskip
     if list.assoc.mem("liq_blankskip", m) then
       blankskip := bool_of_string(default=false, m["liq_blankskip"])
@@ -169,7 +169,7 @@ def protocol.autocue(~rlog, ~maxtime=settings.protocol.autocue.timeout(), arg) =
     log(level=3, arg)
     urilocal := arg
     # FIXME: AzuraCast kludge: only skip blanks if not jingle
-    blankskip = list.assoc.mem("jingle_mode", meta()) ? false : (settings.protocol.autocue.blankskip())
+    blankskip = list.assoc.mem("jingle_mode", meta()) ? false : (settings.protocol.autocue2.blankskip())
     newmeta := get_data(urilocal(), blankskip=blankskip)
   end
   
@@ -219,11 +219,11 @@ def protocol.autocue(~rlog, ~maxtime=settings.protocol.autocue.timeout(), arg) =
 end
 
 protocol.add(
-  "autocue",
-  protocol.autocue,
-  syntax="autocue:uri",
+  "autocue2",
+  protocol.autocue2,
+  syntax="autocue2:uri",
   doc=
-    "Compute autocue values. Adds returned values as \
+    "Compute autocue2 values. Adds returned values as \
      annotation in metadata"
 )
 
