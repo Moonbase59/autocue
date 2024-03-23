@@ -17,7 +17,7 @@ end
 #settings.protocol.autocue2 := "cue_file"
 #settings.protocol.autocue2.timeout := 60.
 #settings.protocol.autocue2.target := -18
-#settings.protocol.autocue2.silence := -40
+#settings.protocol.autocue2.silence := -42
 #settings.protocol.autocue2.overlay := -8
 #settings.protocol.autocue2.longtail := 15.0
 #settings.protocol.autocue2.overlay_longtail := -15
