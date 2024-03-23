@@ -26,6 +26,8 @@ import re
 # Default presets
 FFMPEG = "ffmpeg"  # location of the ffmpeg binary
 TARGET_LUFS = -18.0  # Reference Loudness Target
+# -96 dB/LU is "digital silence" for 16-bit audio.
+# A "noise floor" of -60 dB/LU (42 dB/LU below -18 target) is a good value to use.
 SILENCE = -42.0  # LU below average for cue-in/cue-out trigger ("silence")
 OVERLAY_LU = -8.0  # LU below average for overlay trigger (start next song)
 # more than LONGTAIL_SECONDS below OVERLAY_LU are considered a "long tail"
