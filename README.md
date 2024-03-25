@@ -278,7 +278,7 @@ end
 radio = cross(duration=3.0, width=2.0, live_aware_crossfade, radio)
 ```
 
-**Note:** The option `reconcile_duration=true` is new since _Liquidsoap 2.2.5+git@4a3770d7a_, and still under development.
+**Note:** The `cross` parameter `reconcile_duration=true` is new since _Liquidsoap 2.2.5+git@4a3770d7a_, and still under development. We hope this can eventually help automating things further (= less user coding).
 
 If you have a long `liq_cross_duration` and a jingle following that is _shorter_ than the computed crossing duration, setting this to `true` ensures the jingle can be played correctly by effectively _shifting it to the right within the crossing duration window_, thus playing it _later than originally computed_ and ensuring correct playout for the following track.
 
