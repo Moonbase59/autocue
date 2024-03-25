@@ -282,6 +282,14 @@ radio = cross(duration=3.0, width=2.0, live_aware_crossfade, radio)
 
 If you have a long `liq_cross_duration` and a jingle following that is _shorter_ than the computed crossing duration, setting this to `true` ensures the jingle can be played correctly by effectively _shifting it to the right within the crossing duration window_, thus playing it _later than originally computed_ and ensuring correct playout for the following track.
 
+We currently do this in above shown crossfading code. If this happens, a message will be logged:
+
+```
+2024/03/25 15:26:33 [live_aware_crossfade:3] Song → Jingle transition
+2024/03/25 15:26:33 [live_aware_crossfade:2] Cross duration 5.8 s longer than next track (4.5 s)!
+2024/03/25 15:26:33 [live_aware_crossfade:2] Delaying next track fade-in by 1.3 s.
+```
+
 The 2.5 s fade-out helps tuning long overlap durations down, so they won’t distract the listener by overlaying songs and possibly jingles too long. The increased margin (8 dB/LU) helps making the smart crossfades sound much better.
 
 ~~Jingles should not be shorter than the duration specified in `cross`.~~
