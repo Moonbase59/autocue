@@ -202,42 +202,80 @@ This allows for a general protocol-wide setting, but exceptions for special cont
 - Currently needs a patch to the AzuraCast-generated Liquidsoap code, see above.
 - Currently generates lots of log data, for debugging. But hey, you can see what it does!
 
-Typical log sample:
+Typical log sample (level 3; level 4 gives much more details):
 
 ```
-2024/03/16 13:39:05 [protocol.autocue2:3] /var/azuracast/stations/niteradio/media/Tagged/Dion, Céline/Dion, Céline - Let's Talk About Love/Dion, Céline - Let's Talk About Love.mp3
-2024/03/16 13:39:05 [protocol.autocue2:3] ("song_id", "b61044493bcc39e3cbd6df2a1f451cf9")
-2024/03/16 13:39:05 [protocol.autocue2:3] ("artist", "Céline Dion")
-2024/03/16 13:39:05 [protocol.autocue2:3] ("title", "Let's Talk About Love")
-2024/03/16 13:39:05 [protocol.autocue2:3] ("playlist_id", "226")
-2024/03/16 13:39:05 [protocol.autocue2:3] ("media_id", "194809")
-2024/03/16 13:39:05 [protocol.autocue2:3] ("duration", "312.30")
-2024/03/16 13:39:05 [protocol.autocue2:3] ("liq_duration", "304.20")
-2024/03/16 13:39:05 [protocol.autocue2:3] ("liq_cue_in", "0.00")
-2024/03/16 13:39:05 [protocol.autocue2:3] ("liq_cue_out", "304.20")
-2024/03/16 13:39:05 [protocol.autocue2:3] ("liq_longtail", "true")
-2024/03/16 13:39:05 [protocol.autocue2:3] ("liq_cross_duration", "8.80")
-2024/03/16 13:39:05 [protocol.autocue2:3] ("liq_loudness", "-12.17 dB")
-2024/03/16 13:39:05 [protocol.autocue2:3] ("liq_amplify", "-5.83 dB")
-2024/03/16 13:39:05 [protocol.autocue2:3] ("liq_blank_skipped", "true")
+2024/03/25 14:50:50 [protocol.autocue2:3] Autocueing "annotate:title="Secret Love",artist="Bee Gees",duration="215.00",song_id="91d8c994c8741b1bb0716834a0849c4a",media_id="169415",playlist_id="226":media:Tagged/Bee Gees/Bee Gees - Their Greatest Hits_ The Record (2001 album, compilation, GB)/Bee Gees - Secret Love.mp3" ...
+
+...
+
+2024/03/25 14:50:51 [protocol.autocue2:3] Result: annotate:liq_blank_skipped="false",liq_amplify="5.11 dB",liq_loudness="-23.11 dB",liq_cross_duration="12.90",liq_longtail="false",liq_cue_out="209.10",liq_cue_in="0.00",liq_duration="209.10",duration="215.60",media_id="169415",playlist_id="226",title="Secret Love",artist="Bee Gees",song_id="91d8c994c8741b1bb0716834a0849c4a":/var/azuracast/stations/niteradio/media/Tagged/Bee Gees/Bee Gees - Their Greatest Hits_ The Record (2001 album, compilation, GB)/Bee Gees - Secret Love.mp3
 ```
 
-I currently use these crossfade settings:
+I currently use these crossfade settings (third input box in AzuraCast; lots of debugging info here, could be much shorter):
 
 ```
+def show_meta(m)
+  label="show_meta"
+  l = list.sort.natural(metadata.cover.remove(m))
+  list.iter(fun(v) -> log.info(label=label, "#{v}"), l)
+  nowplaying = ref(m["artist"] ^ " - " ^ m["title"])
+  if m["artist"] == "" then
+    if string.contains(substring=" - ", m["title"]) then
+      let (a, t) = string.split.first(separator=" - ", m["title"])
+      nowplaying := a ^ " - " ^ t
+    end
+  end
+  log.important(label=label, "Now playing: #{nowplaying()}")
+  if m["liq_amplify"] == "" then
+    log.severe(label=label, "Warning: No liq_amplify found, expect loudness jumps!")
+  end
+  if m["liq_blank_skipped"] == "true" then
+    log.severe(label=label, "Blank (silence) detected in track, ending early.")
+  end
+end
+
+radio.on_metadata(show_meta)
+
 def live_aware_crossfade(old, new) =
+    label = "live_aware_crossfade"
     if to_live() then
         # If going to the live show, play a simple sequence
         # fade out AutoDJ, do (almost) not fade in streamer
         sequence([fade.out(duration=2.5,old.source),fade.in(duration=0.1,new.source)])
     else
-        # Otherwise, use a smart crossfade/overlap/segue
-        log(label="crossfade", "Using custom crossfade")
-        cross.smart(old, new, fade_in=0.1, fade_out=2.5, margin=8.)
+        # Otherwise, use the simple transition
+        log.important(label=label, "Using custom crossfade")
+        if (old.metadata["jingle_mode"] == "true")
+          and (new.metadata["jingle_mode"] == "true") then
+            log.important(label=label, "Jingle → Jingle transition")
+        end
+        if (old.metadata["jingle_mode"] == "true")
+          and (new.metadata["jingle_mode"] == "") then
+            log.important(label=label, "Jingle → Song transition")
+        end
+        if (old.metadata["jingle_mode"] == "")
+          and (new.metadata["jingle_mode"] == "true") then
+            log.important(label=label, "Song → Jingle transition")
+        end
+        if (old.metadata["jingle_mode"] == "")
+          and (new.metadata["jingle_mode"] == "") then
+            log.important(label=label, "Song → Song transition")
+        end
+
+        nd = float_of_string(default=0.1, list.assoc(default="0.1", "duration", new.metadata))
+        xd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_cross_duration", old.metadata))
+        delay = max(0., xd - nd)
+        if (xd > nd) then
+          log.severe(label=label, "Cross duration #{xd} s longer than next track (#{nd} s)!")
+          log.severe(label=label, "Delaying next track fade-in by #{delay} s.")
+        end
+
+        add(normalize=false, [fade.in(duration=.1, delay=delay, new.source), fade.out(duration=2.5, old.source)])
     end
 end
 
-radio = cross(reconcile_duration=true, duration=3.0, width=2.0, live_aware_crossfade, radio)
+radio = cross(duration=3.0, width=2.0, live_aware_crossfade, radio)
 ```
 
 **Note:** The option `reconcile_duration=true` is new since _Liquidsoap 2.2.5+git@4a3770d7a_, and still under development.
