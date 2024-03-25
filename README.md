@@ -111,6 +111,17 @@ $ cue_file -b "Nirvana - Something in the Way _ Endless, Nameless.mp3"
 {"duration": "1235.10", "liq_duration": "227.10", "liq_cue_in": "0.40", "liq_cue_out": "227.50", "liq_longtail": "false", "liq_cross_duration": "3.50", "liq_loudness": "-10.47 dB", "liq_amplify": "-7.53 dB", "liq_blank_skipped": "true"}
 ```
 
+where
+- _duration_ — the real file duration (including silence at start/end of song), in seconds
+- _liq_duration_ — the actual playout duration (cue-in to cue-out), in seconds
+- _liq_cue_in_ — cue-in point, in seconds
+- _liq_cue_out_ — cue-out point, in seconds
+- _liq_longtail_ — flag to show if song has a "long tail", i.e. a very long fade-out (true/false)
+- _liq_cross_duration_ — suggested crossing duration for next song, in seconds backwards from cue-out point
+- _liq_loudness_ — song’s EBU R128 loudness, in dB (=LU)
+- _liq_amplify_ — simple "ReplayGain" value, offset to desired loudness target (i.e., -18 LUFS). This is intentionally _not_ called _replaygain_track_gain_, since that tag might already exist and have been calculated using more exact tools like [`loudgain`](https://github.com/Moonbase59/loudgain).
+- _liq_blank_skipped_ — flag to show that we have an early cue-out, caused by silence in the song (true/false)
+
 ### Long tail
 
 _Bohemian Rhapsody_ by _Queen_ has a rather long ending, which we don’t want to destroy by overlaying the next song too early. This is where `cue_file`’s automatic "long tail" handling comes into play:
@@ -132,17 +143,6 @@ $ cue_file "Queen - Bohemian Rhapsody.flac"
 $ cue_file -b "Queen - Bohemian Rhapsody.flac" 
 {"duration": "355.10", "liq_duration": "353.10", "liq_cue_in": "0.00", "liq_cue_out": "353.10", "liq_longtail": "true", "liq_cross_duration": "4.70", "liq_loudness": "-15.50 dB", "liq_amplify": "-2.50 dB", "liq_blank_skipped": "false"}
 ```
-
-where
-- _duration_ — the real file duration (including silence at start/end of song), in seconds
-- _liq_duration_ — the actual playout duration (cue-in to cue-out), in seconds
-- _liq_cue_in_ — cue-in point, in seconds
-- _liq_cue_out_ — cue-out point, in seconds
-- _liq_longtail_ — flag to show if song has a "long tail", i.e. a very long fade-out (true/false)
-- _liq_cross_duration_ — suggested crossing duration for next song, in seconds backwards from cue-out point
-- _liq_loudness_ — song’s EBU R128 loudness, in dB (=LU)
-- _liq_amplify_ — simple "ReplayGain" value, offset to desired loudness target (i.e., -18 LUFS). This is intentionally _not_ called _replaygain_track_gain_, since that tag might already exist and have been calculated using more exact tools like [`loudgain`](https://github.com/Moonbase59/loudgain).
-- _liq_blank_skipped_ — flag to show that we have an early cue-out, caused by silence in the song (true/false)
 
 ### Blank (silence) detection
 
