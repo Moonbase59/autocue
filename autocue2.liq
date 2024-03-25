@@ -1,5 +1,5 @@
 # autocue2.liq
-# 2024-03-23 - Moonbase59
+# 2024-03-25 - Moonbase59
 
 # --- protocol definition begin
 
@@ -65,13 +65,13 @@ let settings.protocol.autocue2.blankskip =
 # @flag hidden
 def protocol.autocue2(~rlog, ~maxtime=settings.protocol.autocue2.timeout(), arg) =
 
-  def log(~level=3, s) =
+  def log(~level=4, s) =
     #rlog(s)
     log(label="protocol.autocue2", level=level, s)
   end
   
   def get_data(f, ~blankskip=settings.protocol.autocue2.blankskip()) =
-    log('Getting data for "#{f}" ...')
+    log('Processing file "#{f}" ...')
     
     # set up CLI arguments
     args=ref([
@@ -138,18 +138,18 @@ def protocol.autocue2(~rlog, ~maxtime=settings.protocol.autocue2.timeout(), arg)
     ]
   end
 
-  log(level=3, 'Performing calculations for "' ^ arg ^ '" ...')
+  log(level=3, 'Autocueing "' ^ arg ^ '" ...')
   meta = ref([])
   urilocal = ref("")
   newmeta = ref([])
   a = string(string.residual(prefix="annotate:", arg))
-  log(level=3, a)
+  log(a)
   if a != "null" then
     let (m, uri) = string.annotate.parse(a)
     meta := m
-    log(level=3, "BEFORE:")
-    log(level=3, uri)
-    list.iter(fun(e) -> log(level=3, "#{e}"), meta())
+    log("BEFORE:")
+    log("URI: #{uri}")
+    list.iter(fun(e) -> log("#{e}"), meta())
     # FIXME: AzuraCast kludge: resolve "media:" protocol manually
     urilocal := string(string.residual(prefix="media:", uri))
     if urilocal() != "null" then
@@ -166,15 +166,15 @@ def protocol.autocue2(~rlog, ~maxtime=settings.protocol.autocue2.timeout(), arg)
     end
     newmeta := get_data(urilocal(), blankskip=blankskip())
   else
-    log(level=3, arg)
+    log("URI: #{arg}")
     urilocal := arg
     # FIXME: AzuraCast kludge: only skip blanks if not jingle
     blankskip = list.assoc.mem("jingle_mode", meta()) ? false : (settings.protocol.autocue2.blankskip())
     newmeta := get_data(urilocal(), blankskip=blankskip)
   end
   
-  log(level=3, "NEW META:")
-  list.iter(fun(e) -> log(level=3, "#{e}"), newmeta())
+  log("NEW META:")
+  list.iter(fun(e) -> log("#{e}"), newmeta())
   
   # remove duration -- we want to always replace this
   # because we believe ours is more exact
@@ -193,8 +193,8 @@ def protocol.autocue2(~rlog, ~maxtime=settings.protocol.autocue2.timeout(), arg)
       newmeta()
   )
 
-  log(level=3, "AFTER:")
-  log(level=3, urilocal())
+  log("AFTER:")
+  log("URI: #{urilocal()}")
   list.iter(fun(e) -> log("#{e}"), meta())
 
   # build list of key=value pairs from combined metadata
@@ -214,6 +214,8 @@ def protocol.autocue2(~rlog, ~maxtime=settings.protocol.autocue2.timeout(), arg)
 
   # add URI
   p := p() ^ urilocal()
+  
+  log(level=3, "Result: #{p()}")
   
   [p()]
 end
