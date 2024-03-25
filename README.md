@@ -262,6 +262,10 @@ Typical log sample (level 3; level 4 gives much more details):
 I currently use these crossfade settings (third input box in AzuraCast; lots of debugging info here, could be much shorter):
 
 ```
+# Be sure to have ReplayGain or "liq_amplify" applied before crossing.
+#radio = amplify(1.,override="replaygain_track_gain",radio)
+radio = amplify(1.,override="liq_amplify",radio)
+
 def show_meta(m)
   label="show_meta"
   l = list.sort.natural(metadata.cover.remove(m))
