@@ -22,6 +22,8 @@ services:
 
 With AzuraCast, you’ll need to change the auto-generated Liquidsoap Configuration to handle my `autocue2:` protocol. This can be done by installing @RM-FM’s [`ls-config-replace`](https://github.com/RM-FM/ls-config-replace) plugin, and copying over the `ls-config-replace/liq/10_audodj_next_song_add_autocue` folder into your `/var/azuracast/plugins/ls-config-replace/liq` folder after installing the plugin.
 
+If you wish to disable AzuraCast’s built-in `liq_amplify` handling and rather use your tagged ReplayGain data, also copy over the `12_remove_amplify` folder.
+
 Then copy-paste the contents of the `autocue2.liq` file into the second input box in your station’s Liquidsoap Config.
 
 If you want to enable skipping silence _within tracks_, add the following line at the end of this input box:
@@ -38,6 +40,25 @@ radio = amplify(1.,override="replaygain_track_gain",radio)
 ```
 
 you might want to _delete_ or _comment out_ these lines. The `autocue2:` protocol already calculates a `liq_amplify` value that is recognized by AzuraCast and roughly equals a ReplayGain "track gain". If you would leave _both_ in, you’d get a much too quiet playout.
+
+**ReplayGain vs. `liq_amplify`**
+
+If you have disabled AzuraCast’s built-in `liq_amplify` handler (by copying `12_remove_amplify` above), _you_ have the choice. But you _must_ define your own adjustment (start of third input box).
+
+Example, to use your own tagged _ReplayGain Track Gain_ instead:
+
+```
+# Be sure to have ReplayGain or "liq_amplify" applied before crossing.
+radio = amplify(1.,override="replaygain_track_gain",radio)
+#radio = amplify(1.,override="liq_amplify",radio)
+```
+
+Pros & Cons:
+- ReplayGain can be more exact (and prevent clipping) if pre-tagged with a tool like [`loudgain`](https://github.com/Moonbase59/loudgain).
+- ReplayGain values _must exist as tags_ in your audio files
+- `cue_file` (and thus the `autocue2:` protocol) will _always_ calculate a `liq_amplify` value _on the fly_, so it can be used with any audio file (even when not pre-tagged)
+- `liq_amplify` has no means of clipping prevention or EBU-recommended -1 dB/LU margin. The value still resembles a _ReplayGain Track Gain_ closely, in most cases.
+- _Both_ can be used with `autocue2:`.
 
 Save and _Restart Broadcasting_.
 
