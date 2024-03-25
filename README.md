@@ -3,7 +3,7 @@ On-the-fly JSON song cue-in, cue-out, overlay, replaygain calculation for Liquid
 
 Work in progress.
 
-Requires Python3 and `ffmpeg` with the _ebur128_ filter.
+Requires Python3 and `ffmpeg` with the _ebur128_ filter. (The AzuraCast Docker already has these.)
 
 Tested on Linux and Mac, with several `ffmpeg` versions ranging from 4.4.2–6.1.1, and running on several stations since a few weeks.
 
