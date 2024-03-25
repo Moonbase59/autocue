@@ -87,7 +87,9 @@ options:
                         False)
 ```
 
-## Example
+## Examples
+
+### Hidden track
 
 The well-known _Nirvana_ song _Something in the Way / Endless, Nameless_ from their 1991 album _Nevermind_:
 
@@ -109,6 +111,28 @@ $ cue_file -b "Nirvana - Something in the Way _ Endless, Nameless.mp3"
 {"duration": "1235.10", "liq_duration": "227.10", "liq_cue_in": "0.40", "liq_cue_out": "227.50", "liq_longtail": "false", "liq_cross_duration": "3.50", "liq_loudness": "-10.47 dB", "liq_amplify": "-7.53 dB", "liq_blank_skipped": "true"}
 ```
 
+### Long tail
+
+_Bohemian Rhapsody_ by _Queen_ has a rather long ending, which we don’t want to destroy by overlaying the next song too early. This is where `cue_file`’s automatic "long tail" handling comes into play:
+
+![Auswahl_354](https://github.com/Moonbase59/autocue/assets/3706922/98a78cc8-217a-48cf-9e57-eda0c8512907)
+
+I marked the _overlay start_ and _cue out_ points that `cue_file` calculated. As you see, the important long ending of this song has been kept intact, and the result parameter `liq_longtail` is `true` to indicate that we have a track with a long ending.
+
+**Normal mode (no blank detection):**
+
+```
+$ cue_file "Queen - Bohemian Rhapsody.flac" 
+{"duration": "355.10", "liq_duration": "353.10", "liq_cue_in": "0.00", "liq_cue_out": "353.10", "liq_longtail": "true", "liq_cross_duration": "4.70", "liq_loudness": "-15.50 dB", "liq_amplify": "-2.50 dB", "liq_blank_skipped": "false"}
+```
+
+**With blank detection (cue-out at start of silence):**
+
+```
+$ cue_file -b "Queen - Bohemian Rhapsody.flac" 
+{"duration": "355.10", "liq_duration": "353.10", "liq_cue_in": "0.00", "liq_cue_out": "353.10", "liq_longtail": "true", "liq_cross_duration": "4.70", "liq_loudness": "-15.50 dB", "liq_amplify": "-2.50 dB", "liq_blank_skipped": "false"}
+```
+
 where
 - _duration_ — the real file duration (including silence at start/end of song), in seconds
 - _liq_duration_ — the actual playout duration (cue-in to cue-out), in seconds
@@ -119,6 +143,8 @@ where
 - _liq_loudness_ — song’s EBU R128 loudness, in dB (=LU)
 - _liq_amplify_ — simple "ReplayGain" value, offset to desired loudness target (i.e., -18 LUFS). This is intentionally _not_ called _replaygain_track_gain_, since that tag might already exist and have been calculated using more exact tools like [`loudgain`](https://github.com/Moonbase59/loudgain).
 - _liq_blank_skipped_ — flag to show that we have an early cue-out, caused by silence in the song (true/false)
+
+### Blank (silence) detection
 
 **Note:** Blank detection _within a song_ is experimental. It will most certainly _fail_ on spoken or TTS-generated messages (since spoken text has long pauses), and it can fail on some songs with very smooth beginnings, like _Sarah McLachlan’s Fallen_:
 
