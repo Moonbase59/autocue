@@ -195,7 +195,7 @@ Much better!
 We possibly don’t want the previous song to play "too much" into the next song, so we can set a _default fade-out_ in our custom crossfading. This will ensure a limit in case no user-defined fade-out has been set. We use `2.5` seconds in the example below (under _AzuraCast Notes_, in `live_aware_crossfade`):
 
 ```
-add(normalize=false, [fade.in(duration=.1, delay=delay, new.source), fade.out(duration=2.5, old.source)])
+add(normalize=false, [fade.in(duration=.1, delay=delay, new.source), fade.out(duration=2.5, delay=delay, old.source)])
 ```
 
 ![Auswahl_362](https://github.com/Moonbase59/autocue/assets/3706922/f1e96db6-2f23-4cdd-9693-24711fe91895)
