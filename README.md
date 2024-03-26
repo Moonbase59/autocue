@@ -354,12 +354,15 @@ def live_aware_crossfade(old, new) =
         nd = float_of_string(default=0.1, list.assoc(default="0.1", "duration", new.metadata))
         xd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_cross_duration", old.metadata))
         delay = max(0., xd - nd)
+        log.important(label=label, "Cross/new/delay: #{xd} / #{nd} / #{delay} s")
         if (xd > nd) then
           log.severe(label=label, "Cross duration #{xd} s longer than next track (#{nd} s)!")
-          log.severe(label=label, "Delaying next track fade-in by #{delay} s.")
+          log.severe(label=label, "Delaying fade-out & next track fade-in by #{delay} s.")
         end
 
-        add(normalize=false, [fade.in(duration=.1, delay=delay, new.source), fade.out(duration=2.5, old.source)])
+        # If needed, delay BOTH fade-out and fade-in, to avoid dead air.
+        # This ensures a better transition for jingles shorter than cross_duration.
+        add(normalize=false, [fade.in(duration=.1, delay=delay, new.source), fade.out(duration=2.5, delay=delay, old.source)])
     end
 end
 
@@ -373,9 +376,9 @@ If you have a long `liq_cross_duration` and a jingle following that is _shorter_
 We currently do this in above shown crossfading code. If this happens, a message will be logged:
 
 ```
-2024/03/25 15:26:33 [live_aware_crossfade:3] Song → Jingle transition
-2024/03/25 15:26:33 [live_aware_crossfade:2] Cross duration 5.8 s longer than next track (4.5 s)!
-2024/03/25 15:26:33 [live_aware_crossfade:2] Delaying next track fade-in by 1.3 s.
+2024/03/26 17:07:56 [live_aware_crossfade:3] Song → Jingle transition
+2024/03/26 17:07:56 [live_aware_crossfade:2] Cross duration 5.9 s longer than next track (3.4 s)!
+2024/03/26 17:07:56 [live_aware_crossfade:2] Delaying fade-out & next track fade-in by 2.5 s.
 ```
 
 The 2.5 s fade-out helps tuning long overlap durations down, so they won’t distract the listener by overlaying songs and possibly jingles too long. The increased margin (8 dB/LU) helps making the smart crossfades sound much better.
