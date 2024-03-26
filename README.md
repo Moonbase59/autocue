@@ -280,7 +280,7 @@ This allows for a general protocol-wide setting, but exceptions for special cont
 ### AzuraCast Notes
 
 - `media:` URIs will be resolved.
-- Works well with smart crossfades.
+- Works well with smart crossfades. (But these are definitely not needed, see code below!)
 - Even when `settings.protocol.autocue2.blankskip := true`, hidden jingles (those with a `jingle_mode="true"` annotation) will be _excluded_ from blank detection within the track, because the chance is too high that spoken text gets cut.
 - User settings in the AzuraCast UI ("Edit Song") always "win" over the calculated values.
 - Currently needs a patch to the AzuraCast-generated Liquidsoap code, see above.
