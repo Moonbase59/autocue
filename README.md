@@ -143,27 +143,64 @@ where
 - _liq_amplify_ — simple "ReplayGain" value, offset to desired loudness target (i.e., -18 LUFS). This is intentionally _not_ called _replaygain_track_gain_, since that tag might already exist and have been calculated using more exact tools like [`loudgain`](https://github.com/Moonbase59/loudgain).
 - _liq_blank_skipped_ — flag to show that we have an early cue-out, caused by silence in the song (true/false)
 
-### Long tail
+### Long tail handling
 
-_Bohemian Rhapsody_ by _Queen_ has a rather long ending, which we don’t want to destroy by overlaying the next song too early. This is where `cue_file`’s automatic "long tail" handling comes into play:
+_Bohemian Rhapsody_ by _Queen_ has a rather long ending, which we don’t want to destroy by overlaying the next song too early. This is where `cue_file`’s automatic "long tail" handling comes into play. Let’s see how the end of the song looks like:
 
-![Auswahl_354](https://github.com/Moonbase59/autocue/assets/3706922/98a78cc8-217a-48cf-9e57-eda0c8512907)
+![Auswahl_363](https://github.com/Moonbase59/autocue/assets/3706922/28f82f63-6341-4064-aaed-36339b0a2d4d)
 
-I marked the _overlay start_ and _cue out_ points that `cue_file` calculated. As you see, the important long ending of this song has been kept intact, and the result parameter `liq_longtail` is `true` to indicate that we have a track with a long ending.
-
-**Normal mode (no blank detection):**
+Here are the values we get from `cue_file`:
 
 ```
 $ cue_file "Queen - Bohemian Rhapsody.flac" 
 {"duration": "355.10", "liq_duration": "353.10", "liq_cue_in": "0.00", "liq_cue_out": "353.10", "liq_longtail": "true", "liq_cross_duration": "4.70", "liq_loudness": "-15.50 dB", "liq_amplify": "-2.50 dB", "liq_blank_skipped": "false"}
 ```
 
-**With blank detection (cue-out at start of silence):**
+We notice the `liq_longtail` flag is `true`, and the `liq_cross_duration` is `4.70` seconds.
+
+Let’s follow the steps `cue_file` took to arrive at this result.
+
+#### Cue-out point
+
+`cue_file` uses the `-s`/`--silence` parameter value (-42 LU default) to scan _backwards from the end_ for something that is louder than -42 LU below the _average (integrated) song loudness_, using the EBU R128 momentary loudness algorithm. This is _not_ a simple "level check"! Using the default (playout) reference loudness target of `-18 LUFS` (`-t`/`--target` parameter), we thus arrive at a noise floor of -60 LU, which is a good silence level to use.
+
+![Auswahl_359](https://github.com/Moonbase59/autocue/assets/3706922/c745989a-5f32-4aa1-a5b7-ac4bc955e568)
+
+`cue_file` has determined the _cue-out point_ at `353.10` seconds (5:53.1).
+
+#### Cross duration (where the next track could start and be overlaid)
+
+Liquidsoap uses a `liq_cross_duration` concept instead of an abolute "start next" point, since that could be ambiguous (start counting at the beginning of the file or at the cue-in point?). The cross duration is measured in seconds _backwards from the cue-out point_.
+
+`cue_file` uses the `-o`/`--overlay` parameter value (-8 LU default) to scan _backwards from the cue-out point_ for something that is louder than -8 LU below the _average (integrated) song loudness_, thus finding a good point where the next song could start and be overlaid.
+
+![Auswahl_360](https://github.com/Moonbase59/autocue/assets/3706922/20a9396b-a31a-4a11-87b4-641d6868cc49)
+
+`cue_file` has determined a _cross duration_ of `16.70` seconds, starting at 336.4 seconds (5:36.4).
+
+We can see this would destroy an important part of the song’s end.
+
+#### A long tail!
+
+Finding that the calculated cross duration of `16.70` seconds is longer than 15 seconds (the `-l`/`--longtail` parameter), `cue_file` now _recalculates the cross duration_ automatically, using an extra -15 LU loudness offset (`-x`/`--extra` parameter), and arrives at this:
+
+![Auswahl_361](https://github.com/Moonbase59/autocue/assets/3706922/9f9ec3af-89d4-4edc-9316-d53ed1fcf000)
+
+`cue_file` has now set `liq_cross_duration` to `4.70` seconds and `liq_longtail` to `true` so we know this song has a "long tail" and been calculated differently.
+
+Much better!
+
+#### Avoiding too much overlap
+
+We possibly don’t want the previous song to play "too much" into the next song, so we can set a _default fade-out_ in our custom crossfading. This will ensure a limit in case no user-defined fade-out has been set. We use `2.5` seconds in the example below (under _AzuraCast Notes_, in `live_aware_crossfade`):
 
 ```
-$ cue_file -b "Queen - Bohemian Rhapsody.flac" 
-{"duration": "355.10", "liq_duration": "353.10", "liq_cue_in": "0.00", "liq_cue_out": "353.10", "liq_longtail": "true", "liq_cross_duration": "4.70", "liq_loudness": "-15.50 dB", "liq_amplify": "-2.50 dB", "liq_blank_skipped": "false"}
+add(normalize=false, [fade.in(duration=.1, delay=delay, new.source), fade.out(duration=2.5, old.source)])
 ```
+
+![Auswahl_362](https://github.com/Moonbase59/autocue/assets/3706922/f1e96db6-2f23-4cdd-9693-24711fe91895)
+
+Fading area, using above settings. The rest of the ending won’t be heard.
 
 ### Blank (silence) detection
 
