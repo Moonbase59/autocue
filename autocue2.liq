@@ -84,9 +84,9 @@ def file.autocue2.compute(
   overlay_longtail = overlay_longtail ?? settings.autocue2.overlay_longtail()
   blankskip = blankskip ?? settings.autocue2.blankskip()
 
-  # This only works in LS 2.2.5/2.3.0
+  # This only works in LS 2.2.5/2.3.0, enabling it then...
   #r = request.create(excluded_metadata_resolvers=["autocue2"], uri)
-  r = request.create(uri)
+  r = request.create(resolve_metadata=false, uri)
   s = request.once(r)
 
   if
