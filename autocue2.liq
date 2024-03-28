@@ -100,6 +100,10 @@ def file.autocue2.compute(
       'Now autocueing: "#{uri}"'
     )
 
+    l = list.sort.natural(metadata.cover.remove(meta))
+    list.iter(fun(v) -> log.important(label="autocue2", "#{v}"), l)
+
+
     # Blank skipping can be set globally using `settings.autocue2.blankskip`.
     # For AzuraCast, we override that setting if we detect "jingle_mode",
     # i.e. a track from a playlist that has "Hide Metadata from Listeners" set.
