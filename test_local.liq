@@ -35,9 +35,10 @@ to_live = ref(false)
 #settings.autocue2.overlay := -8
 #settings.autocue2.longtail := 15.0
 #settings.autocue2.overlay_longtail := -15
-settings.autocue2.blankskip := true
+#settings.autocue2.blankskip := false
 
 # `enable_autocue2_metadata()` will autocue ALL files Liquidsoap processes.
+# Starting with Liquidsoap 2.2.5/2.3.0...
 # You can disable it for selected sources using 'annotate:liq_autocue="false"'.
 # Remember you won't get `liq_amplify` data then -- expect loudness jumps!
 enable_autocue2_metadata()
@@ -50,7 +51,8 @@ uri = "/home/matthias/Musik/Playlists/Radio/Classic Rock.m3u"
 songs = playlist(uri)
 
 # --- Use YOUR playlist here! ---
-uri = "/home/matthias/Musik/Other/Jingles/Short"
+#uri = "/home/matthias/Musik/Other/Jingles/Short"
+uri = "/home/matthias/Musik/Other/Jingles/Programm"
 # set jingle mode, no blank skipping, and some values like AzuraCast would
 #jingles = playlist(prefix='autocue2:annotate:jingle_mode="true",liq_blankskip="false",'
 #  ^ 'liq_cross_duration="0.10",liq_fade_in="0.10",liq_fade_out="0.10"'
@@ -141,66 +143,6 @@ def live_aware_crossfade(old, new) =
         # This ensures a better transition for jingles shorter than cross_duration.
         add(normalize=false, [fade.in(initial_metadata=new.metadata, duration=.1, delay=delay, new.source), fade.out(initial_metadata=old.metadata, duration=2.5, delay=delay, old.source)])
         #cross.simple(old.source, new.source, fade_in=0.1, fade_out=2.5)
-        #cross.smart(old, new, fade_in=0.1, fade_out=2.5, margin=8.)
-    end
-end
-
-def simple_crossfade(old,new) =
-  cross.simple(
-    initial_fade_in_metadata=new.metadata,
-    initial_fade_out_metadata=old.metadata,
-    old.source, new.source)
-end
-
-def live_aware_crossfade_simple(old, new) =
-    label = "live_aware_crossfade_simple"
-    if to_live() then
-        # If going to the live show, play a simple sequence
-        # fade out AutoDJ, do (almost) not fade in streamer
-        sequence([fade.out(duration=2.5,old.source),fade.in(duration=0.1,new.source)])
-    else
-        # Otherwise, use the simple transition
-        log.important(label=label, "Using custom crossfade")
-        if (old.metadata["jingle_mode"] == "true")
-          and (new.metadata["jingle_mode"] == "true") then
-            log.important(label=label, "Jingle → Jingle transition")
-        end
-        if (old.metadata["jingle_mode"] == "true")
-          and (new.metadata["jingle_mode"] == "") then
-            log.important(label=label, "Jingle → Song transition")
-        end
-        if (old.metadata["jingle_mode"] == "")
-          and (new.metadata["jingle_mode"] == "true") then
-            log.important(label=label, "Song → Jingle transition")
-        end
-        if (old.metadata["jingle_mode"] == "")
-          and (new.metadata["jingle_mode"] == "") then
-            log.important(label=label, "Song → Song transition")
-        end
-
-        nd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_duration", new.metadata))
-        xd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_cross_duration", old.metadata))
-        delay = max(0., xd - nd)
-        log.important(label=label, "Cross/new/delay: #{xd} / #{nd} / #{delay} s")
-        if (xd > nd) then
-          log.severe(label=label, "Cross duration #{xd} s longer than next track (#{nd} s)!")
-          log.severe(label=label, "Delaying fade-out & next track fade-in by #{delay} s.")
-          #add(normalize=false, [fade.in(duration=.1, delay=delay, new.source), fade.out(duration=2.5, delay=delay, old.source)])
-          #sequence([fade.out(duration=2.5, old.source), fade.in(duration=.1, new.source)])
-        #else
-          #add(normalize=false, [fade.in(duration=.1, new.source), fade.out(duration=2.5, old.source)])
-        end
-
-        # If needed, delay BOTH fade-out and fade-in, to avoid dead air.
-        # This ensures a better transition for jingles shorter than cross_duration.
-        #add(normalize=false, [fade.in(duration=.1, delay=delay, new.source), fade.out(duration=2.5, delay=delay, old.source)])
-        cross.simple(
-          initial_fade_in_metadata=new.metadata,
-          initial_fade_out_metadata=old.metadata,
-          old.source,
-          new.source,
-          fade_in=0.1,
-          fade_out=2.5)
         #cross.smart(old, new, fade_in=0.1, fade_out=2.5, margin=8.)
     end
 end
