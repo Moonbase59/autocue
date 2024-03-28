@@ -1,5 +1,5 @@
 # test_local.liq
-# 2024-03-26 - Moonbase59
+# 2024-03-28 - Moonbase59
 
 # Test the `autocue2:` protocol and crossfading code locally,
 # using a "songs" and a "jingles" playlist.
@@ -21,12 +21,56 @@ settings.log.file.append := false
 # 3=important, 4=info
 settings.log.level := 3
 
-%include "fake_media_protocol.liq"
+# no "live" in the local test
+to_live = ref(false)
+
+# --- Copy-paste the CONTENTS of `autocue2.liq` into AzuraCast, second input box ---
 %include "autocue2.liq"
 
-# --- Use YOUR base media folder here. ---
-station_media_dir = "/home/matthias/Musik"
+# --- Copy-paste your settings into AzuraCast, second input box AFTER above file ---
+#settings.autocue2.path := "cue_file"
+#settings.autocue2.timeout := 60.
+#settings.autocue2.target := -18
+#settings.autocue2.silence := -42
+#settings.autocue2.overlay := -8
+#settings.autocue2.longtail := 15.0
+#settings.autocue2.overlay_longtail := -15
+settings.autocue2.blankskip := true
 
+# `enable_autocue2_metadata()` will autocue ALL files Liquidsoap processes.
+# You can disable it for selected sources using 'annotate:liq_autocue="false"'.
+# Remember you won't get `liq_amplify` data then -- expect loudness jumps!
+enable_autocue2_metadata()
+
+# --- Copy-paste END ---
+
+# --- Use YOUR playlist here! ---
+uri = "/home/matthias/Musik/Playlists/Radio/Classic Rock.m3u"
+#songs = playlist(prefix="autocue2:", uri)
+songs = playlist(uri)
+
+# --- Use YOUR playlist here! ---
+uri = "/home/matthias/Musik/Other/Jingles/Short"
+# set jingle mode, no blank skipping, and some values like AzuraCast would
+#jingles = playlist(prefix='autocue2:annotate:jingle_mode="true",liq_blankskip="false",'
+#  ^ 'liq_cross_duration="0.10",liq_fade_in="0.10",liq_fade_out="0.10"'
+#  ^ ':', uri)
+jingles = playlist(prefix='annotate:jingle_mode="true",liq_blankskip="false",'
+  ^ 'liq_cross_duration="0.10",liq_fade_in="0.10",liq_fade_out="0.10"'
+  ^ ':', uri)
+
+radio = random(weights=[1,1], [songs, jingles])
+radio = amplify(1.,override="liq_amplify",radio)
+
+
+# --- Copy-paste Azuracast LS Config, third input box BEGIN ---
+
+# Be sure to have ReplayGain or "liq_amplify" applied before crossing.
+#radio = amplify(1.,override="replaygain_track_gain",radio)
+# AzuraCast already has the following line enabled:
+#radio = amplify(1.,override="liq_amplify",radio)
+
+# Show metadata in log
 def show_meta(m)
   label="show_meta"
   l = list.sort.natural(metadata.cover.remove(m))
@@ -38,6 +82,14 @@ def show_meta(m)
       nowplaying := a ^ " - " ^ t
     end
   end
+
+  # show `liq_` metadata in level 3
+  def fl(k, _) =
+    string.contains(prefix="liq_", k) or k == "duration"
+  end
+  liq = list.assoc.filter((fl), l)
+  list.iter(fun(v) -> log.important(label=label, "#{v}"), liq)
+
   log.important(label=label, "Now playing: #{nowplaying()}")
   if m["liq_amplify"] == "" then
     log.severe(label=label, "Warning: No liq_amplify found, expect loudness jumps!")
@@ -47,39 +99,9 @@ def show_meta(m)
   end
 end
 
-# testing
-#settings.protocol.autocue2 := "cue_file"
-#settings.protocol.autocue2.timeout := 60.
-#settings.protocol.autocue2.target := -18
-#settings.protocol.autocue2.silence := -42
-#settings.protocol.autocue2.overlay := -8
-#settings.protocol.autocue2.longtail := 15.0
-#settings.protocol.autocue2.overlay_longtail := -15
-settings.protocol.autocue2.blankskip := true
-
-# --- Use YOUR playlist here! ---
-uri = station_media_dir ^ "/Playlists/Radio/Classic Rock.m3u"
-songs = playlist(prefix="autocue2:", uri)
-
-# --- Use YOUR playlist here! ---
-uri = station_media_dir ^ "/Other/Jingles/Short"
-# set jingle mode, no blank skipping, and some values like AzuraCast would
-jingles = playlist(prefix='autocue2:annotate:jingle_mode="true",liq_blankskip="false",'
-  ^ 'liq_cross_duration="0.10",liq_fade_in="0.10",liq_fade_out="0.10"'
-  ^ ':', uri)
-
-radio = random(weights=[1,1], [songs, jingles])
-
-
-# Be sure to have ReplayGain or "liq_amplify" applied before crossing.
-#radio = amplify(1.,override="replaygain_track_gain",radio)
-radio = amplify(1.,override="liq_amplify",radio)
-
-# Show metadata in log
 radio.on_metadata(show_meta)
 
 # Fading/crossing/segueing
-to_live = ref(false)
 def live_aware_crossfade(old, new) =
     label = "live_aware_crossfade"
     if to_live() then
@@ -106,7 +128,7 @@ def live_aware_crossfade(old, new) =
             log.important(label=label, "Song → Song transition")
         end
 
-        nd = float_of_string(default=0.1, list.assoc(default="0.1", "duration", new.metadata))
+        nd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_duration", new.metadata))
         xd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_cross_duration", old.metadata))
         delay = max(0., xd - nd)
         log.important(label=label, "Cross/new/delay: #{xd} / #{nd} / #{delay} s")
@@ -117,13 +139,76 @@ def live_aware_crossfade(old, new) =
 
         # If needed, delay BOTH fade-out and fade-in, to avoid dead air.
         # This ensures a better transition for jingles shorter than cross_duration.
-        add(normalize=false, [fade.in(duration=.1, delay=delay, new.source), fade.out(duration=2.5, delay=delay, old.source)])
+        add(normalize=false, [fade.in(initial_metadata=new.metadata, duration=.1, delay=delay, new.source), fade.out(initial_metadata=old.metadata, duration=2.5, delay=delay, old.source)])
         #cross.simple(old.source, new.source, fade_in=0.1, fade_out=2.5)
         #cross.smart(old, new, fade_in=0.1, fade_out=2.5, margin=8.)
     end
 end
 
+def simple_crossfade(old,new) =
+  cross.simple(
+    initial_fade_in_metadata=new.metadata,
+    initial_fade_out_metadata=old.metadata,
+    old.source, new.source)
+end
+
+def live_aware_crossfade_simple(old, new) =
+    label = "live_aware_crossfade_simple"
+    if to_live() then
+        # If going to the live show, play a simple sequence
+        # fade out AutoDJ, do (almost) not fade in streamer
+        sequence([fade.out(duration=2.5,old.source),fade.in(duration=0.1,new.source)])
+    else
+        # Otherwise, use the simple transition
+        log.important(label=label, "Using custom crossfade")
+        if (old.metadata["jingle_mode"] == "true")
+          and (new.metadata["jingle_mode"] == "true") then
+            log.important(label=label, "Jingle → Jingle transition")
+        end
+        if (old.metadata["jingle_mode"] == "true")
+          and (new.metadata["jingle_mode"] == "") then
+            log.important(label=label, "Jingle → Song transition")
+        end
+        if (old.metadata["jingle_mode"] == "")
+          and (new.metadata["jingle_mode"] == "true") then
+            log.important(label=label, "Song → Jingle transition")
+        end
+        if (old.metadata["jingle_mode"] == "")
+          and (new.metadata["jingle_mode"] == "") then
+            log.important(label=label, "Song → Song transition")
+        end
+
+        nd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_duration", new.metadata))
+        xd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_cross_duration", old.metadata))
+        delay = max(0., xd - nd)
+        log.important(label=label, "Cross/new/delay: #{xd} / #{nd} / #{delay} s")
+        if (xd > nd) then
+          log.severe(label=label, "Cross duration #{xd} s longer than next track (#{nd} s)!")
+          log.severe(label=label, "Delaying fade-out & next track fade-in by #{delay} s.")
+          #add(normalize=false, [fade.in(duration=.1, delay=delay, new.source), fade.out(duration=2.5, delay=delay, old.source)])
+          #sequence([fade.out(duration=2.5, old.source), fade.in(duration=.1, new.source)])
+        #else
+          #add(normalize=false, [fade.in(duration=.1, new.source), fade.out(duration=2.5, old.source)])
+        end
+
+        # If needed, delay BOTH fade-out and fade-in, to avoid dead air.
+        # This ensures a better transition for jingles shorter than cross_duration.
+        #add(normalize=false, [fade.in(duration=.1, delay=delay, new.source), fade.out(duration=2.5, delay=delay, old.source)])
+        cross.simple(
+          initial_fade_in_metadata=new.metadata,
+          initial_fade_out_metadata=old.metadata,
+          old.source,
+          new.source,
+          fade_in=0.1,
+          fade_out=2.5)
+        #cross.smart(old, new, fade_in=0.1, fade_out=2.5, margin=8.)
+    end
+end
+
+#radio = cross(reconcile_duration=true, duration=3.0, width=2.0, live_aware_crossfade_simple, radio)
 radio = cross(duration=3.0, width=2.0, live_aware_crossfade, radio)
+
+# --- Copy-paste Azuracast LS Config, third input box END ---
 
 radio = mksafe(radio)
 

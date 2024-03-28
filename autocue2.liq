@@ -1,102 +1,147 @@
 # autocue2.liq
-# 2024-03-25 - Moonbase59
+# 2024-03-28 - Moonbase59
 
-# --- protocol definition begin
+# --- Copy-paste Azuracast LS Config, second input box BEGIN ---
 
-let settings.protocol.autocue2 = settings.make.protocol("autocue2")
-let settings.protocol.autocue2.path =
+# Initialize settings for autocue2 protocol
+let settings.autocue2 = ()
+
+let settings.autocue2.path =
   settings.make(
     description=
       "Path of the autocue2 binary.",
     "cue_file"
   )
 
-let settings.protocol.autocue2.timeout =
+let settings.autocue2.timeout =
   settings.make(
     description=
       "Timeout (in seconds) for autocue2 executions.",
     60.
   )
 
-let settings.protocol.autocue2.target =
+let settings.autocue2.target =
   settings.make(
     description=
       "Loudness target in LUFS.",
     -18
   )
 
-let settings.protocol.autocue2.silence =
+let settings.autocue2.silence =
   settings.make(
     description=
       "Silence level (for cue points) in LU/dB below track loudness.",
     -42
   )
 
-let settings.protocol.autocue2.overlay =
+let settings.autocue2.overlay =
   settings.make(
     description=
       "Start overlay level in LU/dB below track loudness.",
     -8
   )
 
-let settings.protocol.autocue2.longtail =
+let settings.autocue2.longtail =
   settings.make(
     description=
       "More than so many seconds of calculated overlay are considered a long tail.",
     15.0
   )
 
-let settings.protocol.autocue2.overlay_longtail =
+let settings.autocue2.overlay_longtail =
   settings.make(
     description=
       "Extra LU/dB level below overlay loudness, to recalculate songs with long tails.",
     -15
   )
 
-let settings.protocol.autocue2.blankskip =
+let settings.autocue2.blankskip =
   settings.make(
     description=
       'Skip blank (silence) within song (get rid of "hidden tracks".)',
     false
   )
 
+let file.autocue2 = ()
 
-# Register the autocue2 protocol.
+# Get autocue values from external cue_file executable
 # @flag hidden
-def protocol.autocue2(~rlog, ~maxtime=settings.protocol.autocue2.timeout(), arg) =
+def file.autocue2.compute(
+  ~timeout=null(),
+  ~target=null(),
+  ~silence=null(),
+  ~overlay=null(),
+  ~longtail=null(),
+  ~overlay_longtail=null(),
+  ~blankskip=null(),
+  uri
+) =
+  timeout = timeout ?? settings.autocue2.timeout()
+  target = target ?? settings.autocue2.target()
+  silence = silence ?? settings.autocue2.silence()
+  overlay = overlay ?? settings.autocue2.overlay()
+  longtail = longtail ?? settings.autocue2.longtail()
+  overlay_longtail = overlay_longtail ?? settings.autocue2.overlay_longtail()
+  blankskip = blankskip ?? settings.autocue2.blankskip()
 
-  def log(~level=4, s) =
-    #rlog(s)
-    log(label="protocol.autocue2", level=level, s)
-  end
-  
-  def get_data(f, ~blankskip=settings.protocol.autocue2.blankskip()) =
-    log('Processing file "#{f}" ...')
-    
+  r = request.create(excluded_metadata_resolvers=["autocue2"], uri)
+  s = request.once(r)
+
+  if
+    s.resolve()
+  then
+    # resolved local filename
+    fname = request.filename(r)
+    meta = request.metadata(r)
+
+    log(
+      level=3,
+      label="autocue2",
+      'Now autocueing: "#{uri}"'
+    )
+
+    # Blank skipping can be set globally using `settings.autocue2.blankskip`.
+    # For AzuraCast, we override that setting if we detect "jingle_mode",
+    # i.e. a track from a playlist that has "Hide Metadata from Listeners" set.
+    # For standalone Liquidsoap, the ultimate override is `liq_blankskip`.
+    # This can even be used to switch blank skipping ON if is globally off.
+    blankskip = ref(blankskip)
+    blankskip := list.assoc.mem("jingle_mode", meta) ? false : blankskip()
+    # Handle annotated `liq_blankskip`
+    if list.assoc.mem("liq_blankskip", meta) then
+      blankskip := bool_of_string(default=false, meta["liq_blankskip"])
+    end
+
     # set up CLI arguments
     args=ref([
-      '-t', string(settings.protocol.autocue2.target()),
-      '-s', string(settings.protocol.autocue2.silence()),
-      '-o', string(settings.protocol.autocue2.overlay()),
-      '-l', string(settings.protocol.autocue2.longtail()),
-      '-x', string(settings.protocol.autocue2.overlay_longtail()),
-      f
+      '-t', string(target),
+      '-s', string(silence),
+      '-o', string(overlay),
+      '-l', string(longtail),
+      '-x', string(overlay_longtail),
+      fname
     ])
-    if blankskip then
+    if blankskip() then
       args := list.add('-b', args())
     end
     
     result = list.hd(
       default="",
       process.read.lines(
-        timeout=settings.protocol.autocue2.timeout(),
+        timeout=timeout,
         process.quote.command(
-          settings.protocol.autocue2.path(),
+          settings.autocue2.path(),
           args=args()
         )
       )
     )
-    log(result)
+    
+    # TODO: Error handling
+    log(
+      level=3,
+      label="autocue2",
+      'Autocue2 result for "#{fname}": #{result}'
+    )
     
     # TODO: How to handle an incomplete result (not all values in JSON)?
     # Could happen if cue_file only read (incomplete) file tags instead of
@@ -136,97 +181,171 @@ def protocol.autocue2(~rlog, ~maxtime=settings.protocol.autocue2.timeout(), arg)
       ("liq_amplify", liq_amplify),
       ("liq_blank_skipped", liq_blank_skipped)
     ]
-  end
-
-  log(level=3, 'Autocueing "' ^ arg ^ '" ...')
-  meta = ref([])
-  urilocal = ref("")
-  newmeta = ref([])
-  a = string(string.residual(prefix="annotate:", arg))
-  log(a)
-  if a != "null" then
-    let (m, uri) = string.annotate.parse(a)
-    meta := m
-    log("BEFORE:")
-    log("URI: #{uri}")
-    list.iter(fun(e) -> log("#{e}"), meta())
-    # FIXME: AzuraCast kludge: resolve "media:" protocol manually
-    urilocal := string(string.residual(prefix="media:", uri))
-    if urilocal() != "null" then
-      urilocal := "#{station_media_dir}/#{urilocal()}"
-    else
-      urilocal := uri
-    end
-    blankskip = ref(settings.protocol.autocue2.blankskip())
-    # FIXME: AzuraCast kludge: only skip blanks if not jingle
-    blankskip := list.assoc.mem("jingle_mode", meta()) ? false : (settings.protocol.autocue2.blankskip())
-    # Handle annotated blankskip
-    if list.assoc.mem("liq_blankskip", m) then
-      blankskip := bool_of_string(default=false, m["liq_blankskip"])
-    end
-    newmeta := get_data(urilocal(), blankskip=blankskip())
   else
-    log("URI: #{arg}")
-    urilocal := arg
-    # FIXME: AzuraCast kludge: only skip blanks if not jingle
-    blankskip = list.assoc.mem("jingle_mode", meta()) ? false : (settings.protocol.autocue2.blankskip())
-    newmeta := get_data(urilocal(), blankskip=blankskip)
+    log(
+      level=2,
+      label="autocue2",
+      "Couldn't resolve source for URI: #{uri}"
+    )
+    []
   end
-  
-  log("NEW META:")
-  list.iter(fun(e) -> log("#{e}"), newmeta())
-  
-  # remove duration -- we want to always replace this
-  # because we believe ours is more exact
-  meta := list.assoc.remove("duration", meta())
-  
-  # only use calculated values if not already existent in AzuraCast
-  # so we don't overwrite manually set values in the database
-  meta := list.fold(
-    fun(result, entry) -> 
-      if list.assoc.mem(fst(entry), result) then
-        result
-      else
-        [...result, entry]
-      end,
-      meta(),
-      newmeta()
-  )
+end
 
-  log("AFTER:")
-  log("URI: #{urilocal()}")
-  list.iter(fun(e) -> log("#{e}"), meta())
+# Compute autocue2 data
+# @flag extra
+# @category Source / Audio processing
+# @param ~timeout Timeout
+# @param ~target Loudness target in LUFS
+# @param ~silence Silence level in LU/dB below track loudness
+# @param ~overlay Start overlay level in LU/dB below track loudness
+# @param ~longtail More than so many seconds of calculated overlay are considered a long tail.
+# @param ~overlay_longtail Extra LU/dB level below overlay loudness, to recalculate songs with long tails
+# @param ~blankskip Skip blank (silence) within song (get rid of "hidden tracks")
+def replaces file.autocue2(
+  ~timeout=null(),
+  ~target=null(),
+  ~silence=null(),
+  ~overlay=null(),
+  ~longtail=null(),
+  ~overlay_longtail=null(),
+  ~blankskip=null(),
+  uri
+) =
+  timeout = timeout ?? settings.autocue2.timeout()
+  target = target ?? settings.autocue2.target()
+  silence = silence ?? settings.autocue2.silence()
+  overlay = overlay ?? settings.autocue2.overlay()
+  longtail = longtail ?? settings.autocue2.longtail()
+  overlay_longtail = overlay_longtail ?? settings.autocue2.overlay_longtail()
+  blankskip = blankskip ?? settings.autocue2.blankskip()
 
-  # build list of key=value pairs from combined metadata
-  l = ref([])
-  list.iter(fun(e) ->
-    l := list.add("#{fst(e)}=\"#{snd(e)}\"", l()),
-    meta()
-  )
+  result =
+    file.autocue2.compute(
+      timeout=timeout,
+      target=target,
+      silence=silence,
+      overlay=overlay,
+      longtail=longtail,
+      overlay_longtail=overlay_longtail,
+      blankskip=blankskip,
+      uri
+    )    
 
-  # concatenate list to param string
-  p = ref("")
-  p := string.concat(separator=",", l())
-  # if we got params, add "annotate:" protocol
-  if p() != "" then
-    p := "annotate:" ^ p() ^ ":"
+  if
+    result == []
+  then
+    log(
+      level=2,
+      label="autocue2",
+      "Autocue2 computation failed!"
+    )
+    #null()
+    []
+  else
+    result
   end
+end
 
-  # add URI
-  p := p() ^ urilocal()
-  
-  log(level=3, "Result: #{p()}")
-  
-  [p()]
+# Return the file's autocue2 values as metadata suitable for metadata override.
+# @flag extra
+# @category Source / Audio processing
+# @param ~timeout Timeout
+# @param ~target Loudness target in LUFS
+# @param ~silence Silence level in LU/dB below track loudness
+# @param ~overlay Start overlay level in LU/dB below track loudness
+# @param ~longtail More than so many seconds of calculated overlay are considered a long tail.
+# @param ~overlay_longtail Extra LU/dB level below overlay loudness, to recalculate songs with long tails
+# @param ~blankskip Skip blank (silence) within song (get rid of "hidden tracks")
+def file.autocue2.metadata(
+  ~timeout=null(),
+  ~target=null(),
+  ~silence=null(),
+  ~overlay=null(),
+  ~longtail=null(),
+  ~overlay_longtail=null(),
+  ~blankskip=null(),
+  uri
+) =
+  let autocue2 =
+    file.autocue2(
+      timeout=timeout,
+      target=target,
+      silence=silence,
+      overlay=overlay,
+      longtail=longtail,
+      overlay_longtail=overlay_longtail,
+      blankskip=blankskip,
+      uri
+    )
+
+  if
+    null.defined(autocue2)
+  then
+    autocue2
+  else
+    log(
+      level=2,
+      label="autocue2.metadata",
+      'No autocue data found for file "#{uri}"'
+    )
+    []
+  end
+end
+
+# Enable autocue2 metadata resolver. This resolver will process any file
+# decoded by Liquidsoap and add cue-in/out and crossfade metadata when these
+# values can be computed. For a finer-grained processing, use the `autocue2:` protocol.
+# NOTE: You might want to annotate VIDEO sources with `liq_autocue=false`!
+# Autocueing a multi-GB video works, but can really eat up CPU.
+# @category Liquidsoap
+def enable_autocue2_metadata() =
+  def autocue2_metadata(~metadata, fname) =
+    if 
+      metadata["liq_autocue"] == "false"
+    then
+      log(
+        level=2,
+        label="autocue2",
+        'Skipping autocue for file "#{fname}" because liq_autocue=false forbids it.'
+      )
+      []
+    else
+      file.autocue2.metadata(fname)
+    end
+  end
+  decoder.metadata.add("autocue2", autocue2_metadata)
+end
+
+# Define autocue2 protocol
+# @flag hidden
+def protocol.autocue2(~rlog=_, ~maxtime=_, arg) =
+  cue_metadata = file.autocue2.metadata(arg)
+
+  if
+    cue_metadata != []
+  then
+    cue_metadata =
+      list.map(fun (el) -> "#{fst(el)}=#{string.quote(snd(el))}", cue_metadata)
+    cue_metadata = string.concat(separator=",", cue_metadata)
+    ["annotate:#{cue_metadata}:#{arg}"]
+  else
+    log(
+      level=2,
+      label="autocue2.protocol",
+      'No autocue data found for URI "#{arg}"!'
+    )
+    [arg]
+  end
 end
 
 protocol.add(
   "autocue2",
   protocol.autocue2,
-  syntax="autocue2:uri",
   doc=
-    "Compute autocue2 values. Adds returned values as \
-     annotation in metadata"
+    "Adding automatically computed cues/crossfade metadata",
+  syntax="autocue2:uri"
 )
 
-# --- protocol definition end
+# --- Copy-paste Azuracast LS Config, second input box END ---
+
+# Don't forget to add your settings after this.
