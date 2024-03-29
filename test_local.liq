@@ -35,10 +35,9 @@ to_live = ref(false)
 #settings.autocue2.overlay := -8
 #settings.autocue2.longtail := 15.0
 #settings.autocue2.overlay_longtail := -15
-#settings.autocue2.blankskip := false
+settings.autocue2.blankskip := true
 
 # `enable_autocue2_metadata()` will autocue ALL files Liquidsoap processes.
-# Starting with Liquidsoap 2.2.5/2.3.0...
 # You can disable it for selected sources using 'annotate:liq_autocue="false"'.
 # Remember you won't get `liq_amplify` data then -- expect loudness jumps!
 enable_autocue2_metadata()

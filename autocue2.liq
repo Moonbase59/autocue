@@ -1,5 +1,5 @@
 # autocue2.liq
-# 2024-03-28 - Moonbase59
+# 2024-03-29 - Moonbase59
 
 # --- Copy-paste Azuracast LS Config, second input box BEGIN ---
 
@@ -102,10 +102,6 @@ def file.autocue2.compute(
       'Now autocueing: "#{uri}"'
     )
 
-    l = list.sort.natural(metadata.cover.remove(meta))
-    list.iter(fun(v) -> log.important(label="autocue2", "#{v}"), l)
-
-
     # Blank skipping can be set globally using `settings.autocue2.blankskip`.
     # For AzuraCast, we override that setting if we detect "jingle_mode",
     # i.e. a track from a playlist that has "Hide Metadata from Listeners" set.
@@ -117,6 +113,7 @@ def file.autocue2.compute(
     if list.assoc.mem("liq_blankskip", meta) then
       blankskip := bool_of_string(default=false, meta["liq_blankskip"])
     end
+    log.important(label="autocue2", "Blank (silence) skipping active: #{blankskip()}")
 
     # set up CLI arguments
     args=ref([
@@ -306,8 +303,9 @@ end
 # @category Liquidsoap
 def enable_autocue2_metadata() =
   def autocue2_metadata(~metadata, fname) =
+    meta = metadata
     if 
-      metadata["liq_autocue"] == "false"
+      meta["liq_autocue"] == "false"
     then
       log(
         level=2,
@@ -316,7 +314,20 @@ def enable_autocue2_metadata() =
       )
       []
     else
-      file.autocue2.metadata(fname)
+      # "Hand down" blankskip since we can't rely on having the metadata later.
+
+      # Blank skipping can be set globally using `settings.autocue2.blankskip`.
+      # For AzuraCast, we override that setting if we detect "jingle_mode",
+      # i.e. a track from a playlist that has "Hide Metadata from Listeners" set.
+      # For standalone Liquidsoap, the ultimate override is `liq_blankskip`.
+      # This can even be used to switch blank skipping ON if is globally off.
+      blankskip = ref(settings.autocue2.blankskip())
+      blankskip := list.assoc.mem("jingle_mode", meta) ? false : blankskip()
+      # Handle annotated `liq_blankskip`
+      if list.assoc.mem("liq_blankskip", meta) then
+        blankskip := bool_of_string(default=false, meta["liq_blankskip"])
+      end
+      file.autocue2.metadata(blankskip=blankskip(), fname)
     end
   end
   decoder.metadata.add("autocue2", autocue2_metadata)
