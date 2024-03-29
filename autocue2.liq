@@ -333,7 +333,7 @@ def enable_autocue2_metadata() =
       list.iter(fun(v) -> log.important(label=label, "#{v}"), l)
 
       log(level=3, label=label, 'jingle_mode=#{metadata["jingle_mode"]}, liq_blankskip=#{metadata["liq_blankskip"]}')
-
+      
       # Blank skipping can be set globally using `settings.autocue2.blankskip`.
       # For AzuraCast, we override that setting if we detect "jingle_mode",
       # i.e. a track from a playlist that has "Hide Metadata from Listeners" set.
@@ -345,7 +345,7 @@ def enable_autocue2_metadata() =
       if list.assoc.mem("liq_blankskip", metadata) then
         blankskip := bool_of_string(default=false, metadata["liq_blankskip"])
       end
-      log(level=3, label=label, 'jingle_mode=#{metadata["jingle_mode"]}, liq_blankskip=#{metadata["liq_blankskip"]}')
+      
       file.autocue2.metadata(blankskip=blankskip(), fname)
     end
   end
