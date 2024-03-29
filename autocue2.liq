@@ -1,6 +1,8 @@
 # autocue2.liq
 # 2024-03-29 - Moonbase59
 
+# Lots of debugging output for AzuraCast in this, will be removed eventually.
+
 # --- Copy-paste Azuracast LS Config, second input box BEGIN ---
 
 # Initialize settings for autocue2 protocol
@@ -84,6 +86,8 @@ def file.autocue2.compute(
   overlay_longtail = overlay_longtail ?? settings.autocue2.overlay_longtail()
   blankskip = blankskip ?? settings.autocue2.blankskip()
 
+  label = "autocue2.compute"
+
   # This only works in LS 2.2.5/2.3.0, enabling it then...
   #r = request.create(excluded_metadata_resolvers=["autocue2"], uri)
   r = request.create(resolve_metadata=false, uri)
@@ -98,9 +102,12 @@ def file.autocue2.compute(
 
     log(
       level=3,
-      label="autocue2",
+      label=label,
       'Now autocueing: "#{uri}"'
     )
+
+    #l = list.sort.natural(metadata.cover.remove(meta))
+    #list.iter(fun(v) -> log.important(label=label, "#{v}"), l)
 
     # Blank skipping can be set globally using `settings.autocue2.blankskip`.
     # For AzuraCast, we override that setting if we detect "jingle_mode",
@@ -113,7 +120,8 @@ def file.autocue2.compute(
     if list.assoc.mem("liq_blankskip", meta) then
       blankskip := bool_of_string(default=false, meta["liq_blankskip"])
     end
-    log.important(label="autocue2", "Blank (silence) skipping active: #{blankskip()}")
+    log.important(label=label, "Blank (silence) skipping active: #{blankskip()}")
+    #log.important(label=label, 'jingle_mode=#{meta["jingle_mode"]}, liq_blankskip=#{meta["liq_blankskip"]}')
 
     # set up CLI arguments
     args=ref([
@@ -142,7 +150,7 @@ def file.autocue2.compute(
     # TODO: Error handling
     log(
       level=3,
-      label="autocue2",
+      label=label,
       'Autocue2 result for "#{fname}": #{result}'
     )
     
@@ -187,7 +195,7 @@ def file.autocue2.compute(
   else
     log(
       level=2,
-      label="autocue2",
+      label=label,
       "Couldn't resolve source for URI: #{uri}"
     )
     []
@@ -303,18 +311,28 @@ end
 # @category Liquidsoap
 def enable_autocue2_metadata() =
   def autocue2_metadata(~metadata, fname) =
-    meta = metadata
+    label = "autocue2_metadata"
     if 
-      meta["liq_autocue"] == "false"
+      metadata["liq_autocue"] == "false"
     then
       log(
         level=2,
-        label="autocue2",
+        label=label,
         'Skipping autocue for file "#{fname}" because liq_autocue=false forbids it.'
       )
       []
     else
       # "Hand down" blankskip since we can't rely on having the metadata later.
+
+      def metadata_cover_remove(m) =
+        list.assoc.filter(
+          fun (k, (_:string)) -> not list.mem(k, settings.encoder.metadata.cover()), m
+        )
+      end
+      l = list.sort.natural(metadata_cover_remove(metadata))
+      list.iter(fun(v) -> log.important(label=label, "#{v}"), l)
+
+      log(level=3, label=label, 'jingle_mode=#{metadata["jingle_mode"]}, liq_blankskip=#{metadata["liq_blankskip"]}')
 
       # Blank skipping can be set globally using `settings.autocue2.blankskip`.
       # For AzuraCast, we override that setting if we detect "jingle_mode",
@@ -322,11 +340,12 @@ def enable_autocue2_metadata() =
       # For standalone Liquidsoap, the ultimate override is `liq_blankskip`.
       # This can even be used to switch blank skipping ON if is globally off.
       blankskip = ref(settings.autocue2.blankskip())
-      blankskip := list.assoc.mem("jingle_mode", meta) ? false : blankskip()
+      blankskip := list.assoc.mem("jingle_mode", metadata) ? false : blankskip()
       # Handle annotated `liq_blankskip`
-      if list.assoc.mem("liq_blankskip", meta) then
-        blankskip := bool_of_string(default=false, meta["liq_blankskip"])
+      if list.assoc.mem("liq_blankskip", metadata) then
+        blankskip := bool_of_string(default=false, metadata["liq_blankskip"])
       end
+      log(level=3, label=label, 'jingle_mode=#{metadata["jingle_mode"]}, liq_blankskip=#{metadata["liq_blankskip"]}')
       file.autocue2.metadata(blankskip=blankskip(), fname)
     end
   end
