@@ -8,7 +8,7 @@ Requires Python3 and `ffmpeg` with the _ebur128_ filter. (The AzuraCast Docker a
 Tested on Linux and Mac, with several `ffmpeg` versions ranging from 4.4.2–6.1.1, and running on several stations since a few weeks.
 
 Basically, `autocue` consists of two parts:
-- `cue_file`, a Python3 script, that returns JSON data for a file. This can be used standalone, as part of some pre-processing or AutoDJ software, or in conjunction with below.
+- `cue_file`, a Python3 script, that returns JSON cueing, loudness and overlay data for an audio file. This can be used standalone, as part of some pre-processing or AutoDJ software, or in conjunction with below.
 - The [Liquidsoap](https://www.liquidsoap.info/) `autocue2:` protocol, for full integration into Liquidsoap, which in turn can be used standalone or as part of a larger playout system like [AzuraCast](https://www.azuracast.com/) or others.
 
 ## Install
