@@ -36,6 +36,7 @@ to_live = ref(false)
 #settings.autocue2.longtail := 15.0
 #settings.autocue2.overlay_longtail := -15
 settings.autocue2.blankskip := true
+#settings.autocue2.unify_loudness_correction := true
 
 # `enable_autocue2_metadata()` will autocue ALL files Liquidsoap processes.
 # You can disable it for selected sources using 'annotate:liq_autocue="false"'.
@@ -92,7 +93,7 @@ def show_meta(m)
 
   # show `liq_` metadata in level 3
   def fl(k, _) =
-    string.contains(prefix="liq_", k) or k == "duration"
+    string.contains(prefix="liq_", k) or k == "duration" or k == "replaygain_track_gain"
   end
   liq = list.assoc.filter((fl), l)
   list.iter(fun(v) -> log.important(label=label, "#{v}"), liq)
@@ -164,5 +165,5 @@ output.ao(radio)
 # record to a file for later checking with Audacity or the like
 # also write a .cue file so we can find tracks more easily
 # --- comment out the following one line if you have a pre-2.3.0 Liquidsoap version ---
-radio = source.cue(title="test_local.liq", file="test_local.mp3", "test_local.cue", radio)
+#radio = source.cue(title="test_local.liq", file="test_local.mp3", "test_local.cue", radio)
 output.file(%mp3, "test_local.mp3", radio)

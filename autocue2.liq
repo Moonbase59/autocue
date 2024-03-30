@@ -1,5 +1,5 @@
 # autocue2.liq
-# 2024-03-29 - Moonbase59
+# 2024-03-30 - Moonbase59
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -64,6 +64,13 @@ let settings.autocue2.blankskip =
     false
   )
 
+let settings.autocue2.unify_loudness_correction =
+  settings.make(
+    description=
+      'Unify `replaygain_track_gain` and `liq_amplify`. If enabled, this will ensure both have the same value, with `raplaygain_track_gain` taking precedence if it exists. Allows scripts to amplify on either value, without getting loudness jumps.',
+    true
+  )
+
 let file.autocue2 = ()
 
 # Get autocue values from external cue_file executable
@@ -89,8 +96,8 @@ def file.autocue2.compute(
   label = "autocue2.compute"
 
   # This only works in LS 2.2.5/2.3.0, enabling it then...
-  #r = request.create(excluded_metadata_resolvers=["autocue2"], uri)
-  r = request.create(resolve_metadata=false, uri)
+  r = request.create(excluded_metadata_resolvers=["autocue2"], uri)
+  #r = request.create(resolve_metadata=false, uri)
   s = request.once(r)
 
   if
@@ -106,8 +113,8 @@ def file.autocue2.compute(
       'Now autocueing: "#{uri}"'
     )
 
-    #l = list.sort.natural(metadata.cover.remove(meta))
-    #list.iter(fun(v) -> log.important(label=label, "#{v}"), l)
+    l = list.sort.natural(metadata.cover.remove(meta))
+    list.iter(fun(v) -> log.important(label=label, "#{v}"), l)
 
     # Blank skipping can be set globally using `settings.autocue2.blankskip`.
     # For AzuraCast, we override that setting if we detect "jingle_mode",
@@ -120,8 +127,8 @@ def file.autocue2.compute(
     if list.assoc.mem("liq_blankskip", meta) then
       blankskip := bool_of_string(default=false, meta["liq_blankskip"])
     end
+    log.important(label=label, 'jingle_mode=#{meta["jingle_mode"]}, liq_blankskip=#{meta["liq_blankskip"]}')
     log.important(label=label, "Blank (silence) skipping active: #{blankskip()}")
-    #log.important(label=label, 'jingle_mode=#{meta["jingle_mode"]}, liq_blankskip=#{meta["liq_blankskip"]}')
 
     # set up CLI arguments
     args=ref([
@@ -275,28 +282,83 @@ def file.autocue2.metadata(
   ~longtail=null(),
   ~overlay_longtail=null(),
   ~blankskip=null(),
+  ~metadata=null(),
   uri
 ) =
-  let autocue2 =
-    file.autocue2(
-      timeout=timeout,
-      target=target,
-      silence=silence,
-      overlay=overlay,
-      longtail=longtail,
-      overlay_longtail=overlay_longtail,
-      blankskip=blankskip,
-      uri
-    )
+  timeout = timeout ?? settings.autocue2.timeout()
+  target = target ?? settings.autocue2.target()
+  silence = silence ?? settings.autocue2.silence()
+  overlay = overlay ?? settings.autocue2.overlay()
+  longtail = longtail ?? settings.autocue2.longtail()
+  overlay_longtail = overlay_longtail ?? settings.autocue2.overlay_longtail()
+  blankskip = blankskip ?? settings.autocue2.blankskip()
+  metadata = metadata ?? []
 
+  label = "autocue2.metadata"
+
+  # need to replicate, "metadata.cover.remove" can't be accessed here
+  def metadata_cover_remove(m) =
+    list.assoc.filter(
+      fun (k, (_:string)) -> not list.mem(k, settings.encoder.metadata.cover()), m
+    )
+  end
+  l = list.sort.natural(metadata_cover_remove(metadata))
+  list.iter(fun(v) -> log.important(label=label, "#{v}"), l)
+
+  log(level=3, label=label, 'jingle_mode=#{metadata["jingle_mode"]}, liq_blankskip=#{metadata["liq_blankskip"]}')
+
+  # Blank skipping can be set globally using `settings.autocue2.blankskip`.
+  # For AzuraCast, we override that setting if we detect "jingle_mode",
+  # i.e. a track from a playlist that has "Hide Metadata from Listeners" set.
+  # For standalone Liquidsoap, the ultimate override is `liq_blankskip`.
+  # This can even be used to switch blank skipping ON if is globally off.
+  blankskip = ref(settings.autocue2.blankskip())
+  blankskip := list.assoc.mem("jingle_mode", metadata) ? false : blankskip()
+  # Handle annotated `liq_blankskip`
+  if list.assoc.mem("liq_blankskip", metadata) then
+    blankskip := bool_of_string(default=false, metadata["liq_blankskip"])
+  end
+
+  result = ref([])
+  result := file.autocue2(
+    timeout=timeout,
+    target=target,
+    silence=silence,
+    overlay=overlay,
+    longtail=longtail,
+    overlay_longtail=overlay_longtail,
+    blankskip=blankskip(),
+    uri
+  )
   if
-    null.defined(autocue2)
+    null.defined(result())
   then
-    autocue2
+    if settings.autocue2.unify_loudness_correction() then
+      # We wish to avoid loudness jumps in all possible cases,
+      # so bring `replaygain_track_gain` and `liq_amplify` in line.
+      if list.assoc.mem("replaygain_track_gain", metadata) then
+        # `replaygain_track_gain` available: override `liq_amplify`
+        la = list.assoc(default="0.00 dB", "liq_amplify", result())
+        rg = list.assoc(default="0.00 dB", "replaygain_track_gain", metadata)
+        r = list.assoc.remove("liq_amplify", result())
+        result := list.append([("liq_amplify", "#{rg}")], r)
+        log(level=3, label=label, 'Replaced liq_amplify=#{la} with #{rg} from replaygain_track_gain')
+      else
+        # no `replaygain_track_gain`? insert one, using calculated `liq_amplify`
+        rg = list.assoc(default="0.00 dB", "liq_amplify", result())
+        result := list.append([("replaygain_track_gain", "#{rg}")], result())
+        log(level=3, label=label, 'Inserted missing replaygain_track_gain: #{rg}')
+      end
+    end
+
+    l = list.sort.natural(metadata_cover_remove(result()))
+    list.iter(fun(v) -> log.important(label=label, "#{v}"), l)
+
+    result()
   else
     log(
       level=2,
-      label="autocue2.metadata",
+      label=label,
       'No autocue data found for file "#{uri}"'
     )
     []
@@ -318,35 +380,12 @@ def enable_autocue2_metadata() =
       log(
         level=2,
         label=label,
-        'Skipping autocue for file "#{fname}" because liq_autocue=false forbids it.'
+        'Skipping autocue2 for file "#{fname}" because liq_autocue=false forbids it.'
       )
       []
     else
-      # "Hand down" blankskip since we can't rely on having the metadata later.
-
-      def metadata_cover_remove(m) =
-        list.assoc.filter(
-          fun (k, (_:string)) -> not list.mem(k, settings.encoder.metadata.cover()), m
-        )
-      end
-      l = list.sort.natural(metadata_cover_remove(metadata))
-      list.iter(fun(v) -> log.important(label=label, "#{v}"), l)
-
-      log(level=3, label=label, 'jingle_mode=#{metadata["jingle_mode"]}, liq_blankskip=#{metadata["liq_blankskip"]}')
-      
-      # Blank skipping can be set globally using `settings.autocue2.blankskip`.
-      # For AzuraCast, we override that setting if we detect "jingle_mode",
-      # i.e. a track from a playlist that has "Hide Metadata from Listeners" set.
-      # For standalone Liquidsoap, the ultimate override is `liq_blankskip`.
-      # This can even be used to switch blank skipping ON if is globally off.
-      blankskip = ref(settings.autocue2.blankskip())
-      blankskip := list.assoc.mem("jingle_mode", metadata) ? false : blankskip()
-      # Handle annotated `liq_blankskip`
-      if list.assoc.mem("liq_blankskip", metadata) then
-        blankskip := bool_of_string(default=false, metadata["liq_blankskip"])
-      end
-      
-      file.autocue2.metadata(blankskip=blankskip(), fname)
+      # "Hand down" metadata since we can't rely on having it later.
+      file.autocue2.metadata(metadata=metadata, fname)
     end
   end
   decoder.metadata.add("autocue2", autocue2_metadata)
