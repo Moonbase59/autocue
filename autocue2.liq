@@ -347,7 +347,7 @@ def file.autocue2.metadata(
         # no `replaygain_track_gain`? insert one, using calculated `liq_amplify`
         rg = list.assoc(default="0.00 dB", "liq_amplify", result())
         result := list.append([("replaygain_track_gain", "#{rg}")], result())
-        log(level=3, label=label, 'Inserted missing replaygain_track_gain: #{rg}')
+        log(level=3, label=label, 'Inserted replaygain_track_gain: #{rg}')
       end
     end
 
