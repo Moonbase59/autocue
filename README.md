@@ -7,6 +7,10 @@ Requires Python3 and `ffmpeg` with the _ebur128_ filter. (The AzuraCast Docker a
 
 Tested on Linux and Mac, with several `ffmpeg` versions ranging from 4.4.2–6.1.1, and running on several stations since a few weeks.
 
+Basically, `autocue` consists of two parts:
+- `cue_file`, a Python3 script, that returns JSON data for a file. This can be used standalone, as part of some pre-processing or AutoDJ software, or in conjunction with below.
+- The [Liquidsoap](https://www.liquidsoap.info/) `autocue2:` protocol, for full integration into Liquidsoap, which in turn can be used standalone or as part of a larger playout system like [AzuraCast](https://www.azuracast.com/) or others.
+
 ## Install
 
 Put `cue_file` in your path locally (i.e., into `~/bin`, `~/.local/bin` or `/usr/local/bin`) and `chmod+x` it.
@@ -20,7 +24,7 @@ services:
       - /var/azuracast/bin/cue_file:/usr/local/bin/cue_file
 ```
 
-With [AzuraCast](https://www.azuracast.com/), you now have two options for installing:
+With AzuraCast, you now have two options for installing:
 
 1. Without modifying the generated AzuraCast Liquidsoap config. Use `enable_autocue2_metadata()` for that. _Drawback:_ You can’t use `settings.autocue2.blankskip := true` and expect "hidden" jingles to be automatically exempted from finding silent parts in the tracks.
 2. You can modify the AzuraCast Liquidsoap config by installing @RM-FM’s [`ls-config-replace`](https://github.com/RM-FM/ls-config-replace) plugin, and copying over the `ls-config-replace/liq/10_audodj_next_song_add_autocue` folder into your `/var/azuracast/plugins/ls-config-replace/liq` folder after installing the plugin. This will allow using _all features_.
