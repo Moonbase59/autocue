@@ -2,8 +2,6 @@
 On-the-fly JSON song cue-in, cue-out, overlay, replaygain calculation for Liquidsoap, AzuraCast and other AutoDJ software.
 
 Work in progress.
-- **_Liquidsoap documentation not up-to-date, will fix._**
-- You also don’t need the plugin anymore and can simply use `enable_autocue2_metadata()`.
 
 Requires Python3 and `ffmpeg` with the _ebur128_ filter. (The AzuraCast Docker already has these.)
 
@@ -22,7 +20,10 @@ services:
       - /var/azuracast/bin/cue_file:/usr/local/bin/cue_file
 ```
 
-With AzuraCast, you’ll need to change the auto-generated Liquidsoap Configuration to handle my `autocue2:` protocol. This can be done by installing @RM-FM’s [`ls-config-replace`](https://github.com/RM-FM/ls-config-replace) plugin, and copying over the `ls-config-replace/liq/10_audodj_next_song_add_autocue` folder into your `/var/azuracast/plugins/ls-config-replace/liq` folder after installing the plugin.
+With [AzuraCast](https://www.azuracast.com/), you now have two options for installing:
+
+1. Without modifying the generated AzuraCast Liquidsoap config. Use `enable_autocue2_metadata()` for that. _Drawback:_ You can’t use `settings.autocue2.blankskip := true` and expect "hidden" jingles to be automatically exempted from finding silent parts in the tracks.
+2. You can modify the AzuraCast Liquidsoap config by installing @RM-FM’s [`ls-config-replace`](https://github.com/RM-FM/ls-config-replace) plugin, and copying over the `ls-config-replace/liq/10_audodj_next_song_add_autocue` folder into your `/var/azuracast/plugins/ls-config-replace/liq` folder after installing the plugin. This will allow using _all features_.
 
 If you wish to disable AzuraCast’s built-in `liq_amplify` handling and rather use your tagged ReplayGain data, also copy over the `12_remove_amplify` folder.
 
@@ -33,6 +34,8 @@ If you want to enable skipping silence _within tracks_, add the following line a
 ```
 settings.protocol.autocue2.blankskip := true
 ```
+
+**Note:** This should only be used with installation variant 2 (plugin/modify config).
 
 **Note:** If you had used ReplayGain adjustment before like so (third input box)
 
@@ -57,7 +60,7 @@ radio = amplify(1.,override="replaygain_track_gain",radio)
 
 Pros & Cons:
 - ReplayGain can be more exact (and prevent clipping) if pre-tagged with a tool like [`loudgain`](https://github.com/Moonbase59/loudgain).
-- ReplayGain values _must exist as tags_ in your audio files
+- ReplayGain values _should exist as tags_ in your audio files. If not, and `settings.autocue2.unify_loudness_correction := true`, `autocue2` will insert an (internal) `replaygain_track_gain` value.
 - `cue_file` (and thus the `autocue2:` protocol) will _always_ calculate a `liq_amplify` value _on the fly_, so it can be used with any audio file (even when not pre-tagged)
 - `liq_amplify` has no means of clipping prevention or EBU-recommended -1 dB/LU margin. The value still resembles a _ReplayGain Track Gain_ closely, in most cases.
 - _Both_ can be used with `autocue2:`.
@@ -234,7 +237,7 @@ Notice the new cue-in and cue-out times as well as the long cross duration with 
 
 ## Liquidsoap protocol
 
-Works, but the code is a little kludgy. I might want the help of the Liquidsoap devs to clean this up a little, especially the parts marked `TODO:` and `FIXME:`.
+**Note: The `autocue2:` protocol is meant to be used with [Liquidsoap 2.2.5](https://github.com/savonet/liquidsoap/releases) or newer.**
 
 The protocol is invoked by prefixing a playlist or request with `autocue2:` like so:
 
@@ -242,7 +245,9 @@ The protocol is invoked by prefixing a playlist or request with `autocue2:` like
 radio = playlist(prefix="autocue2:", "/home/matthias/Musik/Playlists/Radio/Classic Rock.m3u")
 ```
 
-It offers the following settings (defaults shown):
+Alternatively, you can set `enable_autocue2_metadata()` and it will process _all files_ Liquidsoap handles. Use _either_—_or_, but not _both_ variants together. If running video streams, you might also want to _exclude_ the video files from processing, by annotating `liq_autocue=false` for them, for instance as a playlist prefix. `autocue2` _can_ handle multi-gigabyte video files, but that will eat up _lots_ of CPU (and bandwidth) and might bring your station down.
+
+`autocue2` offers the following settings (defaults shown):
 
 ```
 settings.protocol.autocue2 := "cue_file"
@@ -255,6 +260,7 @@ settings.protocol.autocue2.overlay_longtail := -15
 # The following can be overridden by the `liq_blankskip` annotation
 # on a per-request or per-playlist basis
 settings.protocol.autocue2.blankskip := false
+settings.autocue2.unify_loudness_correction := true
 ```
 
 You can _override_ the "blankskip" behaviour on a per-request or per-playlist basis using a special `liq_blankskip` annotation.
@@ -285,8 +291,8 @@ This allows for a general protocol-wide setting, but exceptions for special cont
 - Works well with smart crossfades. (But these are definitely not needed, see code below!)
 - Even when `settings.protocol.autocue2.blankskip := true`, hidden jingles (those with a `jingle_mode="true"` annotation) will be _excluded_ from blank detection within the track, because the chance is too high that spoken text gets cut.
 - User settings in the AzuraCast UI ("Edit Song") always "win" over the calculated values.
-- Currently needs a patch to the AzuraCast-generated Liquidsoap code, see above.
-- Currently generates lots of log data, for debugging. But hey, you can see what it does!
+- Currently needs a patch to the AzuraCast-generated Liquidsoap code to enable _all features_, but you can also opt to use `enable_autocue2_metadata()` instead, _not_ use `settings.autocue2.blankskip := true` and skip all the plugin-related things.
+- Currently generates _lots_ of log data, for debugging. This will eventually change. But hey, you can see what it does!
 
 Typical log sample (level 3; level 4 gives much more details):
 
@@ -301,32 +307,7 @@ Typical log sample (level 3; level 4 gives much more details):
 I currently use these crossfade settings (third input box in AzuraCast; lots of debugging info here, could be much shorter):
 
 ```
-# Be sure to have ReplayGain or "liq_amplify" applied before crossing.
-#radio = amplify(1.,override="replaygain_track_gain",radio)
-radio = amplify(1.,override="liq_amplify",radio)
-
-def show_meta(m)
-  label="show_meta"
-  l = list.sort.natural(metadata.cover.remove(m))
-  list.iter(fun(v) -> log.info(label=label, "#{v}"), l)
-  nowplaying = ref(m["artist"] ^ " - " ^ m["title"])
-  if m["artist"] == "" then
-    if string.contains(substring=" - ", m["title"]) then
-      let (a, t) = string.split.first(separator=" - ", m["title"])
-      nowplaying := a ^ " - " ^ t
-    end
-  end
-  log.important(label=label, "Now playing: #{nowplaying()}")
-  if m["liq_amplify"] == "" then
-    log.severe(label=label, "Warning: No liq_amplify found, expect loudness jumps!")
-  end
-  if m["liq_blank_skipped"] == "true" then
-    log.severe(label=label, "Blank (silence) detected in track, ending early.")
-  end
-end
-
-radio.on_metadata(show_meta)
-
+# Fading/crossing/segueing
 def live_aware_crossfade(old, new) =
     label = "live_aware_crossfade"
     if to_live() then
@@ -353,7 +334,7 @@ def live_aware_crossfade(old, new) =
             log.important(label=label, "Song → Song transition")
         end
 
-        nd = float_of_string(default=0.1, list.assoc(default="0.1", "duration", new.metadata))
+        nd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_duration", new.metadata))
         xd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_cross_duration", old.metadata))
         delay = max(0., xd - nd)
         log.important(label=label, "Cross/new/delay: #{xd} / #{nd} / #{delay} s")
@@ -364,16 +345,16 @@ def live_aware_crossfade(old, new) =
 
         # If needed, delay BOTH fade-out and fade-in, to avoid dead air.
         # This ensures a better transition for jingles shorter than cross_duration.
-        add(normalize=false, [fade.in(duration=.1, delay=delay, new.source), fade.out(duration=2.5, delay=delay, old.source)])
+        add(normalize=false, [fade.in(initial_metadata=new.metadata, duration=.1, delay=delay, new.source), fade.out(initial_metadata=old.metadata, duration=2.5, delay=delay, old.source)])
+        #cross.simple(old.source, new.source, fade_in=0.1, fade_out=2.5)
+        #cross.smart(old, new, fade_in=0.1, fade_out=2.5, margin=8.)
     end
 end
 
 radio = cross(duration=3.0, width=2.0, live_aware_crossfade, radio)
 ```
 
-**Note:** The `cross` parameter `reconcile_duration=true` is new since _Liquidsoap 2.2.5+git@4a3770d7a_, and still under development. We hope this can eventually help automating things further (= less user coding).
-
-If you have a long `liq_cross_duration` and a jingle following that is _shorter_ than the computed crossing duration, setting this to `true` ensures the jingle can be played correctly by effectively _shifting it to the right within the crossing duration window_, thus playing it _later than originally computed_ and ensuring correct playout for the following track.
+If you have a long `liq_cross_duration` and a jingle following that is _shorter_ than the computed crossing duration, above ensures the jingle can be played correctly by effectively _shifting it to the right within the crossing duration window_, thus playing it _later than originally computed_ and ensuring correct playout for the following track.
 
 We currently do this in above shown crossfading code. If this happens, a message will be logged:
 
