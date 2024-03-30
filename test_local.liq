@@ -35,6 +35,8 @@ to_live = ref(false)
 #settings.autocue2.overlay := -8
 #settings.autocue2.longtail := 15.0
 #settings.autocue2.overlay_longtail := -15
+# The following can be overridden by the `liq_blankskip` annotation
+# on a per-request or per-playlist basis
 settings.autocue2.blankskip := true
 #settings.autocue2.unify_loudness_correction := true
 
