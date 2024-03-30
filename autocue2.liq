@@ -312,7 +312,7 @@ def file.autocue2.metadata(
   # i.e. a track from a playlist that has "Hide Metadata from Listeners" set.
   # For standalone Liquidsoap, the ultimate override is `liq_blankskip`.
   # This can even be used to switch blank skipping ON if is globally off.
-  blankskip = ref(settings.autocue2.blankskip())
+  blankskip = ref(blankskip)
   blankskip := list.assoc.mem("jingle_mode", metadata) ? false : blankskip()
   # Handle annotated `liq_blankskip`
   if list.assoc.mem("liq_blankskip", metadata) then
