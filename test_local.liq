@@ -1,5 +1,5 @@
 # test_local.liq
-# 2024-03-28 - Moonbase59
+# 2024-03-31 - Moonbase59
 
 # Test the `autocue2:` protocol and crossfading code locally,
 # using a "songs" and a "jingles" playlist.
@@ -93,9 +93,10 @@ def show_meta(m)
     end
   end
 
-  # show `liq_` metadata in level 3
+  # show `liq_` & other metadata in level 3
   def fl(k, _) =
-    string.contains(prefix="liq_", k) or k == "duration" or k == "replaygain_track_gain"
+    tags = ["duration", "kind", "replaygain_track_gain"]
+    string.contains(prefix="liq_", k) or list.mem(k, tags)
   end
   liq = list.assoc.filter((fl), l)
   list.iter(fun(v) -> log.important(label=label, "#{v}"), liq)
