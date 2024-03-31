@@ -36,7 +36,7 @@ Then copy-paste the contents of the `autocue2.liq` file into the second input bo
 If you want to enable skipping silence _within tracks_, add the following line at the end of this input box:
 
 ```
-settings.protocol.autocue2.blankskip := true
+settings.autocue2.blankskip := true
 ```
 
 **Note:** This should only be used with installation variant 2 (plugin/modify config).
@@ -254,16 +254,16 @@ Alternatively, you can set `enable_autocue2_metadata()` and it will process _all
 `autocue2` offers the following settings (defaults shown):
 
 ```
-settings.protocol.autocue2 := "cue_file"
-settings.protocol.autocue2.timeout := 60.
-settings.protocol.autocue2.target := -18
-settings.protocol.autocue2.silence := -42
-settings.protocol.autocue2.overlay := -8
-settings.protocol.autocue2.longtail := 15.0
-settings.protocol.autocue2.overlay_longtail := -15
+settings.autocue2 := "cue_file"
+settings.autocue2.timeout := 60.
+settings.autocue2.target := -18
+settings.autocue2.silence := -42
+settings.autocue2.overlay := -8
+settings.autocue2.longtail := 15.0
+settings.autocue2.overlay_longtail := -15
 # The following can be overridden by the `liq_blankskip` annotation
 # on a per-request or per-playlist basis
-settings.protocol.autocue2.blankskip := false
+settings.autocue2.blankskip := false
 settings.autocue2.unify_loudness_correction := true
 ```
 
@@ -293,7 +293,7 @@ This allows for a general protocol-wide setting, but exceptions for special cont
 
 - `media:` URIs will be resolved.
 - Works well with smart crossfades. (But these are definitely not needed, see code below!)
-- Even when `settings.protocol.autocue2.blankskip := true`, hidden jingles (those with a `jingle_mode="true"` annotation) will be _excluded_ from blank detection within the track, because the chance is too high that spoken text gets cut.
+- Even when `settings.autocue2.blankskip := true`, hidden jingles (those with a `jingle_mode="true"` annotation) will be _excluded_ from blank detection within the track, because the chance is too high that spoken text gets cut.
 - User settings in the AzuraCast UI ("Edit Song") always "win" over the calculated values.
 - Currently needs a patch to the AzuraCast-generated Liquidsoap code to enable _all features_, but you can also opt to use `enable_autocue2_metadata()` instead, _not_ use `settings.autocue2.blankskip := true` and skip all the plugin-related things.
 - Currently generates _lots_ of log data, for debugging. This will eventually change. But hey, you can see what it does!
