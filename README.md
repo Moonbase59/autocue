@@ -254,7 +254,7 @@ Alternatively, you can set `enable_autocue2_metadata()` and it will process _all
 `autocue2` offers the following settings (defaults shown):
 
 ```
-settings.autocue2 := "cue_file"
+settings.autocue2.path := "cue_file"
 settings.autocue2.timeout := 60.
 settings.autocue2.target := -18
 settings.autocue2.silence := -42
