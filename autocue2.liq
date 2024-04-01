@@ -67,7 +67,7 @@ let settings.autocue2.blankskip =
 let settings.autocue2.unify_loudness_correction =
   settings.make(
     description=
-      'Unify `replaygain_track_gain` and `liq_amplify`. If enabled, this will ensure both have the same value, with `raplaygain_track_gain` taking precedence if it exists. Allows scripts to amplify on either value, without getting loudness jumps.',
+      'Unify `replaygain_track_gain` and `liq_amplify`. If enabled, this will ensure both have the same value, with `replaygain_track_gain` taking precedence if we can see it. Allows scripts to amplify on either value, without getting loudness jumps.\n Note this can only work correctly if your files have been replaygained to the same LUFS target as your `settings.autocue2.target`!',
     true
   )
 
@@ -336,6 +336,8 @@ def file.autocue2.metadata(
     if settings.autocue2.unify_loudness_correction() then
       # We wish to avoid loudness jumps in all possible cases,
       # so bring `replaygain_track_gain` and `liq_amplify` in line.
+      # NOTE: This can only work correctly if your files have been replaygained
+      # to the same LUFS target as your `settings.autocue2.target`!
       if list.assoc.mem("replaygain_track_gain", metadata) then
         # `replaygain_track_gain` available: override `liq_amplify`
         la = list.assoc(default="0.00 dB", "liq_amplify", result())
@@ -344,7 +346,7 @@ def file.autocue2.metadata(
         result := list.append([("liq_amplify", "#{rg}")], r)
         log(level=3, label=label, 'Replaced liq_amplify=#{la} with #{rg} from replaygain_track_gain')
       else
-        # no `replaygain_track_gain`? insert one, using calculated `liq_amplify`
+        # no `replaygain_track_gain` seen? insert one, using calculated `liq_amplify`
         rg = list.assoc(default="0.00 dB", "liq_amplify", result())
         result := list.append([("replaygain_track_gain", "#{rg}")], result())
         log(level=3, label=label, 'Inserted replaygain_track_gain: #{rg}')

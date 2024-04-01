@@ -264,6 +264,9 @@ settings.autocue2.overlay_longtail := -15
 # The following can be overridden by the `liq_blankskip` annotation
 # on a per-request or per-playlist basis
 settings.autocue2.blankskip := false
+# Unify can only work correctly if your files have been replaygained
+# to the same LUFS target as your `settings.autocue2.target`,
+# usually -23 or -18 LUFS (-18 corresponds to the now obsolete `mp3gain` value "89 dB").
 settings.autocue2.unify_loudness_correction := true
 ```
 
