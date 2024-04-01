@@ -369,11 +369,17 @@ end
 
 # Enable autocue2 metadata resolver. This resolver will process any file
 # decoded by Liquidsoap and add cue-in/out and crossfade metadata when these
-# values can be computed. For a finer-grained processing, use the `autocue2:` protocol.
+# values can be computed. This function sets `settings.request.prefetch` to `2`
+# to account for the latency introduced by the `autocue` computation when resolving
+# requsts. For a finer-grained processing, use the `autocue:` protocol.
 # NOTE: You might want to annotate VIDEO sources with `liq_autocue=false`!
 # Autocueing a multi-GB video works, but can really eat up CPU.
 # @category Liquidsoap
 def enable_autocue2_metadata() =
+
+  # enable this line once `settings.request.prefetch` is in current branch
+  #if settings.request.prefetch() == 1 then settings.request.prefetch := 2 end
+
   def autocue2_metadata(~metadata, fname) =
     label = "autocue2_metadata"
     if 
