@@ -328,7 +328,7 @@ The logs will show if blank skipping has been used on a track:
 2024/04/01 06:43:40 [autocue2.compute:3] Blank (silence) skipping active: true
 ```
 
-In the _metadata_, in `liq_blank_skipped`, you’ll also receive information if something actually _has_ been skipped. So for the _Nirvana_ song above, it would show:
+In the returned _metadata_, in `liq_blank_skipped`, you’ll also receive information if something actually _has_ been skipped. So for the _Nirvana_ song above, it would show:
 
 ```
 2024/04/01 11:00:47 [autocue2.metadata:3] ("liq_blank_skipped", "true")
