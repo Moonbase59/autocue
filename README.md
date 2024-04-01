@@ -356,11 +356,13 @@ Note this setting is superceded by `liq_blankskip`, the "ultimate blankskip swit
 Typical log sample (level 3; level 4 gives much more details):
 
 ```
-2024/03/25 14:50:50 [protocol.autocue2:3] Autocueing "annotate:title="Secret Love",artist="Bee Gees",duration="215.00",song_id="91d8c994c8741b1bb0716834a0849c4a",media_id="169415",playlist_id="226":media:Tagged/Bee Gees/Bee Gees - Their Greatest Hits_ The Record (2001 album, compilation, GB)/Bee Gees - Secret Love.mp3" ...
+2024/04/01 06:43:40 [autocue2.compute:3] Now autocueing: "annotate:title="Dancing in the Street",artist="David Bowie & Mick Jagger",duration="190.00",song_id="c7ea81945a4b20b2905cee98b05af5c3",media_id="277242",playlist_id="533":media:Tagged/Bowie, David/Bowie, David - The Singles Collection (1993 album, compilation, GB)/Bowie, David & Jagger, Mick - Dancing in the Street.flac"
 
 ...
 
-2024/03/25 14:50:51 [protocol.autocue2:3] Result: annotate:liq_blank_skipped="false",liq_amplify="5.11 dB",liq_loudness="-23.11 dB",liq_cross_duration="12.90",liq_longtail="false",liq_cue_out="209.10",liq_cue_in="0.00",liq_duration="209.10",duration="215.60",media_id="169415",playlist_id="226",title="Secret Love",artist="Bee Gees",song_id="91d8c994c8741b1bb0716834a0849c4a":/var/azuracast/stations/niteradio/media/Tagged/Bee Gees/Bee Gees - Their Greatest Hits_ The Record (2001 album, compilation, GB)/Bee Gees - Secret Love.mp3
+2024/04/01 06:43:40 [autocue2.compute:3] Blank (silence) skipping active: true
+2024/04/01 06:43:42 [autocue2.compute:3] Autocue2 result for "/var/azuracast/stations/niteradio/media/Tagged/Bowie, David/Bowie, David - The Singles Collection (1993 album, compilation, GB)/Bowie, David & Jagger, Mick - Dancing in the Street.flac": {"duration": "190.70", "liq_duration": "187.50", "liq_cue_in": "0.50", "liq_cue_out": "188.00", "liq_longtail": "false", "liq_cross_duration": "6.60", "liq_loudness": "-7.78 dB", "liq_amplify": "-10.22 dB", "liq_blank_skipped": "false"}
+2024/04/01 06:43:42 [autocue2.metadata:3] Inserted replaygain_track_gain: -10.22 dB
 ```
 
 I currently use these crossfade settings (third input box in AzuraCast; lots of debugging info here, could be much shorter):
