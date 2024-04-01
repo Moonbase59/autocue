@@ -67,7 +67,7 @@ let settings.autocue2.blankskip =
 let settings.autocue2.unify_loudness_correction =
   settings.make(
     description=
-      'Unify `replaygain_track_gain` and `liq_amplify`. If enabled, this will ensure both have the same value, with `replaygain_track_gain` taking precedence if we can see it. Allows scripts to amplify on either value, without getting loudness jumps.\n Note this can only work correctly if your files have been replaygained to the same LUFS target as your `settings.autocue2.target`!',
+      'Unify `replaygain_track_gain` and `liq_amplify`. If enabled, this will ensure both have the same value, with `replaygain_track_gain` taking precedence if we can see it. Allows scripts to amplify on either value, without getting loudness jumps.\nNote this can only work correctly if your files have been replaygained to the same LUFS target as your `settings.autocue2.target`!',
     true
   )
 
