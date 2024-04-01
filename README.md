@@ -270,7 +270,21 @@ settings.autocue2.blankskip := false
 settings.autocue2.unify_loudness_correction := true
 ```
 
-You can _override_ the "blankskip" behaviour on a per-request or per-playlist basis using a special `liq_blankskip` annotation.
+### Tags/Annotations that influence `autocue2`’s behaviour
+
+There are three possible _annotations_ (or tags from a file) that can influence `autocue2`’s behaviour. In an annotation string, these must occur _to the right_ of the protcol, i.e. `autocue2:annotate:...` to work as intended. Think of these as "switches" to enable or disable features.
+
+#### `liq_autocue` (`true`/`false`)
+
+You can _disable_ autocueing for selected sources, like maybe a playlist of large video files, even when `autocue2` is globally enabled:
+
+```
+p = playlist(prefix='annotate:liq_autocue="false":', '/path/to/playlist.ext')
+```
+
+#### `liq_blankskip` (`true`/`false`)
+
+You can _override_ the "blankskip" behaviour (early cue-out of a song when silence is detected) on a per-request or per-playlist basis using a special `liq_blankskip` annotation. This is an "ultimate override" which overrides both `settings.autocue2.blankskip` and `jingle_mode`.
 
 For a `playlist`, you could use its `prefix`, like in
 
@@ -291,6 +305,14 @@ r = request.create('autocue2:annotate:liq_blankskip="false":/path/to/file.ext')
 ```
 
 This allows for a general protocol-wide setting, but exceptions for special content, like a playlist containing spoken content that would otherwise be cut.
+
+#### AzuraCast: `jingle_mode` (`"true"`)
+
+This is a convenience feature for AzuraCast users. If you set _Hide Metadata from Listeners ("Jingle Mode")_ to ON for a playlist in AzuraCast, it will annotate requests for this playlist with `jingle_mode="true"`. Even if blank skipping for songs is globally enabled, we would not want this to happen for jingles. They might contain pauses in speech that could cut them off early.
+
+So if `autocue2` sees this annotation (or tag in a file), it will automatically _disable_ "blankskip" for this track.
+
+Note this setting is superceded by `liq_blankskip`, the "ultimate blankskip switch". So if _both_ are there, the setting from `liq_blankskip` will "win".
 
 ### AzuraCast Notes
 
