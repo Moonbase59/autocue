@@ -276,11 +276,27 @@ There are three possible _annotations_ (or tags from a file) that can influence 
 
 #### `liq_autocue` (`true`/`false`)
 
-You can _disable_ autocueing for selected sources, like maybe a playlist of large video files, even when `autocue2` is globally enabled:
+You can _disable_ autocueing for selected sources, like maybe a playlist of large video files, even when `autocue2` is globally enabled.
+
+So if you’ve used
+
+```
+enable_autocue2_metadata()
+```
+
+to globally enable `autocue2`, and want to _exclude_ a playlist from processing, use:
 
 ```
 p = playlist(prefix='annotate:liq_autocue="false":', '/path/to/playlist.ext')
 ```
+
+If a track has been skipped, it will be shown in the logs like this:
+
+```
+2024/04/01 10:47:00 [autocue2_metadata:2] Skipping autocue2 for file "/home/matthias/Musik/Other/Jingles/Short/Magenta - How sentimental.flac" because liq_autocue=false forbids it.
+```
+
+**Note:** Using this makes only sense if you used `enable_autocue2_metadata()`. When using the `autocue2:` _protocol_ in your annotations, you’d simply leave the `autocue2:` part off the annotation instead.
 
 #### `liq_blankskip` (`true`/`false`)
 
@@ -305,6 +321,20 @@ r = request.create('autocue2:annotate:liq_blankskip="false":/path/to/file.ext')
 ```
 
 This allows for a general protocol-wide setting, but exceptions for special content, like a playlist containing spoken content that would otherwise be cut.
+
+The logs will show if blank skipping has been used on a track:
+
+```
+2024/04/01 06:43:40 [autocue2.compute:3] Blank (silence) skipping active: true
+```
+
+In the _metadata_, in `liq_blank_skipped`, you’ll also receive information if something actually _has_ been skipped. So for the _Nirvana_ song above, it would show:
+
+```
+2024/04/01 11:00:47 [autocue2.metadata:3] ("liq_blank_skipped", "true")
+```
+
+`liq_blankskip` is the _switch_ that controls `autocue2`’s behaviour, while `liq_blank_skipped` is the _result_ of the operation.
 
 #### AzuraCast: `jingle_mode` (`"true"`)
 
