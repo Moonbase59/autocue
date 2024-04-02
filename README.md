@@ -15,7 +15,34 @@ Basically, `autocue` consists of two parts:
 
 ## Install
 
+### `cue_file`
+
 Put `cue_file` in your path locally (i.e., into `~/bin`, `~/.local/bin` or `/usr/local/bin`) and `chmod+x` it.
+
+### Local testing
+
+Use the code in `test_local.liq` for some local testing, if you have Liquidsoap installed on your machine.
+
+Look for
+```
+# --- Use YOUR ... here! ---
+```
+and put in _your_ song and jingle playlist, and a `single` for testing.
+
+Then run
+```
+$ liquidsoap test_local.liq
+```
+
+Depending on your settings, you’ll get some result files for further study:
+
+- `test_local.log` -- Log file, use `tail -f test_local.liq` in another terminal to follow
+- `test_local.mp3` -- an MP3 recording, to see how well the track transitions worked out
+- `test_local.cue` -- a `.cue` file to go with the MP3 recording, for finding tracks easier (open _this_ in your audio player)
+
+### AzuraCast
+
+#### `cue_file`
 
 On your AzuraCast host, you can put it into `/var/azuracast/bin` and overlay it into the Docker by adding a line to your `docker-compose.override.yml`, like so:
 
@@ -26,6 +53,8 @@ services:
       - /var/azuracast/bin/cue_file:/usr/local/bin/cue_file
 ```
 
+#### Use Plugin or not?
+
 With AzuraCast, you now have two options for installing:
 
 1. Without modifying the generated AzuraCast Liquidsoap config. Use `enable_autocue2_metadata()` for that. _Drawback:_ You can’t use `settings.autocue2.blankskip := true` and expect "hidden" jingles to be automatically exempted from finding silent parts in the tracks.
@@ -33,7 +62,9 @@ With AzuraCast, you now have two options for installing:
 
 If you wish to disable AzuraCast’s built-in `liq_amplify` handling and rather use your tagged ReplayGain data, also copy over the `12_remove_amplify` folder.
 
-Then copy-paste the contents of the `autocue2.liq` file into the second input box in your station’s Liquidsoap Config.
+#### Add the `autocue2` protocol code
+
+Then copy-paste the contents of the `autocue2.liq` file into _the second input box_ in your station’s Liquidsoap Config.
 
 If you want to enable skipping silence _within tracks_, add the following line at the end of this input box:
 
@@ -42,6 +73,16 @@ settings.autocue2.blankskip := true
 ```
 
 **Note:** This should only be used with installation variant 2 (plugin/modify config).
+
+#### Custom crossfading code
+
+Use the example in `test_local.liq` and add your custom `amplify` and `live_aware_crossfade` code in the _third input box_ of AzuraCast’s Liquidsoap Config. You might already have modified this in your local testing above.
+
+To find the relevant parts, look out for
+
+```
+# --- Copy-paste ...
+```
 
 **Note:** If you had used ReplayGain adjustment before like so (third input box)
 
@@ -52,7 +93,7 @@ radio = amplify(1.,override="replaygain_track_gain",radio)
 
 you might want to _delete_ or _comment out_ these lines. The `autocue2:` protocol already calculates a `liq_amplify` value that is recognized by AzuraCast and roughly equals a ReplayGain "track gain". If you would leave _both_ in, you’d get a much too quiet playout.
 
-**ReplayGain vs. `liq_amplify`**
+#### ReplayGain vs. `liq_amplify`
 
 If you have disabled AzuraCast’s built-in `liq_amplify` handler (by copying `12_remove_amplify` above), _you_ have the choice. But you _must_ define your own adjustment (start of third input box).
 
