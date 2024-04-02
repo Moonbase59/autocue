@@ -34,6 +34,7 @@ Basically, `autocue` consists of two parts:
     - [Avoiding too much overlap](#avoiding-too-much-overlap)
   - [Blank (silence) detection](#blank-silence-detection)
 - [Liquidsoap protocol](#liquidsoap-protocol)
+  - [Next track and short jingle handling](#next-track-and-short-jingle-handling)
   - [Tags/Annotations that influence `autocue2`’s behaviour](#tagsannotations-that-influence-autocue2s-behaviour)
     - [`liq_autocue2` (`true`/`false`)](#liq_autocue2-truefalse)
     - [`liq_blankskip` (`true`/`false`)](#liq_blankskip-truefalse)
@@ -344,6 +345,14 @@ settings.autocue2.blankskip := false
 settings.autocue2.unify_loudness_correction := true
 ```
 
+### Next track and short jingle handling
+
+With _Liquidsoap 2.2.5+git@cadd05596_ and newer:
+
+If you have a long `liq_cross_duration` and a jingle following that is _shorter_ than the computed crossing duration, Liquidsoap will now try to ensure the jingle _still_ starts at the right position, and simply _cut off_ the "overhang" from the previous track.
+
+`autocue2`, if used, sets `settings.request.prefetch := 2` to ensure there is always _one more track ready_. This is also new functionality. It helps "bridging the time" until `autocue2` has calculated data for the next track, which might take a while.
+
 ### Tags/Annotations that influence `autocue2`’s behaviour
 
 There are three possible _annotations_ (or tags from a file) that can influence `autocue2`’s behaviour. In an annotation string, these must occur _to the right_ of the protcol, i.e. `autocue2:annotate:...` to work as intended. Think of these as "switches" to enable or disable features.
@@ -521,17 +530,17 @@ end
 radio = cross(duration=3.0, width=2.0, live_aware_crossfade, radio)
 ```
 
-If you have a long `liq_cross_duration` and a jingle following that is _shorter_ than the computed crossing duration, above ensures the jingle can be played correctly by effectively _shifting it to the right within the crossing duration window_, thus playing it _later than originally computed_ and ensuring correct playout for the following track.
+The 2.5 s fade-out helps tuning long overlap durations down, so they won’t distract the listener by overlaying songs and possibly jingles too long. If using `cross.smart`, the increased margin (8 dB/LU) helps making the smart crossfades sound much better.
 
-We currently do this in above shown crossfading code. If this happens, a message will be logged:
+~~If you have a long `liq_cross_duration` and a jingle following that is _shorter_ than the computed crossing duration, above ensures the jingle can be played correctly by effectively _shifting it to the right within the crossing duration window_, thus playing it _later than originally computed_ and ensuring correct playout for the following track.~~
+
+~~We currently do this in above shown crossfading code. If this happens, a message will be logged:~~
 
 ```
 2024/03/26 17:07:56 [live_aware_crossfade:3] Song → Jingle transition
 2024/03/26 17:07:56 [live_aware_crossfade:2] Cross duration 5.9 s longer than next track (3.4 s)!
 2024/03/26 17:07:56 [live_aware_crossfade:2] Delaying fade-out & next track fade-in by 2.5 s.
 ```
-
-The 2.5 s fade-out helps tuning long overlap durations down, so they won’t distract the listener by overlaying songs and possibly jingles too long. The increased margin (8 dB/LU) helps making the smart crossfades sound much better.
 
 ~~Jingles should not be shorter than the duration specified in `cross`.~~
 
