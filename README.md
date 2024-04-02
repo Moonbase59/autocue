@@ -13,6 +13,33 @@ Basically, `autocue` consists of two parts:
 
 **Note:** Liquidsoap recently introduced a _bultin_ `autocue:` protocol. I had to rename my `autocue:` protocol to `autocue2:` so it doesn’t clash with the other one.
 
+## Table of Contents
+
+- [Install](#install)
+  - [Install `cue_file`](#install-cuefile)
+  - [Local testing with Liquidsoap](#local-testing-with-liquidsoap)
+  - [Install on AzuraCast](#install-on-azuracast)
+    - [`cue_file`](#cuefile)
+    - [Use Plugin or not?](#use-plugin-or-not)
+    - [Add the `autocue2` protocol code](#add-the-autocue2-protocol-code)
+    - [Custom crossfading code](#custom-crossfading-code)
+    - [ReplayGain vs. `liq_amplify`](#replaygain-vs-liqamplify)
+- [Command-line interface](#command-line-interface)
+- [Examples](#examples)
+  - [Hidden track](#hidden-track)
+  - [Long tail handling](#long-tail-handling)
+    - [Cue-out point](#cue-out-point)
+    - [Cross duration (where the next track could start and be overlaid)](#cross-duration-where-the-next-track-could-start-and-be-overlaid)
+    - [A long tail!](#a-long-tail)
+    - [Avoiding too much overlap](#avoiding-too-much-overlap)
+  - [Blank (silence) detection](#blank-silence-detection)
+- [Liquidsoap protocol](#liquidsoap-protocol)
+  - [Tags/Annotations that influence `autocue2`’s behaviour](#tagsannotations-that-influence-autocue2s-behaviour)
+    - [`liq_autocue` (`true`/`false`)](#liqautocue-truefalse)
+    - [`liq_blankskip` (`true`/`false`)](#liqblankskip-truefalse)
+    - [AzuraCast: `jingle_mode` (`"true"`)](#azuracast-jinglemode-true)
+  - [AzuraCast Notes](#azuracast-notes)
+
 ## Install
 
 ### Install `cue_file`
@@ -471,6 +498,5 @@ We currently do this in above shown crossfading code. If this happens, a message
 The 2.5 s fade-out helps tuning long overlap durations down, so they won’t distract the listener by overlaying songs and possibly jingles too long. The increased margin (8 dB/LU) helps making the smart crossfades sound much better.
 
 ~~Jingles should not be shorter than the duration specified in `cross`.~~
-
 
 [^1]: As of 2024-04-02. _Liquidsoap_ has a very active development, so things might change.
