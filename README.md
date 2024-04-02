@@ -38,6 +38,9 @@ Basically, `autocue` consists of two parts:
     - [`liq_autocue2` (`true`/`false`)](#liq_autocue2-truefalse)
     - [`liq_blankskip` (`true`/`false`)](#liq_blankskip-truefalse)
     - [AzuraCast: `jingle_mode` (`"true"`)](#azuracast-jingle_mode-true)
+  - [Effect of `settings.autocue2.unify_loudness_correction` (`true`/`false`)](#effect-of-settingsautocue2unify_loudness_correction-truefalse)
+    - [ReplayGain inserted](#replaygain-inserted)
+    - [ReplayGain overriding `liq_amplify`](#replaygain-overriding-liq_amplify)
   - [AzuraCast Notes](#azuracast-notes)
 
 ## Install
