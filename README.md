@@ -473,12 +473,16 @@ def live_aware_crossfade(old, new) =
         log.important(label=label, "Cross/new/delay: #{xd} / #{nd} / #{delay} s")
         if (xd > nd) then
           log.severe(label=label, "Cross duration #{xd} s longer than next track (#{nd} s)!")
-          log.severe(label=label, "Delaying fade-out & next track fade-in by #{delay} s.")
+          #log.severe(label=label, "Delaying fade-out & next track fade-in by #{delay} s.")
         end
 
         # If needed, delay BOTH fade-out and fade-in, to avoid dead air.
         # This ensures a better transition for jingles shorter than cross_duration.
-        add(normalize=false, [fade.in(initial_metadata=new.metadata, duration=.1, delay=delay, new.source), fade.out(initial_metadata=old.metadata, duration=2.5, delay=delay, old.source)])
+        #add(normalize=false, [fade.in(initial_metadata=new.metadata, duration=.1, delay=delay, new.source), fade.out(initial_metadata=old.metadata, duration=2.5, delay=delay, old.source)])
+
+        # Starting with LS 2.2.5+git@cadd05596, we don’t need the delay anymore
+        add(normalize=false, [fade.in(initial_metadata=new.metadata, duration=.1, new.source), fade.out(initial_metadata=old.metadata, duration=2.5, old.source)])
+
         #cross.simple(old.source, new.source, fade_in=0.1, fade_out=2.5)
         #cross.smart(old, new, fade_in=0.1, fade_out=2.5, margin=8.)
     end
