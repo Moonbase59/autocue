@@ -365,7 +365,7 @@ Typical log sample (level 3; level 4 gives much more details):
 2024/04/01 06:43:42 [autocue2.metadata:3] Inserted replaygain_track_gain: -10.22 dB
 ```
 
-I currently use these crossfade settings (third input box in AzuraCast; lots of debugging info here, could be much shorter):
+I currently[^1] use these crossfade settings (third input box in AzuraCast; lots of debugging info here, could be much shorter):
 
 ```
 # Fading/crossing/segueing
@@ -429,3 +429,5 @@ The 2.5 s fade-out helps tuning long overlap durations down, so they won’t dis
 
 ~~Jingles should not be shorter than the duration specified in `cross`.~~
 
+
+[^1]: As of 2024-04-02. _Liquidsoap_ has a very active development, so things might change.
