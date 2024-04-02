@@ -36,9 +36,9 @@ $ liquidsoap test_local.liq
 
 Depending on your settings, you’ll get some result files for further study:
 
-- `test_local.log` -- Log file, use `tail -f test_local.liq` in another terminal to follow
-- `test_local.mp3` -- an MP3 recording, to see how well the track transitions worked out
-- `test_local.cue` -- a `.cue` file to go with the MP3 recording, for finding tracks easier (open _this_ in your audio player)
+- `test_local.log` — Log file, use `tail -f test_local.liq` in another terminal to follow
+- `test_local.mp3` — an MP3 recording, to see how well the track transitions worked out
+- `test_local.cue` — a `.cue` file to go with the MP3 recording, for finding tracks easier (open _this_ in your audio player)
 
 ### AzuraCast
 
