@@ -42,6 +42,7 @@ Basically, `autocue` consists of two parts:
     - [ReplayGain inserted](#replaygain-inserted)
     - [ReplayGain overriding `liq_amplify`](#replaygain-overriding-liq_amplify)
   - [AzuraCast Notes](#azuracast-notes)
+    - [Custom crossfading](#custom-crossfading)
 
 ## Install
 
@@ -462,7 +463,11 @@ Typical log sample (level 3; level 4 gives much more details):
 2024/04/01 06:43:42 [autocue2.metadata:3] Inserted replaygain_track_gain: -10.22 dB
 ```
 
-I currently[^1] use these crossfade settings (third input box in AzuraCast; lots of debugging info here, could be much shorter):
+#### Custom crossfading
+
+I currently[^1] use these crossfade settings (third input box in AzuraCast; lots of debugging info here, could be much shorter).
+
+Be sure to check the _copy-paste sections_ in `test_local.liq`, which always holds the most current code.
 
 ```
 # Fading/crossing/segueing
