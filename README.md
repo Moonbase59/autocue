@@ -16,14 +16,14 @@ Basically, `autocue` consists of two parts:
 ## Table of Contents
 
 - [Install](#install)
-  - [Install `cue_file`](#install-cuefile)
+  - [Install `cue_file`](#install-cue_file)
   - [Local testing with Liquidsoap](#local-testing-with-liquidsoap)
   - [Install on AzuraCast](#install-on-azuracast)
-    - [`cue_file`](#cuefile)
+    - [`cue_file`](#cue_file)
     - [Use Plugin or not?](#use-plugin-or-not)
     - [Add the `autocue2` protocol code](#add-the-autocue2-protocol-code)
     - [Custom crossfading code](#custom-crossfading-code)
-    - [ReplayGain vs. `liq_amplify`](#replaygain-vs-liqamplify)
+    - [ReplayGain vs. `liq_amplify`](#replaygain-vs-liq_amplify)
 - [Command-line interface](#command-line-interface)
 - [Examples](#examples)
   - [Hidden track](#hidden-track)
@@ -35,9 +35,9 @@ Basically, `autocue` consists of two parts:
   - [Blank (silence) detection](#blank-silence-detection)
 - [Liquidsoap protocol](#liquidsoap-protocol)
   - [Tags/Annotations that influence `autocue2`’s behaviour](#tagsannotations-that-influence-autocue2s-behaviour)
-    - [`liq_autocue` (`true`/`false`)](#liqautocue-truefalse)
-    - [`liq_blankskip` (`true`/`false`)](#liqblankskip-truefalse)
-    - [AzuraCast: `jingle_mode` (`"true"`)](#azuracast-jinglemode-true)
+    - [`liq_autocue` (`true`/`false`)](#liq_autocue-truefalse)
+    - [`liq_blankskip` (`true`/`false`)](#liq_blankskip-truefalse)
+    - [AzuraCast: `jingle_mode` (`"true"`)](#azuracast-jingle_mode-true)
   - [AzuraCast Notes](#azuracast-notes)
 
 ## Install
