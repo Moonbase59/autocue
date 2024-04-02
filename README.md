@@ -23,9 +23,9 @@ Put `cue_file` in your path locally (i.e., into `~/bin`, `~/.local/bin` or `/usr
 
 Use the code in `test_local.liq` for some local testing, if you have Liquidsoap installed on your machine.
 
-Look for
+Adjust the _settings_ near the beginning of the fie, then look for
 ```
-# --- Use YOUR ... here! ---
+# --- Use YOUR (playlist/single) here! ---
 ```
 and put in _your_ song and jingle playlist, and a `single` for testing.
 
