@@ -370,8 +370,8 @@ end
 # Enable autocue2 metadata resolver. This resolver will process any file
 # decoded by Liquidsoap and add cue-in/out and crossfade metadata when these
 # values can be computed. This function sets `settings.request.prefetch` to `2`
-# to account for the latency introduced by the `autocue` computation when resolving
-# requsts. For a finer-grained processing, use the `autocue:` protocol.
+# to account for the latency introduced by the `autocue2` computation when resolving
+# requsts. For a finer-grained processing, use the `autocue2:` protocol.
 # NOTE: You might want to annotate VIDEO sources with `liq_autocue=false`!
 # Autocueing a multi-GB video works, but can really eat up CPU.
 # @category Liquidsoap
