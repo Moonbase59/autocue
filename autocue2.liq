@@ -237,6 +237,10 @@ def replaces file.autocue2(
   overlay_longtail = overlay_longtail ?? settings.autocue2.overlay_longtail()
   blankskip = blankskip ?? settings.autocue2.blankskip()
 
+  # be sure request prefetching is set also if only using the protocol
+  # valid for Liquidsoap 2.2.5+git@cadd05596 and newer
+  if settings.request.prefetch() == 1 then settings.request.prefetch := 2 end
+
   result =
     file.autocue2.compute(
       timeout=timeout,
