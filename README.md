@@ -38,6 +38,9 @@ Basically, `autocue` consists of two parts:
     - [`liq_autocue2` (`true`/`false`)](#liq_autocue2-truefalse)
     - [`liq_blankskip` (`true`/`false`)](#liq_blankskip-truefalse)
     - [AzuraCast: `jingle_mode` (`"true"`)](#azuracast-jingle_mode-true)
+  - [Effect of `settings.autocue2.unify_loudness_correction` (`true`/`false`)](#effect-of-settingsautocue2unify_loudness_correction-truefalse)
+    - [ReplayGain inserted](#replaygain-inserted)
+    - [ReplayGain overriding `liq_amplify`](#replaygain-overriding-liq_amplify)
   - [AzuraCast Notes](#azuracast-notes)
 
 ## Install
@@ -415,6 +418,28 @@ This is a convenience feature for AzuraCast users. If you set _Hide Metadata fro
 So if `autocue2` sees this annotation (or tag in a file), it will automatically _disable_ "blankskip" for this track.
 
 Note this setting is superceded by `liq_blankskip`, the "ultimate blankskip switch". So if _both_ are there, the setting from `liq_blankskip` will "win".
+
+### Effect of `settings.autocue2.unify_loudness_correction` (`true`/`false`)
+
+Unify `replaygain_track_gain` and `liq_amplify`. If enabled, this will ensure both have the same value, with `replaygain_track_gain` taking precedence if we can see it. Allows scripts to amplify on either value, without getting loudness jumps.
+
+**Note:** This can only work correctly if your files have been replaygained to _the same LUFS target_ as your `settings.autocue2.target`!
+
+#### ReplayGain inserted
+
+Here is an example of an inserted `replaygain_track_gain` value (taken from the calculated `liq_amplify`):
+
+```
+2024/04/02 09:07:57 [autocue2.metadata:3] Inserted replaygain_track_gain: -8.36 dB
+```
+
+#### ReplayGain overriding `liq_amplify`
+
+Here `liq_amplify` has been corrected, because we have seen a different `replaygain_track_gain` (coming from a pre-tagged file where [loudgain](https://github.com/Moonbase59/loudgain) was used to ensure clipping prevention):
+
+```
+2024/04/02 08:54:48 [autocue2.metadata:3] Replaced liq_amplify=-8.72 dB with -9.71 dB from replaygain_track_gain
+```
 
 ### AzuraCast Notes
 
