@@ -15,7 +15,7 @@ Basically, `autocue` consists of two parts:
 
 ## Install
 
-### `cue_file`
+### Install `cue_file`
 
 Put `cue_file` in your path locally (i.e., into `~/bin`, `~/.local/bin` or `/usr/local/bin`) and `chmod+x` it.
 
@@ -42,7 +42,7 @@ Depending on your settings, you’ll get some result files for further study:
 - `test_local.mp3` — an MP3 recording, to see how well the track transitions worked out
 - `test_local.cue` — a `.cue` file to go with the MP3 recording, for finding tracks easier (open _this_ in your audio player)
 
-### AzuraCast
+### Install on AzuraCast
 
 #### `cue_file`
 
