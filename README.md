@@ -19,6 +19,8 @@ Basically, `autocue` consists of two parts:
 
 Put `cue_file` in your path locally (i.e., into `~/bin`, `~/.local/bin` or `/usr/local/bin`) and `chmod+x` it.
 
+If you wish, you can now play around with it a bit (use `cue_file --help` for help), or follow our examples below and analyze some of your audio files. _Audacity_ and _[spec](https://gist.github.com/Moonbase59/5e70279740a5b227c2106cff45abd706)_ can be helpful in checking.
+
 ### Local testing
 
 Use the code in `test_local.liq` for some local testing, if you have Liquidsoap installed on your machine.
