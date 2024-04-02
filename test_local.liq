@@ -153,10 +153,15 @@ def live_aware_crossfade(old, new) =
         #add(normalize=false, [fade.in(initial_metadata=new.metadata, duration=.1, delay=delay, new.source), fade.out(initial_metadata=old.metadata, duration=2.5, delay=delay, old.source)])
 
         # Starting with LS 2.2.5+git@cadd05596, we don’t need the delay anymore
-        add(normalize=false, [fade.in(initial_metadata=new.metadata, duration=.1, new.source), fade.out(initial_metadata=old.metadata, duration=2.5, old.source)])
+        add(normalize=false,
+          [fade.in(initial_metadata=new.metadata, duration=.1, new.source),
+           fade.out(initial_metadata=old.metadata, duration=2.5, old.source)]
+        )
 
-        #cross.simple(old.source, new.source, fade_in=0.1, fade_out=2.5)
-        #cross.smart(old, new, fade_in=0.1, fade_out=2.5, margin=8.)
+        #cross.simple(old.source, new.source, fade_in=0.1, fade_out=2.5,
+        #  initial_fade_out_metadata=old.metadata, initial_fade_in_metadata=new.metadata)
+        #cross.smart(old, new, fade_in=0.1, fade_out=2.5, margin=8.,
+        #  initial_fade_out_metadata=old.metadata, initial_fade_in_metadata=new.metadata)
     end
 end
 
