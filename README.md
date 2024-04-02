@@ -11,6 +11,8 @@ Basically, `autocue` consists of two parts:
 - `cue_file`, a Python3 script, that returns JSON cueing, loudness and overlay data for an audio file. This can be used standalone, as part of some pre-processing or AutoDJ software, or in conjunction with below.
 - The [Liquidsoap](https://www.liquidsoap.info/) `autocue2:` protocol, for full integration into Liquidsoap, which in turn can be used standalone or as part of a larger playout system like [AzuraCast](https://www.azuracast.com/) or others.
 
+**Note:** Liquidsoap recently introduced a _bultin_ `autocue:` protocol. I had to rename my `autocue:` protocol to `autocue2:` so it doesn’t clash with the other one.
+
 ## Install
 
 Put `cue_file` in your path locally (i.e., into `~/bin`, `~/.local/bin` or `/usr/local/bin`) and `chmod+x` it.
@@ -70,8 +72,6 @@ Pros & Cons:
 - _Both_ can be used with `autocue2:`.
 
 Save and _Restart Broadcasting_.
-
-**Note:** Liquidsoap recently introduced a _bultin_ `autocue:` protocol. I had to rename my `autocue:` protocol to `autocue2:` so it doesn’t clash with the other one.
 
 ## Command-line interface
 
