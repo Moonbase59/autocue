@@ -53,8 +53,8 @@ uri = "/home/matthias/Musik/Playlists/Radio/Classic Rock.m3u"
 songs = playlist(uri)
 
 # --- Use YOUR playlist here! ---
-#uri = "/home/matthias/Musik/Other/Jingles/Short"
-uri = "/home/matthias/Musik/Other/Jingles/Programm"
+uri = "/home/matthias/Musik/Other/Jingles/Short"
+#uri = "/home/matthias/Musik/Other/Jingles/Programm"
 # set jingle mode, no blank skipping, and some values like AzuraCast would
 #jingles = playlist(prefix='autocue2:annotate:jingle_mode="true",liq_blankskip="false",'
 #  ^ 'liq_cross_duration="0.10",liq_fade_in="0.10",liq_fade_out="0.10"'

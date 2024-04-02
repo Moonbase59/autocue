@@ -378,7 +378,8 @@ end
 def enable_autocue2_metadata() =
 
   # enable this line once `settings.request.prefetch` is in current branch
-  #if settings.request.prefetch() == 1 then settings.request.prefetch := 2 end
+  # enabled now for Liquidsoap 2.2.5+git@cadd05596 and newer
+  if settings.request.prefetch() == 1 then settings.request.prefetch := 2 end
 
   def autocue2_metadata(~metadata, fname) =
     label = "autocue2_metadata"
