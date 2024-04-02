@@ -35,7 +35,7 @@ Basically, `autocue` consists of two parts:
   - [Blank (silence) detection](#blank-silence-detection)
 - [Liquidsoap protocol](#liquidsoap-protocol)
   - [Tags/Annotations that influence `autocue2`’s behaviour](#tagsannotations-that-influence-autocue2s-behaviour)
-    - [`liq_autocue` (`true`/`false`)](#liq_autocue-truefalse)
+    - [`liq_autocue2` (`true`/`false`)](#liq_autocue2-truefalse)
     - [`liq_blankskip` (`true`/`false`)](#liq_blankskip-truefalse)
     - [AzuraCast: `jingle_mode` (`"true"`)](#azuracast-jingle_mode-true)
   - [AzuraCast Notes](#azuracast-notes)
@@ -319,7 +319,7 @@ The protocol is invoked by prefixing a playlist or request with `autocue2:` like
 radio = playlist(prefix="autocue2:", "/home/matthias/Musik/Playlists/Radio/Classic Rock.m3u")
 ```
 
-Alternatively, you can set `enable_autocue2_metadata()` and it will process _all files_ Liquidsoap handles. Use _either_—_or_, but not _both_ variants together. If running video streams, you might also want to _exclude_ the video files from processing, by annotating `liq_autocue=false` for them, for instance as a playlist prefix. `autocue2` _can_ handle multi-gigabyte video files, but that will eat up _lots_ of CPU (and bandwidth) and might bring your station down.
+Alternatively, you can set `enable_autocue2_metadata()` and it will process _all files_ Liquidsoap handles. Use _either_—_or_, but not _both_ variants together. If running video streams, you might also want to _exclude_ the video files from processing, by annotating `liq_autocue2=false` for them, for instance as a playlist prefix. `autocue2` _can_ handle multi-gigabyte video files, but that will eat up _lots_ of CPU (and bandwidth) and might bring your station down.
 
 `autocue2` offers the following settings (defaults shown):
 
@@ -344,7 +344,9 @@ settings.autocue2.unify_loudness_correction := true
 
 There are three possible _annotations_ (or tags from a file) that can influence `autocue2`’s behaviour. In an annotation string, these must occur _to the right_ of the protcol, i.e. `autocue2:annotate:...` to work as intended. Think of these as "switches" to enable or disable features.
 
-#### `liq_autocue` (`true`/`false`)
+#### `liq_autocue2` (`true`/`false`)
+
+**Note:** I had to rename my original `liq_autocue` to `liq_autocue2`, because Liquidsoap now also uses `liq_autocue`, for another purpose. Sigh.
 
 You can _disable_ autocueing for selected sources, like maybe a playlist of large video files, even when `autocue2` is globally enabled.
 
@@ -357,13 +359,13 @@ enable_autocue2_metadata()
 to globally enable `autocue2`, and want to _exclude_ a playlist from processing, use:
 
 ```
-p = playlist(prefix='annotate:liq_autocue="false":', '/path/to/playlist.ext')
+p = playlist(prefix='annotate:liq_autocue2="false":', '/path/to/playlist.ext')
 ```
 
 If a track has been skipped, it will be shown in the logs like this:
 
 ```
-2024/04/01 10:47:00 [autocue2_metadata:2] Skipping autocue2 for file "/home/matthias/Musik/Other/Jingles/Short/Magenta - How sentimental.flac" because liq_autocue=false forbids it.
+2024/04/01 10:47:00 [autocue2_metadata:2] Skipping autocue2 for file "/home/matthias/Musik/Other/Jingles/Short/Magenta - How sentimental.flac" because liq_autocue2=false forbids it.
 ```
 
 **Note:** Using this makes only sense if you used `enable_autocue2_metadata()`. When using the `autocue2:` _protocol_ in your annotations, you’d simply leave the `autocue2:` part off the annotation instead.

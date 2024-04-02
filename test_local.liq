@@ -41,7 +41,7 @@ settings.autocue2.blankskip := true
 #settings.autocue2.unify_loudness_correction := true
 
 # `enable_autocue2_metadata()` will autocue ALL files Liquidsoap processes.
-# You can disable it for selected sources using 'annotate:liq_autocue="false"'.
+# You can disable it for selected sources using 'annotate:liq_autocue2="false"'.
 # Remember you won't get `liq_amplify` data then -- expect loudness jumps!
 enable_autocue2_metadata()
 
@@ -67,7 +67,7 @@ jingles = playlist(prefix='annotate:jingle_mode="true",liq_blankskip="false",'
 # Trying to exclude a single from autocue processing here, just for testing.
 # Should say "Skipping autocue..." in log
 uri = "/home/matthias/Musik/Other/Jingles/Short/Magenta - How sentimental.flac"
-single = single('annotate:liq_autocue="false",dummy="A Test!":#{uri}')
+single = single('annotate:liq_autocue2="false",dummy="A Test!":#{uri}')
 
 radio = random(weights=[1,1,1], [songs, jingles, single])
 radio = amplify(1.,override="liq_amplify",radio)

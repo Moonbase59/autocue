@@ -372,7 +372,7 @@ end
 # values can be computed. This function sets `settings.request.prefetch` to `2`
 # to account for the latency introduced by the `autocue2` computation when resolving
 # requsts. For a finer-grained processing, use the `autocue2:` protocol.
-# NOTE: You might want to annotate VIDEO sources with `liq_autocue=false`!
+# NOTE: You might want to annotate VIDEO sources with `liq_autocue2=false`!
 # Autocueing a multi-GB video works, but can really eat up CPU.
 # @category Liquidsoap
 def enable_autocue2_metadata() =
@@ -384,12 +384,12 @@ def enable_autocue2_metadata() =
   def autocue2_metadata(~metadata, fname) =
     label = "autocue2_metadata"
     if 
-      metadata["liq_autocue"] == "false"
+      metadata["liq_autocue2"] == "false"
     then
       log(
         level=2,
         label=label,
-        'Skipping autocue2 for file "#{fname}" because liq_autocue=false forbids it.'
+        'Skipping autocue2 for file "#{fname}" because liq_autocue2=false forbids it.'
       )
       []
     else
