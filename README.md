@@ -13,6 +13,8 @@ Basically, `autocue` consists of two parts:
 
 **Note:** Liquidsoap recently introduced a _bultin_ `autocue:` protocol. I had to rename my `autocue:` protocol to `autocue2:` so it doesn’t clash with the other one.
 
+Both standalone Liquidsoap operation and integrated playout systems like AzuraCast (and others) are supported. `cue_file`, the central part of `autocue2`, is available as CLI executable and can be used to integrate into other applications, for example to get the `autocue2` results into a _database_, or _pre-tag your audio files_.
+
 ## Table of Contents
 
 - [Install](#install)
