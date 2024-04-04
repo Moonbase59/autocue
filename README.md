@@ -113,6 +113,12 @@ settings.autocue2.blankskip := true
 
 **Note:** This should only be used with installation variant 2 (plugin/modify config).
 
+For installation variant 1 (`enable_autocue2_metadata()`), this command also goes here, _second input box_, just after the settings:
+
+```
+enable_autocue2_metadata()
+```
+
 #### Custom crossfading code
 
 Use the example in `test_local.liq` and add your custom `amplify` and `live_aware_crossfade` code in the _third input box_ of AzuraCast’s Liquidsoap Config. You might already have modified this in your local testing above.
