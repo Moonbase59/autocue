@@ -530,10 +530,6 @@ def live_aware_crossfade(old, new) =
           #log.severe(label=label, "Delaying fade-out & next track fade-in by #{delay} s.")
         end
 
-        # If needed, delay BOTH fade-out and fade-in, to avoid dead air.
-        # This ensures a better transition for jingles shorter than cross_duration.
-        #add(normalize=false, [fade.in(initial_metadata=new.metadata, duration=.1, delay=delay, new.source), fade.out(initial_metadata=old.metadata, duration=2.5, delay=delay, old.source)])
-
         # Starting with LS 2.2.5+git@cadd05596, we don’t need the delay anymore
         add(normalize=false, [fade.in(initial_metadata=new.metadata, duration=.1, new.source), fade.out(initial_metadata=old.metadata, duration=2.5, old.source)])
 
@@ -547,16 +543,5 @@ radio = cross(duration=3.0, width=2.0, live_aware_crossfade, radio)
 
 The 2.5 s fade-out helps tuning long overlap durations down, so they won’t distract the listener by overlaying songs and possibly jingles too long. If using `cross.smart`, the increased margin (8 dB/LU) helps making the smart crossfades sound much better.
 
-~~If you have a long `liq_cross_duration` and a jingle following that is _shorter_ than the computed crossing duration, above ensures the jingle can be played correctly by effectively _shifting it to the right within the crossing duration window_, thus playing it _later than originally computed_ and ensuring correct playout for the following track.~~
 
-~~We currently do this in above shown crossfading code. If this happens, a message will be logged:~~
-
-```
-2024/03/26 17:07:56 [live_aware_crossfade:3] Song → Jingle transition
-2024/03/26 17:07:56 [live_aware_crossfade:2] Cross duration 5.9 s longer than next track (3.4 s)!
-2024/03/26 17:07:56 [live_aware_crossfade:2] Delaying fade-out & next track fade-in by 2.5 s.
-```
-
-~~Jingles should not be shorter than the duration specified in `cross`.~~
-
-[^1]: As of 2024-04-02. _Liquidsoap_ has a very active development, so things might change.
+[^1]: As of 2024-04-07, using _Liquidsoap 2.2.5+git@317f191c0_. _Liquidsoap_ has a very active development, so things might change.
