@@ -208,7 +208,7 @@ def analyse(
 parser = argparse.ArgumentParser(
     description="Return cue-in, cue-out, overlay and replaygain data for an audio " \
     "file as JSON. To be used with my Liquidsoap \"autocue:\" protocol.",
-    epilog="For support, contact moonbase@quantentunnel.de",
+    epilog="Please report any issues to https://github.com/Moonbase59/autocue/issues",
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 parser.add_argument("file", help="File to be processed")
