@@ -156,8 +156,7 @@ def live_aware_crossfade(old, new) =
 
         #cross.simple(old.source, new.source, fade_in=0.1, fade_out=2.5,
         #  initial_fade_out_metadata=old.metadata, initial_fade_in_metadata=new.metadata)
-        #cross.smart(old, new, fade_in=0.1, fade_out=2.5, margin=8.,
-        #  initial_fade_out_metadata=old.metadata, initial_fade_in_metadata=new.metadata)
+        #cross.smart(old, new, fade_in=0.1, fade_out=2.5, margin=8.)
     end
 end
 
@@ -167,7 +166,7 @@ radio = cross(duration=3.0, width=2.0, live_aware_crossfade, radio)
 
 radio = mksafe(radio)
 
-output.ao(radio)
+output(radio)
 
 # record to a file for later checking with Audacity or the like
 # also write a .cue file so we can find tracks more easily

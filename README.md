@@ -1,4 +1,5 @@
 # <a name="autocue"></a>autocue <a href="#toc" class="goToc">⇧</a>
+
 On-the-fly JSON song cue-in, cue-out, overlay, replaygain calculation for Liquidsoap, AzuraCast and other AutoDJ software.
 
 Work in progress.
@@ -41,6 +42,7 @@ Both standalone Liquidsoap operation and integrated playout systems like AzuraCa
       - [Avoiding too much overlap](#avoiding-too-much-overlap)
     - [Blank (silence) detection](#blank-silence-detection)
   - [Liquidsoap protocol](#liquidsoap-protocol)
+    - [Minimal working example](#minimal-working-example)
     - [Next track and short jingle handling](#next-track-and-short-jingle-handling)
     - [Tags/Annotations that influence `autocue2`’s behaviour](#tagsannotations-that-influence-autocue2s-behaviour)
       - [`liq_autocue2` (`true`/`false`)](#liq_autocue2-truefalse)
@@ -67,7 +69,7 @@ If you wish, you can now play around with it a bit (use `cue_file --help` for he
 Use the code in `test_local.liq` for some local testing, if you have Liquidsoap installed on your machine.
 
 Adjust the _settings_ near the beginning of the fie, then look for
-```
+```ruby
 # --- Use YOUR (playlist/single) here! ---
 ```
 and put in _your_ song and jingle playlist, and a `single` for testing.
@@ -111,7 +113,7 @@ Then copy-paste the contents of the `autocue2.liq` file into _the second input b
 
 If you want to enable skipping silence _within tracks_, add the following line at the end of this input box:
 
-```
+```ruby
 settings.autocue2.blankskip := true
 ```
 
@@ -119,7 +121,7 @@ settings.autocue2.blankskip := true
 
 For installation variant 1 (`enable_autocue2_metadata()`), this command also goes here, _second input box_, just after the settings:
 
-```
+```ruby
 enable_autocue2_metadata()
 ```
 
@@ -129,13 +131,13 @@ Use the example in `test_local.liq` and add your custom `amplify` and `live_awar
 
 To find the relevant parts, look out for
 
-```
+```ruby
 # --- Copy-paste ...
 ```
 
 **Note:** If you had used ReplayGain adjustment before like so (third input box)
 
-```
+```ruby
 # Be sure to have ReplayGain applied before crossing.
 radio = amplify(1.,override="replaygain_track_gain",radio)
 ```
@@ -148,7 +150,7 @@ If you have disabled AzuraCast’s built-in `liq_amplify` handler (by copying `1
 
 Example, to use your own tagged _ReplayGain Track Gain_ instead:
 
-```
+```ruby
 # Be sure to have ReplayGain or "liq_amplify" applied before crossing.
 radio = amplify(1.,override="replaygain_track_gain",radio)
 #radio = amplify(1.,override="liq_amplify",radio)
@@ -293,7 +295,7 @@ Much better!
 
 We possibly don’t want the previous song to play "too much" into the next song, so we can set a _default fade-out_ in our custom crossfading. This will ensure a limit in case no user-defined fade-out has been set. We use `2.5` seconds in the example below (under _AzuraCast Notes_, in `live_aware_crossfade`):
 
-```
+```ruby
 add(normalize=false, [fade.in(duration=.1, delay=delay, new.source), fade.out(duration=2.5, delay=delay, old.source)])
 ```
 
@@ -335,7 +337,7 @@ Notice the new cue-in and cue-out times as well as the long cross duration with 
 
 The protocol is invoked by prefixing a playlist or request with `autocue2:` like so:
 
-```
+```ruby
 radio = playlist(prefix="autocue2:", "/home/matthias/Musik/Playlists/Radio/Classic Rock.m3u")
 ```
 
@@ -343,7 +345,7 @@ Alternatively, you can set `enable_autocue2_metadata()` and it will process _all
 
 `autocue2` offers the following settings (defaults shown):
 
-```
+```ruby
 settings.autocue2.path := "cue_file"
 settings.autocue2.timeout := 60.
 settings.autocue2.target := -18
@@ -358,6 +360,34 @@ settings.autocue2.blankskip := false
 # to the same LUFS target as your `settings.autocue2.target`,
 # usually -23 or -18 LUFS (-18 corresponds to the now obsolete `mp3gain` value "89 dB").
 settings.autocue2.unify_loudness_correction := true
+```
+
+### <a name="minimal-working-example"></a>Minimal working example <a href="#toc" class="goToc">⇧</a>
+
+This [minimal example](minimal_example.liq) enables `autocue2` for all tracks, using default settings, and plays a nicely crossfaded playlist to your sound card, so you can get a first impression. Just change the playlist to one of your own!
+
+```ruby
+# minimal_example.liq
+# 2024-04-09 - Moonbase59
+
+# Minimal example for the `autocue2` protocol.
+# Uses one playlist and outputs to sound card.
+
+%include "autocue2.liq"
+enable_autocue2_metadata()
+
+# --- Use YOUR playlist here! ---
+radio = playlist("/home/matthias/Musik/Playlists/Radio/Classic Rock.m3u")
+
+# Use calculated `liq_amplify` for loudness correction
+radio = amplify(1.,override="liq_amplify",radio)
+
+# simplest crossfade possible, using `autocue2` calculated data
+# set fades to your preference
+radio = crossfade(radio, fade_in=0.1, fade_out=2.5)
+
+radio = mksafe(radio)
+output(radio)
 ```
 
 ### <a name="next-track-and-short-jingle-handling"></a>Next track and short jingle handling <a href="#toc" class="goToc">⇧</a>
@@ -380,13 +410,13 @@ You can _disable_ autocueing for selected sources, like maybe a playlist of larg
 
 So if you’ve used
 
-```
+```ruby
 enable_autocue2_metadata()
 ```
 
 to globally enable `autocue2`, and want to _exclude_ a playlist from processing, use:
 
-```
+```ruby
 p = playlist(prefix='annotate:liq_autocue2="false":', '/path/to/playlist.ext')
 ```
 
@@ -404,19 +434,19 @@ You can _override_ the "blankskip" behaviour (early cue-out of a song when silen
 
 For a `playlist`, you could use its `prefix`, like in
 
-```
+```ruby
 p = playlist(prefix='autocue2:annotate:liq_blankskip="false":', '/path/to/playlist.ext')
 ```
 
 For a `single`, this would look like
 
-```
+```ruby
 s = single('autocue2:annotate:liq_blankskip="false":/path/to/file.ext')
 ```
 
 Or for a `request` like
 
-```
+```ruby
 r = request.create('autocue2:annotate:liq_blankskip="false":/path/to/file.ext')
 ```
 
@@ -493,7 +523,7 @@ I currently[^1] use these crossfade settings (third input box in AzuraCast; lots
 
 Be sure to check the _copy-paste sections_ in `test_local.liq`, which always holds the most current code.
 
-```
+```ruby
 # Fading/crossing/segueing
 def live_aware_crossfade(old, new) =
     label = "live_aware_crossfade"
