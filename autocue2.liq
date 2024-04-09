@@ -114,7 +114,7 @@ def file.autocue2.compute(
     )
 
     l = list.sort.natural(metadata.cover.remove(meta))
-    list.iter(fun(v) -> log.important(label=label, "#{v}"), l)
+    list.iter(fun(v) -> log.info(label=label, "#{v}"), l)
 
     # Blank skipping can be set globally using `settings.autocue2.blankskip`.
     # For AzuraCast, we override that setting if we detect "jingle_mode",
@@ -307,7 +307,7 @@ def file.autocue2.metadata(
     )
   end
   l = list.sort.natural(metadata_cover_remove(metadata))
-  list.iter(fun(v) -> log.important(label=label, "#{v}"), l)
+  list.iter(fun(v) -> log.info(label=label, "#{v}"), l)
 
   log(level=3, label=label, 'jingle_mode=#{metadata["jingle_mode"]}, liq_blankskip=#{metadata["liq_blankskip"]}')
 
@@ -358,7 +358,7 @@ def file.autocue2.metadata(
     end
 
     l = list.sort.natural(metadata_cover_remove(result()))
-    list.iter(fun(v) -> log.important(label=label, "#{v}"), l)
+    list.iter(fun(v) -> log.info(label=label, "#{v}"), l)
 
     result()
   else
