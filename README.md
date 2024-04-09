@@ -215,7 +215,7 @@ options:
 
 The well-known _Nirvana_ song _Something in the Way / Endless, Nameless_ from their 1991 album _Nevermind_:
 
-![Auswahl_352](https://github.com/Moonbase59/autocue/assets/3706922/fa7e66e9-ccd8-42f3-8051-fa2fc060a939)
+![Screenhot of Nirvana song waveform, showing a 10-minute silent gap in the middle](https://github.com/Moonbase59/autocue/assets/3706922/fa7e66e9-ccd8-42f3-8051-fa2fc060a939)
 
 It contains the 3:48 song _Something in the Way_, followed by 10:03 of silence, followed by the "hidden track" _Endless, Nameless_.
 
@@ -248,7 +248,7 @@ where
 
 _Bohemian Rhapsody_ by _Queen_ has a rather long ending, which we don’t want to destroy by overlaying the next song too early. This is where `cue_file`’s automatic "long tail" handling comes into play. Let’s see how the end of the song looks like:
 
-![Auswahl_363](https://github.com/Moonbase59/autocue/assets/3706922/28f82f63-6341-4064-aaed-36339b0a2d4d)
+![Screenshot of Queen's Bohemian Rhapsody waveform, showing the almost 40 second long silent ending](https://github.com/Moonbase59/autocue/assets/3706922/28f82f63-6341-4064-aaed-36339b0a2d4d)
 
 Here are the values we get from `cue_file`:
 
@@ -265,7 +265,7 @@ Let’s follow the steps `cue_file` took to arrive at this result.
 
 `cue_file` uses the `-s`/`--silence` parameter value (-42 LU default) to scan _backwards from the end_ for something that is louder than -42 LU below the _average (integrated) song loudness_, using the EBU R128 momentary loudness algorithm. This is _not_ a simple "level check"! Using the default (playout) reference loudness target of `-18 LUFS` (`-t`/`--target` parameter), we thus arrive at a noise floor of -60 LU, which is a good silence level to use.
 
-![Auswahl_359](https://github.com/Moonbase59/autocue/assets/3706922/c745989a-5f32-4aa1-a5b7-ac4bc955e568)
+![Screenshot of Bohemian Rhapsody waveform, showing calculated cue-out point at 353.10 seconds (2 seconds before end)](https://github.com/Moonbase59/autocue/assets/3706922/c745989a-5f32-4aa1-a5b7-ac4bc955e568)
 
 `cue_file` has determined the _cue-out point_ at `353.10` seconds (5:53.1).
 
@@ -275,7 +275,7 @@ Liquidsoap uses a `liq_cross_duration` concept instead of an abolute "start next
 
 `cue_file` uses the `-o`/`--overlay` parameter value (-8 LU default) to scan _backwards from the cue-out point_ for something that is louder than -8 LU below the _average (integrated) song loudness_, thus finding a good point where the next song could start and be overlaid.
 
-![Auswahl_360](https://github.com/Moonbase59/autocue/assets/3706922/20a9396b-a31a-4a11-87b4-641d6868cc49)
+![Screenshot of Bohemian Rhapsody waveform, showing the cross duration calculated in the first run: 16.7 seconds before end – way too much](https://github.com/Moonbase59/autocue/assets/3706922/20a9396b-a31a-4a11-87b4-641d6868cc49)
 
 `cue_file` has determined a _cross duration_ of `16.70` seconds, starting at 336.4 seconds (5:36.4).
 
@@ -285,7 +285,7 @@ We can see this would destroy an important part of the song’s end.
 
 Finding that the calculated cross duration of `16.70` seconds is longer than 15 seconds (the `-l`/`--longtail` parameter), `cue_file` now _recalculates the cross duration_ automatically, using an extra -15 LU loudness offset (`-x`/`--extra` parameter), and arrives at this:
 
-![Auswahl_361](https://github.com/Moonbase59/autocue/assets/3706922/9f9ec3af-89d4-4edc-9316-d53ed1fcf000)
+![Screenshot of Bohemian Rhapsody waveform, showing the newly calculated cross duration: 4.7 seconds before end – just right, not cutting off important parts of the song ending](https://github.com/Moonbase59/autocue/assets/3706922/9f9ec3af-89d4-4edc-9316-d53ed1fcf000)
 
 `cue_file` has now set `liq_cross_duration` to `4.70` seconds and `liq_longtail` to `true` so we know this song has a "long tail" and been calculated differently.
 
@@ -299,7 +299,7 @@ We possibly don’t want the previous song to play "too much" into the next song
 add(normalize=false, [fade.in(duration=.1, delay=delay, new.source), fade.out(duration=2.5, delay=delay, old.source)])
 ```
 
-![Auswahl_362](https://github.com/Moonbase59/autocue/assets/3706922/f1e96db6-2f23-4cdd-9693-24711fe91895)
+![Screenshot of Bohemian Rhapsody waveform, showing the user-defined fade-out of 2.5 seconds, starting 4.7 seconds before song ends](https://github.com/Moonbase59/autocue/assets/3706922/f1e96db6-2f23-4cdd-9693-24711fe91895)
 
 Fading area, using above settings. The rest of the ending won’t be heard.
 
@@ -307,7 +307,7 @@ Fading area, using above settings. The rest of the ending won’t be heard.
 
 **Note:** Blank detection _within a song_ is experimental. It will most certainly _fail_ on spoken or TTS-generated messages (since spoken text has long pauses), and it can fail on some songs with very smooth beginnings, like _Sarah McLachlan’s Fallen_:
 
-![Auswahl_353](https://github.com/Moonbase59/autocue/assets/3706922/c1085156-5483-4474-afd8-cb437d0d2e4b)
+![Screenshot of Sarah McLachlan's "Fallen" waveform. The song has a long silent beginning, which makes blank detection fail, using the default settings.](https://github.com/Moonbase59/autocue/assets/3706922/c1085156-5483-4474-afd8-cb437d0d2e4b)
 
 This song works fine in "normal mode", but only a 0.6 second portion (marked) of the beginning is played in "blank detection" mode when using the default settings:
 
