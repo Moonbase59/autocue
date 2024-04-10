@@ -19,7 +19,7 @@
 
 You can now do really wild things, like enabling `autocue2` processing globally, and _still_ create something like a "sampling" playlist which plays 30s-snippets of a list of songs. And even with the simplest crossfade command possible!
 
-```
+```ruby
 enable_autocue2_metadata()
 
 ...
@@ -34,7 +34,7 @@ radio = crossfade(radio, fade_in=0.1, fade_out=2.5)
 
 Or you can _exclude_ your video files from processing, for example:
 
-```
+```ruby
 video_playlist_night = playlist(
   id="video_playlist_night",
   prefix="annotate:liq_autocue2=false:",
