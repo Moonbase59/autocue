@@ -186,13 +186,6 @@ def analyse(
                 break
         start_next_time = max(start_next_time, cue_out_time - start_next_time)
 
-    # Now that we know where to start the next song, calculate Liquidsoap's
-    # cross duration from it, allowing for an extra 0.1s of overlap -- no, reverse
-    # (a value of 0.0 is invalid in Liquidsoap)
-    cross_duration = cue_out_time - start_next_time
-
-    # We now also return start_next_time
-    
     # return a dict
     return ({
         "duration": duration,
@@ -201,7 +194,6 @@ def analyse(
         "liq_cue_out": cue_out_time,
         "liq_cross_start_next": start_next_time,
         "liq_longtail": longtail,
-        "liq_cross_duration": cross_duration,
         "liq_loudness": loudness,
         "liq_amplify": (target - loudness),
         "liq_blank_skipped": blank_skipped
@@ -283,16 +275,15 @@ result = analyse(
 # 2 decimals is exact enough, also some tools don't understand 3 or more decimals
 # we use "dB" instead of "LU" units, because LS & others don’t understand "LU"
 liq_result = {
-    "duration": f"{result['duration']:.2f}",
-    "liq_duration": f"{result['liq_duration']:.2f}",
-    "liq_cue_in": f"{result['liq_cue_in']:.2f}",
-    "liq_cue_out": f"{result['liq_cue_out']:.2f}",
-    "liq_cross_start_next": f"{result['liq_cross_start_next']:.2f}",
-    "liq_longtail": "true" if (result["liq_longtail"]) else "false",
-    "liq_cross_duration": f"{result['liq_cross_duration']:.2f}",
+    "duration": result['duration'],
+    "liq_duration": result['liq_duration'],
+    "liq_cue_in": result['liq_cue_in'],
+    "liq_cue_out": result['liq_cue_out'],
+    "liq_cross_start_next": result['liq_cross_start_next'],
+    "liq_longtail": result["liq_longtail"],
     "liq_loudness": f"{result['liq_loudness']:.2f} dB",
     "liq_amplify": f"{result['liq_amplify']:.2f} dB",
-    "liq_blank_skipped": "true" if (result["liq_blank_skipped"]) else "false"
+    "liq_blank_skipped": result['liq_blank_skipped'],
 }
 
 # output compact (one line) JSON, for use in Liquidsoap "autocue:" protocol
