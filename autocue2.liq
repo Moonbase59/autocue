@@ -239,6 +239,7 @@ def file.autocue2.metadata(
     # Work around metadata quirk:
     # If coming from `enable_autocue2_metadata()`, we must use the "handed-down" metadata.
     # Otherwise, we’d not see extra annotated values.
+    # TODO: Maybe fixed in LS 2.2.5+git@02cb8dbb6, needs testing.
     if initial_metadata != [] then
       m := initial_metadata
     end
