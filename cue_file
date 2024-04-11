@@ -270,7 +270,6 @@ result = analyse(
 )
 
 # prepare string-based JSON result
-# 2 decimals is exact enough, also some tools don't understand 3 or more decimals
 # we use "dB" instead of "LU" units, because LS & others don’t understand "LU"
 liq_result = {
     "duration": result['duration'],
