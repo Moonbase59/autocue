@@ -3,6 +3,7 @@
 
 # cue_file
 # 2024-03-23 Moonbase59
+# 2024-04-11 Moonbase59 - Added liq_cross_start_next
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
@@ -144,17 +145,17 @@ def analyse(
             end = i+1
             # print(f"Found cue-out: {end}, {cue_out_time}")
             break
-    # cue out PAST the current frame (100ms)
-    cue_out_time = max(cue_out_time + 0.1, duration - cue_out_time)
+    # cue out PAST the current frame (100ms) -- no, reverse that
+    cue_out_time = max(cue_out_time, duration - cue_out_time)
 
     # Adjust cue-out and "end" point if we're working with blank detection.
     # Also set a flag (`liq_blank_skipped`) so we can later see if cue-out is early.
     blank_skipped = False
     if blankskip:
-        # cue out PAST the current frame (100ms)
-        cue_out_time_blank = cue_out_time_blank + 0.1
+        # cue out PAST the current frame (100ms) -- no, reverse that
+        #cue_out_time_blank = cue_out_time_blank + 0.1
         # print(f"cue-out blank: {cue_out_time_blank}, cue-out: {cue_out_time}")
-        if 0.1 < cue_out_time_blank < cue_out_time:
+        if 0.0 < cue_out_time_blank < cue_out_time:
             cue_out_time = cue_out_time_blank
             blank_skipped = True
         end = end_blank
@@ -186,16 +187,19 @@ def analyse(
         start_next_time = max(start_next_time, cue_out_time - start_next_time)
 
     # Now that we know where to start the next song, calculate Liquidsoap's
-    # cross duration from it, allowing for an extra 0.1s of overlap
+    # cross duration from it, allowing for an extra 0.1s of overlap -- no, reverse
     # (a value of 0.0 is invalid in Liquidsoap)
-    cross_duration = cue_out_time - start_next_time + 0.1
+    cross_duration = cue_out_time - start_next_time
 
+    # We now also return start_next_time
+    
     # return a dict
     return ({
         "duration": duration,
         "liq_duration": cue_duration,
         "liq_cue_in": cue_in_time,
         "liq_cue_out": cue_out_time,
+        "liq_cross_start_next": start_next_time,
         "liq_longtail": longtail,
         "liq_cross_duration": cross_duration,
         "liq_loudness": loudness,
@@ -283,6 +287,7 @@ liq_result = {
     "liq_duration": f"{result['liq_duration']:.2f}",
     "liq_cue_in": f"{result['liq_cue_in']:.2f}",
     "liq_cue_out": f"{result['liq_cue_out']:.2f}",
+    "liq_cross_start_next": f"{result['liq_cross_start_next']:.2f}",
     "liq_longtail": "true" if (result["liq_longtail"]) else "false",
     "liq_cross_duration": f"{result['liq_cross_duration']:.2f}",
     "liq_loudness": f"{result['liq_loudness']:.2f} dB",

@@ -161,6 +161,7 @@ def replaces file.autocue2(
       liq_duration,
       liq_cue_in,
       liq_cue_out,
+      liq_cross_start_next,
       liq_longtail,
       liq_cross_duration,
       liq_loudness,
@@ -171,6 +172,7 @@ def replaces file.autocue2(
       liq_duration: string,
       liq_cue_in: string,
       liq_cue_out: string,
+      liq_cross_start_next: string,
       liq_longtail: string,
       liq_cross_duration: string,
       liq_loudness: string,
@@ -184,6 +186,7 @@ def replaces file.autocue2(
       ("liq_duration", liq_duration),
       ("liq_cue_in", liq_cue_in),
       ("liq_cue_out", liq_cue_out),
+      ("liq_cross_start_next", liq_cross_start_next),
       ("liq_longtail", liq_longtail),
       ("liq_cross_duration", liq_cross_duration),
       ("liq_loudness", liq_loudness),
@@ -297,6 +300,15 @@ def file.autocue2.metadata(
             result()
         )
 
+        # TODO: Add some plausibility checks here, to prevent user error
+        # cue_out <= duration || cue_out = duration
+        # cue_out >= cue_in || cue_out = duration ?
+        # cue_in <= cross_start_next <= cue_out || cross_start_next = cue_out
+        # liq_duration = cue_out - cue_in || always set
+        # fade_in_delay + fade_in < liq_duration || let LS handle?
+        # fade_out_delay + fade_out < liq_curation || let LS handle?
+        # fade_in_delay + fade_in + fade_out_delay + fade_out <= liq_duration || let LS handle?
+        
         # correct `liq_duration`
         cue_in = float_of_string(list.assoc(default="0.00", "liq_cue_in", result()))
         cue_out = float_of_string(list.assoc(default="0.00", "liq_cue_out", result()))
