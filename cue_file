@@ -144,8 +144,8 @@ def analyse(
             end = i+1
             # print(f"Found cue-out: {end}, {cue_out_time}")
             break
-    # cue out PAST the current frame (100ms)
-    cue_out_time = max(cue_out_time + 0.1, duration - cue_out_time)
+    # cue out PAST the current frame (100ms) -- no, reverse that
+    cue_out_time = max(cue_out_time, duration - cue_out_time)
 
     # Adjust cue-out and "end" point if we're working with blank detection.
     # Also set a flag (`liq_blank_skipped`) so we can later see if cue-out is early.
