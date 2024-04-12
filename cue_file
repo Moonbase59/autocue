@@ -3,7 +3,6 @@
 
 # cue_file
 # 2024-03-23 Moonbase59
-# 2024-04-11 Moonbase59 - Added liq_cross_start_next
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
@@ -189,11 +188,10 @@ def analyse(
     # return a dict
     return ({
         "duration": duration,
-        "liq_duration": cue_duration,
         "liq_cue_in": cue_in_time,
         "liq_cue_out": cue_out_time,
-        "liq_cross_start_next": start_next_time,
         "liq_longtail": longtail,
+        "liq_cross_start_next": start_next_time,
         "liq_loudness": loudness,
         "liq_amplify": (target - loudness),
         "liq_blank_skipped": blank_skipped
@@ -272,18 +270,16 @@ result = analyse(
 )
 
 # prepare string-based JSON result
-# 2 decimals is exact enough, also some tools don't understand 3 or more decimals
 # we use "dB" instead of "LU" units, because LS & others don’t understand "LU"
 liq_result = {
     "duration": result['duration'],
-    "liq_duration": result['liq_duration'],
     "liq_cue_in": result['liq_cue_in'],
     "liq_cue_out": result['liq_cue_out'],
-    "liq_cross_start_next": result['liq_cross_start_next'],
     "liq_longtail": result["liq_longtail"],
+    "liq_cross_start_next": result['liq_cross_start_next'],
     "liq_loudness": f"{result['liq_loudness']:.2f} dB",
     "liq_amplify": f"{result['liq_amplify']:.2f} dB",
-    "liq_blank_skipped": result['liq_blank_skipped'],
+    "liq_blank_skipped": result["liq_blank_skipped"],
 }
 
 # output compact (one line) JSON, for use in Liquidsoap "autocue:" protocol
