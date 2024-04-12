@@ -6,44 +6,71 @@
 # --- Copy-paste Azuracast LS Config, second input box BEGIN ---
 
 # Initialize settings for cue_file autocue implementation
-let settings.cue_file = ()
+let settings.autocue.cue_file = ()
 
-let settings.cue_file.path =
+let settings.autocue.cue_file.path =
   settings.make(
     description=
       "Path of the cue_file binary.",
     "cue_file"
   )
 
-let settings.cue_file.timeout =
+let settings.autocue.cue_file.fade_in =
+  settings.make(
+    description=
+      "Default fade-in duration if no specified by the user.",
+    0.1
+  )
+
+let settings.autocue.cue_file.fade_out =
+  settings.make(
+    description=
+      "Default fade-out duration if no specified by the user.",
+    3.
+  )
+
+let settings.autocue.cue_file.metadata_override =
+  settings.make(
+    description=
+      "Disable processing when one of these metadata is found",
+    [
+      "liq_cue_in",
+      "liq_cue_out",
+      "liq_cross_start_next",
+      "liq_fade_in_delay",
+      "liq_fade_out_delay"
+    ]
+  )
+
+let settings.autocue.cue_file.timeout =
   settings.make(
     description=
       "Timeout (in seconds) for cue_file executions.",
     60.
   )
 
-let settings.cue_file.target =
+let settings.autocue.cue_file.target =
   settings.make(
     description=
       "Loudness target in LUFS.",
     -18
   )
 
-let settings.cue_file.silence =
+let settings.autocue.cue_file.silence =
   settings.make(
     description=
       "Silence level (for cue points) in LU/dB below track loudness.",
     -42
   )
 
-let settings.cue_file.overlay =
+let settings.autocue.cue_file.overlay =
   settings.make(
     description=
       "Start overlay level in LU/dB below track loudness.",
     -8
   )
 
-let settings.cue_file.longtail =
+let settings.autocue.cue_file.longtail =
   settings.make(
     description=
       "More than so many seconds of calculated overlay are considered a long \
@@ -51,7 +78,7 @@ let settings.cue_file.longtail =
     15.0
   )
 
-let settings.cue_file.overlay_longtail =
+let settings.autocue.cue_file.overlay_longtail =
   settings.make(
     description=
       "Extra LU/dB level below overlay loudness, to recalculate songs with long \
@@ -59,14 +86,14 @@ let settings.cue_file.overlay_longtail =
     -15
   )
 
-let settings.cue_file.blankskip =
+let settings.autocue.cue_file.blankskip =
   settings.make(
     description=
       'Skip blank (silence) within song (get rid of "hidden tracks".)',
     false
   )
 
-let settings.cue_file.unify_loudness_correction =
+let settings.autocue.cue_file.unify_loudness_correction =
   settings.make(
     description=
       'Unify `replaygain_track_gain` and `liq_amplify`. If enabled, this will \
@@ -74,20 +101,20 @@ let settings.cue_file.unify_loudness_correction =
        precedence if we can see it. Allows scripts to amplify on either value, \
        without getting loudness jumps.\nNote this can only work correctly if \
        your files have been replaygained to the same LUFS target as your \
-       `settings.cue_file.target`!',
+       `settings.autocue.cue_file.target`!',
     true
   )
 
 # Compute cue_file data
 # @flag extra
 def cue_file(req) =
-  timeout = settings.cue_file.timeout()
-  target = settings.cue_file.target()
-  silence = settings.cue_file.silence()
-  overlay = settings.cue_file.overlay()
-  longtail = settings.cue_file.longtail()
-  overlay_longtail = settings.cue_file.overlay_longtail()
-  blankskip = settings.cue_file.blankskip()
+  timeout = settings.autocue.cue_file.timeout()
+  target = settings.autocue.cue_file.target()
+  silence = settings.autocue.cue_file.silence()
+  overlay = settings.autocue.cue_file.overlay()
+  longtail = settings.autocue.cue_file.longtail()
+  overlay_longtail = settings.autocue.cue_file.overlay_longtail()
+  blankskip = settings.autocue.cue_file.blankskip()
 
   label = "cue_file"
 
@@ -96,7 +123,44 @@ def cue_file(req) =
   # so we can use meta["something"]
   meta = m()
 
+  liq_fade_in =
+    try
+      float_of_string(list.assoc("liq_fade_in", meta))
+    catch _ do
+      log(
+        level=3,
+        label="autocue.cue_file.metadata",
+        "Could not find user-supplied value for fade-in duration, using default \
+         setting."
+      )
+      settings.autocue.cue_file.fade_in()
+    end
+
+  liq_fade_out =
+    try
+      float_of_string(list.assoc("liq_fade_out", meta))
+    catch _ do
+      log(
+        level=3,
+        label="autocue.cue_file.metadata",
+        "Could not find user-supplied value for fade-out duration, using default \
+         setting."
+      )
+      settings.autocue.cue_file.fade_out()
+    end
+
+  metadata_overrides = settings.autocue.internal.metadata_override()
+
   if
+    list.exists(fun (el) -> list.mem(fst(el), metadata_overrides), meta)
+  then
+    log(
+      level=2,
+      label="autocue.cue_file.metadata",
+      "Override metadata detected for #{request.uri(req)}, disabling autocue!"
+    )
+    null()
+  elsif
     meta["liq_cue_file"] == "false"
   then
     log(
@@ -129,7 +193,7 @@ def cue_file(req) =
       }'
     )
 
-    # Blank skipping can be set globally using `settings.cue_file.blankskip`.
+    # Blank skipping can be set globally using `settings.autocue.cue_file.blankskip`.
     # For AzuraCast, we override that setting if we detect "jingle_mode",
     # i.e. a track from a playlist that has "Hide Metadata from Listeners" set.
     # For standalone Liquidsoap, the ultimate override is `liq_blankskip`.
@@ -175,7 +239,7 @@ def cue_file(req) =
           default="",
           process.read.lines(
             timeout=timeout,
-            process.quote.command(settings.cue_file.path(), args=args())
+            process.quote.command(settings.autocue.cue_file.path(), args=args())
           )
         )
     catch err do
@@ -236,12 +300,12 @@ def cue_file(req) =
         )
 
       if
-        settings.cue_file.unify_loudness_correction()
+        settings.autocue.cue_file.unify_loudness_correction()
       then
         # We wish to avoid loudness jumps in all possible cases,
         # so bring `replaygain_track_gain` and `liq_amplify` in line.
         # NOTE: This can only work correctly if your files have been replaygained
-        # to the same LUFS target as your `settings.cue_file.target`!
+        # to the same LUFS target as your `settings.autocue.cue_file.target`!
         if
           list.assoc.mem("replaygain_track_gain", meta)
         then
@@ -271,10 +335,42 @@ def cue_file(req) =
         end
       end
 
+      # Adjust cue_out according to user-supplied fade_out
+      let (liq_fade_out, liq_cue_out) =
+        if
+          liq_cross_start_next + liq_fade_out < liq_cue_out
+        then
+          (liq_fade_out, liq_cross_start_next + liq_fade_out)
+        else
+          log(
+            level=2,
+            label=label,
+            "User-supplied fade-out duration exceeds available time!"
+          )
+          (liq_cue_out - liq_cross_start_next, liq_cue_out)
+        end
+
+      # Check for invalid fade.in
+      let liq_fade_in =
+        if
+          liq_fade_in < liq_cue_out - liq_cue_in
+        then
+          liq_fade_in
+        else
+          log(
+            level=2,
+            label=label,
+            "User-supplied fade-in duration exceeds available time!"
+          )
+          0.1
+        end
+
       {
         amplify=liq_amplify(),
         cue_in=liq_cue_in,
         cue_out=liq_cue_out,
+        fade_in=liq_fade_in,
+        fade_out=liq_fade_out,
         start_next=liq_cross_start_next,
         extra_metadata=extra_metadata()
       }
