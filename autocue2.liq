@@ -1,5 +1,6 @@
 # autocue2.liq
 # 2024-04-10 - Moonbase59
+# 2024-04-12 - Toots: re-organize to integrate as core autocue implementation.
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -388,6 +389,5 @@ end
 autocue.register(name="cue_file", cue_file)
 
 # --- Copy-paste Azuracast LS Config, second input box END ---
-
 
 # Don't forget to add your settings after this.
