@@ -1,6 +1,7 @@
 # autocue2.liq
 # 2024-04-10 - Moonbase59
 # 2024-04-12 - Toots: re-organize to integrate as core autocue implementation.
+# 2024-04-12 - Moonbase59 - re-introduce `liq_duration` as `liq_cue_duration`.
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -27,20 +28,14 @@ let settings.autocue.cue_file.fade_out =
   settings.make(
     description=
       "Default fade-out duration if no specified by the user.",
-    3.
+    2.5
   )
 
 let settings.autocue.cue_file.metadata_override =
   settings.make(
     description=
       "Disable processing when one of these metadata is found",
-    [
-      "liq_cue_in",
-      "liq_cue_out",
-      "liq_cross_start_next",
-      "liq_fade_in_delay",
-      "liq_fade_out_delay"
-    ]
+    []
   )
 
 let settings.autocue.cue_file.timeout =
@@ -268,10 +263,11 @@ def cue_file(req) =
       let json.parse (
         {
           duration,
+          liq_cue_duration,
           liq_cue_in,
           liq_cue_out,
-          liq_longtail,
           liq_cross_start_next,
+          liq_longtail,
           liq_loudness,
           liq_amplify,
           liq_blank_skipped
@@ -279,10 +275,11 @@ def cue_file(req) =
       :
         {
           duration: float,
+          liq_cue_duration: float,
           liq_cue_in: float,
           liq_cue_out: float,
-          liq_longtail: bool,
           liq_cross_start_next: float,
+          liq_longtail: bool,
           liq_loudness: string,
           liq_amplify: string,
           liq_blank_skipped: bool
@@ -294,6 +291,7 @@ def cue_file(req) =
         ref(
           [
             ("duration", string(duration)),
+            ("liq_cue_duration", string(liq_cue_duration)),
             ("liq_longtail", string(liq_longtail)),
             ("liq_loudness", liq_loudness),
             ("liq_blank_skipped", string(liq_blank_skipped))

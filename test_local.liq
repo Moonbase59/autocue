@@ -28,22 +28,27 @@ to_live = ref(false)
 %include "autocue2.liq"
 
 # --- Copy-paste your settings into AzuraCast, second input box AFTER above file ---
-#settings.autocue2.path := "cue_file"
-#settings.autocue2.timeout := 60.
-#settings.autocue2.target := -18
-#settings.autocue2.silence := -42
-#settings.autocue2.overlay := -8
-#settings.autocue2.longtail := 15.0
-#settings.autocue2.overlay_longtail := -15
-# The following can be overridden by the `liq_blankskip` annotation
-# on a per-request or per-playlist basis
-settings.autocue2.blankskip := true
-#settings.autocue2.unify_loudness_correction := true
+
+#settings.autocue.cue_file.path := "cue_file"
+#settings.autocue.cue_file.fade_in := 0.1
+#settings.autocue.cue_file.fade_out := 2.5
+#settings.autocue.cue_file.metadata_override := []
+#settings.autocue.cue_file.timeout := 60.
+#settings.autocue.cue_file.target := -18
+#settings.autocue.cue_file.silence := -42
+#settings.autocue.cue_file.overlay := -8
+#settings.autocue.cue_file.longtail := 15.
+#settings.autocue.cue_file.overlay_longtail := -15
+#settings.autocue.cue_file.blankskip := false
+#settings.autocue.cue_file.unify_loudness_correction := true
+
+settings.autocue.cue_file.blankskip := true
 
 # `enable_autocue2_metadata()` will autocue ALL files Liquidsoap processes.
 # You can disable it for selected sources using 'annotate:liq_autocue2="false"'.
 # Remember you won't get `liq_amplify` data then -- expect loudness jumps!
-enable_autocue2_metadata()
+settings.autocue.preferred := "cue_file"
+enable_autocue_metadata()
 
 # --- Copy-paste END ---
 
@@ -56,18 +61,18 @@ songs = playlist(uri)
 uri = "/home/matthias/Musik/Other/Jingles/Short"
 #uri = "/home/matthias/Musik/Other/Jingles/Programm"
 # set jingle mode, no blank skipping, and some values like AzuraCast would
-#jingles = playlist(prefix='autocue2:annotate:jingle_mode="true",liq_blankskip="false",'
-#  ^ 'liq_cross_duration="0.10",liq_fade_in="0.10",liq_fade_out="0.10"'
+#jingles = playlist(prefix='autocue:annotate:jingle_mode="true",liq_blankskip="false",'
+#  ^ 'liq_fade_in="0.10",liq_fade_out="0.10"'
 #  ^ ':', uri)
 jingles = playlist(prefix='annotate:jingle_mode="true",liq_blankskip="false",'
-  ^ 'liq_cross_duration="0.10",liq_fade_in="0.10",liq_fade_out="0.10"'
+  ^ 'liq_fade_in="0.10",liq_fade_out="0.10"'
   ^ ':', uri)
 
 # --- Use YOUR single here! ---
 # Trying to exclude a single from autocue processing here, just for testing.
 # Should say "Skipping autocue..." in log
 uri = "/home/matthias/Musik/Other/Jingles/Short/Magenta - How sentimental.flac"
-single = single('annotate:liq_autocue2="false",dummy="A Test!":#{uri}')
+single = single('annotate:liq_cue_file=false,dummy="A Test!":#{uri}')
 
 radio = random(weights=[1,1,1], [songs, jingles, single])
 radio = amplify(1.,override="liq_amplify",radio)
