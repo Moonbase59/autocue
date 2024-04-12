@@ -145,7 +145,7 @@ def cue_file(req) =
       settings.autocue.cue_file.fade_out()
     end
 
-  metadata_overrides = settings.autocue.internal.metadata_override()
+  metadata_overrides = settings.autocue.cue_file.metadata_override()
 
   if
     list.exists(fun (el) -> list.mem(fst(el), metadata_overrides), meta)
