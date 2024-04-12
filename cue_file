@@ -151,10 +151,10 @@ def analyse(
     # Also set a flag (`liq_blank_skipped`) so we can later see if cue-out is early.
     blank_skipped = False
     if blankskip:
-        # cue out PAST the current frame (100ms)
-        cue_out_time_blank = cue_out_time_blank + 0.1
+        # cue out PAST the current frame (100ms) -- no, reverse that
+        #cue_out_time_blank = cue_out_time_blank + 0.1
         # print(f"cue-out blank: {cue_out_time_blank}, cue-out: {cue_out_time}")
-        if 0.1 < cue_out_time_blank < cue_out_time:
+        if 0.0 < cue_out_time_blank < cue_out_time:
             cue_out_time = cue_out_time_blank
             blank_skipped = True
         end = end_blank
