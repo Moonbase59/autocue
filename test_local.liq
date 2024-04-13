@@ -139,7 +139,7 @@ def live_aware_crossfade(old, new) =
             log.important(label=label, "Song → Song transition")
         end
 
-        nd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_duration", new.metadata))
+        nd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_cue_duration", new.metadata))
         xd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_cross_duration", old.metadata))
         delay = max(0., xd - nd)
         log.important(label=label, "Cross/new/delay: #{xd} / #{nd} / #{delay} s")

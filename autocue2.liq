@@ -1,5 +1,6 @@
 # autocue2.liq
 # 2024-04-10 - Moonbase59
+# 2024-04-13 - Moonbase59 - Rename `liq_duration` to `liq_cue_duration`
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -158,7 +159,7 @@ def replaces file.autocue2(
     
     let json.parse ({
       duration,
-      liq_duration,
+      liq_cue_duration,
       liq_cue_in,
       liq_cue_out,
       liq_cross_start_next,
@@ -169,7 +170,7 @@ def replaces file.autocue2(
       liq_blank_skipped
     } : {
       duration: string,
-      liq_duration: string,
+      liq_cue_duration: string,
       liq_cue_in: string,
       liq_cue_out: string,
       liq_cross_start_next: string,
@@ -183,7 +184,7 @@ def replaces file.autocue2(
     # TODO: How to return an incomplete assoc list from above?
     [
       ("duration", duration),
-      ("liq_duration", liq_duration),
+      ("liq_cue_duration", liq_cue_duration),
       ("liq_cue_in", liq_cue_in),
       ("liq_cue_out", liq_cue_out),
       ("liq_cross_start_next", liq_cross_start_next),
@@ -304,19 +305,19 @@ def file.autocue2.metadata(
         # cue_out <= duration || cue_out = duration
         # cue_out >= cue_in || cue_out = duration ?
         # cue_in <= cross_start_next <= cue_out || cross_start_next = cue_out
-        # liq_duration = cue_out - cue_in || always set
-        # fade_in_delay + fade_in < liq_duration || let LS handle?
+        # liq_cue_duration = cue_out - cue_in || always set
+        # fade_in_delay + fade_in < liq_cue_duration || let LS handle?
         # fade_out_delay + fade_out < liq_curation || let LS handle?
-        # fade_in_delay + fade_in + fade_out_delay + fade_out <= liq_duration || let LS handle?
+        # fade_in_delay + fade_in + fade_out_delay + fade_out <= liq_cue_duration || let LS handle?
         
-        # correct `liq_duration`
+        # correct `liq_cue_duration`
         cue_in = float_of_string(list.assoc(default="0.00", "liq_cue_in", result()))
         cue_out = float_of_string(list.assoc(default="0.00", "liq_cue_out", result()))
-        liq_duration = cue_out - cue_in
-        if liq_duration > 0. then
-          result := list.assoc.remove("liq_duration", result())
-          result := list.add(("liq_duration",
-            string.float(decimal_places=2, liq_duration)), result())
+        liq_cue_duration = cue_out - cue_in
+        if liq_cue_duration > 0. then
+          result := list.assoc.remove("liq_cue_duration", result())
+          result := list.add(("liq_cue_duration",
+            string.float(decimal_places=2, liq_cue_duration)), result())
         end
 
         if settings.autocue2.unify_loudness_correction() then

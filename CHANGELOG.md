@@ -1,5 +1,9 @@
 # autocue changelog
 
+### 2024-04-13
+
+- Changed `liq_duration` to `liq_cue_duration`, upon request by toots.
+
 ### 2024-04-10
 
 - Started a CHANGELOG.md, so interested parties can follow.

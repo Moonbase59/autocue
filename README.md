@@ -223,19 +223,19 @@ It contains the 3:48 song _Something in the Way_, followed by 10:03 of silence, 
 
 ```
 $ cue_file "Nirvana - Something in the Way _ Endless, Nameless.mp3" 
-{"duration": "1235.10", "liq_duration": "1231.60", "liq_cue_in": "0.40", "liq_cue_out": "1232.00", "liq_longtail": "false", "liq_cross_duration": "9.80", "liq_loudness": "-10.47 dB", "liq_amplify": "-7.53 dB", "liq_blank_skipped": "false"}
+{"duration": "1235.10", "liq_cue_duration": "1231.60", "liq_cue_in": "0.40", "liq_cue_out": "1232.00", "liq_longtail": "false", "liq_cross_duration": "9.80", "liq_loudness": "-10.47 dB", "liq_amplify": "-7.53 dB", "liq_blank_skipped": "false"}
 ```
 
 **With blank detection (cue-out at start of silence):**
 
 ```
 $ cue_file -b "Nirvana - Something in the Way _ Endless, Nameless.mp3" 
-{"duration": "1235.10", "liq_duration": "227.10", "liq_cue_in": "0.40", "liq_cue_out": "227.50", "liq_longtail": "false", "liq_cross_duration": "3.50", "liq_loudness": "-10.47 dB", "liq_amplify": "-7.53 dB", "liq_blank_skipped": "true"}
+{"duration": "1235.10", "liq_cue_duration": "227.10", "liq_cue_in": "0.40", "liq_cue_out": "227.50", "liq_longtail": "false", "liq_cross_duration": "3.50", "liq_loudness": "-10.47 dB", "liq_amplify": "-7.53 dB", "liq_blank_skipped": "true"}
 ```
 
 where
 - _duration_ — the real file duration (including silence at start/end of song), in seconds
-- _liq_duration_ — the actual playout duration (cue-in to cue-out), in seconds
+- _liq_cue_duration_ — the actual playout duration (cue-in to cue-out), in seconds
 - _liq_cue_in_ — cue-in point, in seconds
 - _liq_cue_out_ — cue-out point, in seconds
 - _liq_longtail_ — flag to show if song has a "long tail", i.e. a very long fade-out (true/false)
@@ -254,7 +254,7 @@ Here are the values we get from `cue_file`:
 
 ```
 $ cue_file "Queen - Bohemian Rhapsody.flac" 
-{"duration": "355.10", "liq_duration": "353.10", "liq_cue_in": "0.00", "liq_cue_out": "353.10", "liq_longtail": "true", "liq_cross_duration": "4.70", "liq_loudness": "-15.50 dB", "liq_amplify": "-2.50 dB", "liq_blank_skipped": "false"}
+{"duration": "355.10", "liq_cue_duration": "353.10", "liq_cue_in": "0.00", "liq_cue_out": "353.10", "liq_longtail": "true", "liq_cross_duration": "4.70", "liq_loudness": "-15.50 dB", "liq_amplify": "-2.50 dB", "liq_blank_skipped": "false"}
 ```
 
 We notice the `liq_longtail` flag is `true`, and the `liq_cross_duration` is `4.70` seconds.
@@ -313,7 +313,7 @@ This song works fine in "normal mode", but only a 0.6 second portion (marked) of
 
 ```
 $ cue_file -b "McLachlan, Sarah - Fallen (radio mix).flac" 
-{"duration": "229.00", "liq_duration": "0.60", "liq_cue_in": "2.30", "liq_cue_out": "2.90", "liq_longtail": "false", "liq_cross_duration": "0.10", "liq_loudness": "-8.97 dB", "liq_amplify": "-9.03 dB", "liq_blank_skipped": "true"}
+{"duration": "229.00", "liq_cue_duration": "0.60", "liq_cue_in": "2.30", "liq_cue_out": "2.90", "liq_longtail": "false", "liq_cross_duration": "0.10", "liq_loudness": "-8.97 dB", "liq_amplify": "-9.03 dB", "liq_blank_skipped": "true"}
 ```
 
 You can avoid such issues in several ways:
@@ -325,7 +325,7 @@ Example result when reducing the silence level to -50 LU below average:
 
 ```
 $ cue_file -b -s -50 "McLachlan, Sarah - Fallen (radio mix).flac" 
-{"duration": "229.00", "liq_duration": "221.90", "liq_cue_in": "1.90", "liq_cue_out": "223.80", "liq_longtail": "false", "liq_cross_duration": "8.30", "liq_loudness": "-8.97 dB", "liq_amplify": "-9.03 dB", "liq_blank_skipped": "false"}
+{"duration": "229.00", "liq_cue_duration": "221.90", "liq_cue_in": "1.90", "liq_cue_out": "223.80", "liq_longtail": "false", "liq_cross_duration": "8.30", "liq_loudness": "-8.97 dB", "liq_amplify": "-9.03 dB", "liq_blank_skipped": "false"}
 ```
 
 Notice the new cue-in and cue-out times as well as the long cross duration with this change!
@@ -513,7 +513,7 @@ Typical log sample (level 3; level 4 gives much more details):
 ...
 
 2024/04/01 06:43:40 [autocue2.compute:3] Blank (silence) skipping active: true
-2024/04/01 06:43:42 [autocue2.compute:3] Autocue2 result for "/var/azuracast/stations/niteradio/media/Tagged/Bowie, David/Bowie, David - The Singles Collection (1993 album, compilation, GB)/Bowie, David & Jagger, Mick - Dancing in the Street.flac": {"duration": "190.70", "liq_duration": "187.50", "liq_cue_in": "0.50", "liq_cue_out": "188.00", "liq_longtail": "false", "liq_cross_duration": "6.60", "liq_loudness": "-7.78 dB", "liq_amplify": "-10.22 dB", "liq_blank_skipped": "false"}
+2024/04/01 06:43:42 [autocue2.compute:3] Autocue2 result for "/var/azuracast/stations/niteradio/media/Tagged/Bowie, David/Bowie, David - The Singles Collection (1993 album, compilation, GB)/Bowie, David & Jagger, Mick - Dancing in the Street.flac": {"duration": "190.70", "liq_cue_duration": "187.50", "liq_cue_in": "0.50", "liq_cue_out": "188.00", "liq_longtail": "false", "liq_cross_duration": "6.60", "liq_loudness": "-7.78 dB", "liq_amplify": "-10.22 dB", "liq_blank_skipped": "false"}
 2024/04/01 06:43:42 [autocue2.metadata:3] Inserted replaygain_track_gain: -10.22 dB
 ```
 
@@ -551,7 +551,7 @@ def live_aware_crossfade(old, new) =
             log.important(label=label, "Song → Song transition")
         end
 
-        nd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_duration", new.metadata))
+        nd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_cue_duration", new.metadata))
         xd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_cross_duration", old.metadata))
         delay = max(0., xd - nd)
         log.important(label=label, "Cross/new/delay: #{xd} / #{nd} / #{delay} s")

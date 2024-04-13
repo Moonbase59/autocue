@@ -4,6 +4,7 @@
 # cue_file
 # 2024-03-23 Moonbase59
 # 2024-04-11 Moonbase59 - Added liq_cross_start_next
+# 2024-04-13 Moonbase59 - changed `liq_duration` to `liq_cue_duration`
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
@@ -196,7 +197,7 @@ def analyse(
     # return a dict
     return ({
         "duration": duration,
-        "liq_duration": cue_duration,
+        "liq_cue_duration": cue_duration,
         "liq_cue_in": cue_in_time,
         "liq_cue_out": cue_out_time,
         "liq_cross_start_next": start_next_time,
@@ -284,7 +285,7 @@ result = analyse(
 # we use "dB" instead of "LU" units, because LS & others don’t understand "LU"
 liq_result = {
     "duration": f"{result['duration']:.2f}",
-    "liq_duration": f"{result['liq_duration']:.2f}",
+    "liq_cue_duration": f"{result['liq_cue_duration']:.2f}",
     "liq_cue_in": f"{result['liq_cue_in']:.2f}",
     "liq_cue_out": f"{result['liq_cue_out']:.2f}",
     "liq_cross_start_next": f"{result['liq_cross_start_next']:.2f}",
