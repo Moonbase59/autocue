@@ -310,6 +310,9 @@ def file.autocue2.metadata(
         # fade_out_delay + fade_out < liq_curation || let LS handle?
         # fade_in_delay + fade_in + fade_out_delay + fade_out <= liq_cue_duration || let LS handle?
         
+        # `liq_cross_duration` < 0.1 handled ok in Liquidsoap 2.2.5+git@7f0bc4b40 and up
+        # same for `liq_cross_start_next == liq_cue_out`
+
         # correct `liq_cue_duration`
         cue_in = float_of_string(list.assoc(default="0.00", "liq_cue_in", result()))
         cue_out = float_of_string(list.assoc(default="0.00", "liq_cue_out", result()))

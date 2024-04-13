@@ -194,6 +194,11 @@ def analyse(
 
     # We now also return start_next_time
     
+    # NOTE: Liquidsoap doesn’t currently accept `liq_cross_duration=0.`,
+    # or `liq_cross_start_next == liq_cue_out`, but this can happen.
+    # We adjust for that in the Liquidsoap protocol, because other AutoDJ
+    # applications might want the correct values.
+    
     # return a dict
     return ({
         "duration": duration,
