@@ -3,6 +3,7 @@
 ### 2024-04-13
 
 - Changed `liq_duration` to `liq_cue_duration`, upon request by toots.
+- Changed to use the new typed JSON external `cue_file` (thanks @toots!).
 
 ### 2024-04-10
 

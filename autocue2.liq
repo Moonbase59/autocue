@@ -1,6 +1,7 @@
 # autocue2.liq
 # 2024-04-10 - Moonbase59
 # 2024-04-13 - Moonbase59 - Rename `liq_duration` to `liq_cue_duration`
+#                         - Change to use new typed JSON `cue_file` executable
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -157,42 +158,46 @@ def replaces file.autocue2(
     # Could happen if cue_file only read (incomplete) file tags instead of
     # doing a full recalculation (for speed reasons).
     
-    let json.parse ({
-      duration,
-      liq_cue_duration,
-      liq_cue_in,
-      liq_cue_out,
-      liq_cross_start_next,
-      liq_longtail,
-      liq_cross_duration,
-      liq_loudness,
-      liq_amplify,
-      liq_blank_skipped
-    } : {
-      duration: string,
-      liq_cue_duration: string,
-      liq_cue_in: string,
-      liq_cue_out: string,
-      liq_cross_start_next: string,
-      liq_longtail: string,
-      liq_cross_duration: string,
-      liq_loudness: string,
-      liq_amplify: string,
-      liq_blank_skipped: string
-    }) = result()
+    let json.parse (
+      {
+        duration,
+        liq_cue_duration,
+        liq_cue_in,
+        liq_cue_out,
+        liq_cross_start_next,
+        liq_longtail,
+        liq_cross_duration,
+        liq_loudness,
+        liq_amplify,
+        liq_blank_skipped
+      }
+    :
+      {
+        duration: float,
+        liq_cue_duration: float,
+        liq_cue_in: float,
+        liq_cue_out: float,
+        liq_cross_start_next: float,
+        liq_longtail: bool,
+        liq_cross_duration: float,
+        liq_loudness: string,
+        liq_amplify: string,
+        liq_blank_skipped: bool
+      }
+    ) = result()
     
     # TODO: How to return an incomplete assoc list from above?
     [
-      ("duration", duration),
-      ("liq_cue_duration", liq_cue_duration),
-      ("liq_cue_in", liq_cue_in),
-      ("liq_cue_out", liq_cue_out),
-      ("liq_cross_start_next", liq_cross_start_next),
-      ("liq_longtail", liq_longtail),
-      ("liq_cross_duration", liq_cross_duration),
+      ("duration", string(duration)),
+      ("liq_cue_duration", string(liq_cue_duration)),
+      ("liq_cue_in", string(liq_cue_in)),
+      ("liq_cue_out", string(liq_cue_out)),
+      ("liq_cross_start_next", string(liq_cross_start_next)),
+      ("liq_longtail", string(liq_longtail)),
+      ("liq_cross_duration", string(liq_cross_duration)),
       ("liq_loudness", liq_loudness),
       ("liq_amplify", liq_amplify),
-      ("liq_blank_skipped", liq_blank_skipped)
+      ("liq_blank_skipped", string(liq_blank_skipped))
     ]
   else
     []
