@@ -1,5 +1,5 @@
 # test_local.liq
-# 2024-04-02 - Moonbase59
+# 2024-04-14 - Moonbase59
 
 # Test the `autocue2:` protocol and crossfading code locally,
 # using a "songs" and a "jingles" playlist.
@@ -39,6 +39,8 @@ to_live = ref(false)
 # on a per-request or per-playlist basis
 settings.autocue2.blankskip := true
 #settings.autocue2.unify_loudness_correction := true
+#settings.autocue2.write_tags := false
+#settings.autocue2.force_analysis := false
 
 # `enable_autocue2_metadata()` will autocue ALL files Liquidsoap processes.
 # You can disable it for selected sources using 'annotate:liq_autocue2="false"'.

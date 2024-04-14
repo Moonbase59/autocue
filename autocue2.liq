@@ -2,6 +2,7 @@
 # 2024-04-10 - Moonbase59
 # 2024-04-13 - Moonbase59 - Rename `liq_duration` to `liq_cue_duration`
 #                         - Change to use new typed JSON `cue_file` executable
+# 2024-04-14 - Moonbase59 - Add new cue_file parameters
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -73,6 +74,20 @@ let settings.autocue2.unify_loudness_correction =
     true
   )
 
+let settings.autocue2.write_tags =
+  settings.make(
+    description=
+      'Write back `liq_*` tags to original audio file. Use with care, as ffmpeg can\'t write all tags to all file types! Ensure you have enough free space in your TEMP folder.',
+    false
+  )
+
+let settings.autocue2.force_analysis =
+  settings.make(
+    description=
+      'Force re-analysis even when all needed data could be read from file tags.',
+    false
+  )
+
 let file.autocue2 = ()
 
 # Compute autocue2 data
@@ -93,6 +108,8 @@ def replaces file.autocue2(
   ~longtail=null(),
   ~overlay_longtail=null(),
   ~blankskip=null(),
+  ~write_tags=null(),
+  ~force_analysis=null(),
   uri
 ) =
   timeout = timeout ?? settings.autocue2.timeout()
@@ -102,6 +119,8 @@ def replaces file.autocue2(
   longtail = longtail ?? settings.autocue2.longtail()
   overlay_longtail = overlay_longtail ?? settings.autocue2.overlay_longtail()
   blankskip = blankskip ?? settings.autocue2.blankskip()
+  write_tags = write_tags ?? settings.autocue2.write_tags()
+  force_analysis = force_analysis ?? settings.autocue2.force_analysis()
 
   label = "autocue2"
 
@@ -126,10 +145,19 @@ def replaces file.autocue2(
     '-x', string(overlay_longtail),
     uri
   ])
+
   if blankskip then
     args := list.add('-b', args())
   end
-  
+
+  if write_tags then
+    args := list.add('-w', args())
+  end
+
+  if force_analysis then
+    args := list.add('-f', args())
+  end
+
   result = ref("")
   try
     result := list.hd(
@@ -169,6 +197,8 @@ def replaces file.autocue2(
         liq_cross_duration,
         liq_loudness,
         liq_amplify,
+        liq_reference_loudness,
+        liq_blankskip,
         liq_blank_skipped
       }
     :
@@ -182,6 +212,8 @@ def replaces file.autocue2(
         liq_cross_duration: float,
         liq_loudness: string,
         liq_amplify: string,
+        liq_reference_loudness: string,
+        liq_blankskip: bool,
         liq_blank_skipped: bool
       }
     ) = result()
@@ -197,6 +229,8 @@ def replaces file.autocue2(
       ("liq_cross_duration", string(liq_cross_duration)),
       ("liq_loudness", liq_loudness),
       ("liq_amplify", liq_amplify),
+      ("liq_reference_loudness", liq_reference_loudness),
+      ("liq_blankskip", string(liq_blankskip)),
       ("liq_blank_skipped", string(liq_blank_skipped))
     ]
   else
