@@ -206,8 +206,8 @@ options:
                         (default: False)
   -w, --write           Write Liquidsoap liq_* tags to file. Use with care, as
                         ffmpeg can't write all tags to all file types! Ensure
-                        you have enough free space in your TEMP folder.
-                        (default: False)
+                        you have enough free space to hold a copy of the
+                        original file. (default: False)
   -f, --force           Force re-calculation, even if tags exist (default:
                         False)
 
