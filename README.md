@@ -175,7 +175,7 @@ usage: cue_file [-h]
                 file
 
 Return cue-in, cue-out, overlay and replaygain data for an audio file as JSON.
-To be used with my Liquidsoap "autocue2:" protocol.
+To be used with my Liquidsoap "autocue:" protocol.
 
 positional arguments:
   file                  File to be processed
@@ -204,9 +204,14 @@ options:
                         begins. Don't use this with spoken or TTS-generated
                         text, as it will often cut the message short.
                         (default: False)
-  -w, --write           Write Liquidsoap tags to file (default: False)
+  -w, --write           Write Liquidsoap liq_* tags to file. Use with care, as
+                        ffmpeg can't write all tags to all file types! Ensure
+                        you have enough free space in your TEMP folder.
+                        (default: False)
   -f, --force           Force re-calculation, even if tags exist (default:
                         False)
+
+Please report any issues to https://github.com/Moonbase59/autocue/issues
 ```
 
 ## <a name="examples"></a>Examples <a href="#toc" class="goToc">⇧</a>

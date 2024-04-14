@@ -494,8 +494,8 @@ parser.add_argument(
     "-w",
     "--write",
     help="Write Liquidsoap liq_* tags to file. Use with care, as ffmpeg can't " \
-    "write all tags to all file types! Ensure you have enough free space in " \
-    "your TEMP folder.",
+    "write all tags to all file types! Ensure you have enough free space to " \
+    "hold a copy of the orginal file.",
     default=False,
     action='store_true')
 parser.add_argument(
