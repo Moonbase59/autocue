@@ -2,6 +2,8 @@
 # 2024-04-10 - Moonbase59
 # 2024-04-12 - Toots: re-organize to integrate as core autocue implementation.
 # 2024-04-12 - Moonbase59 - re-introduce `liq_duration` as `liq_cue_duration`.
+# 2024-04-19 - Moonbase59 - rename to "autocue.cue_file.liq"
+#                         - update to use same `cue_file` as master branch
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -101,6 +103,22 @@ let settings.autocue.cue_file.unify_loudness_correction =
     true
   )
 
+let settings.autocue.cue_file.write_tags =
+  settings.make(
+    description=
+      "Write back `liq_*` tags to original audio file. Use with care, as \
+       ffmpeg can't write all tags to all file types! Ensure you have enough \
+       free space to hold a copy of the original file.",
+    false
+  )
+
+let settings.autocue.cue_file.force_analysis =
+  settings.make(
+    description=
+      'Force re-analysis even when all needed data could be read from file tags.',
+    false
+  )
+
 # Compute cue_file data
 # @flag extra
 def cue_file(req) =
@@ -111,6 +129,8 @@ def cue_file(req) =
   longtail = settings.autocue.cue_file.longtail()
   overlay_longtail = settings.autocue.cue_file.overlay_longtail()
   blankskip = settings.autocue.cue_file.blankskip()
+  write_tags = settings.autocue.cue_file.write_tags()
+  force_analysis = settings.autocue.cue_file.force_analysis()
 
   label = "cue_file"
 
@@ -227,6 +247,8 @@ def cue_file(req) =
         ]
       )
     if blankskip() then args := list.add('-b', args()) end
+    if write_tags then args := list.add('-w', args()) end
+    if force_analysis then args := list.add('-f', args()) end
 
     result = ref("")
     try
@@ -268,8 +290,11 @@ def cue_file(req) =
           liq_cue_out,
           liq_cross_start_next,
           liq_longtail,
+          liq_cross_duration,
           liq_loudness,
           liq_amplify,
+          liq_reference_loudness,
+          liq_blankskip,
           liq_blank_skipped
         }
       :
@@ -280,8 +305,11 @@ def cue_file(req) =
           liq_cue_out: float,
           liq_cross_start_next: float,
           liq_longtail: bool,
+          liq_cross_duration: float,
           liq_loudness: string,
           liq_amplify: string,
+          liq_reference_loudness: string,
+          liq_blankskip: bool,
           liq_blank_skipped: bool
         }
       ) = result()
@@ -294,6 +322,7 @@ def cue_file(req) =
             ("liq_cue_duration", string(liq_cue_duration)),
             ("liq_longtail", string(liq_longtail)),
             ("liq_loudness", liq_loudness),
+            ("liq_reference_loudness", liq_reference_loudness),
             ("liq_blank_skipped", string(liq_blank_skipped))
           ]
         )

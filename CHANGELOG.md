@@ -1,5 +1,14 @@
 # autocue changelog
 
+### 2024-04-19
+
+In preparation for later merge with `master` branch:
+
+- Rename `autocue2.liq` to `autocue.cue_file.liq`.
+- Rename `test_local.liq` to `test_autocue.cue_file.liq`.
+- Use same `cue_file` as in `master` branch, update `autocue.cue_file.liq`.
+- Add settings to `test_autocue.cue_file.liq` so `autocue` does the right thing (hopefully).
+
 ### 2024-04-10
 
 - Started a CHANGELOG.md, so interested parties can follow.

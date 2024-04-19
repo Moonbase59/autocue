@@ -4,6 +4,8 @@ On-the-fly JSON song cue-in, cue-out, overlay, replaygain calculation for Liquid
 
 Work in progress.
 
+**Note:** This documentation describes the standalone `cue_file` and the `autocue2` Liquidsoap protocol. _Documentation for the **integrated version** in the `integrate-with-liquidsoap` branch will follow later._
+
 Requires Python3 and `ffmpeg` with the _ebur128_ filter. (The AzuraCast Docker already has these.)
 
 Tested on Linux and Mac, with several `ffmpeg` versions ranging from 4.4.2–6.1.1, and running on several stations since a few weeks.
@@ -66,7 +68,7 @@ If you wish, you can now play around with it a bit (use `cue_file --help` for he
 
 ### <a name="local-testing-with-liquidsoap"></a>Local testing with Liquidsoap <a href="#toc" class="goToc">⇧</a>
 
-Use the code in `test_local.liq` for some local testing, if you have Liquidsoap installed on your machine.
+Use the code in `test_autocue2.liq` for some local testing, if you have Liquidsoap installed on your machine.
 
 Adjust the _settings_ near the beginning of the fie, then look for
 ```ruby
@@ -76,14 +78,14 @@ and put in _your_ song and jingle playlist, and a `single` for testing.
 
 Then run
 ```
-$ liquidsoap test_local.liq
+$ liquidsoap test_autocue2.liq
 ```
 
 Depending on your settings, you’ll get some result files for further study:
 
-- `test_local.log` — Log file, use `tail -f test_local.liq` in another terminal to follow
-- `test_local.mp3` — an MP3 recording, to see how well the track transitions worked out
-- `test_local.cue` — a `.cue` file to go with the MP3 recording, for finding tracks easier (open _this_ in your audio player)
+- `test_autocue2.log` — Log file, use `tail -f test_autocue2.liq` in another terminal to follow
+- `test_autocue2.mp3` — an MP3 recording, to see how well the track transitions worked out
+- `test_autocue2.cue` — a `.cue` file to go with the MP3 recording, for finding tracks easier (open _this_ in your audio player)
 
 ### <a name="install-on-azuracast"></a>Install on AzuraCast <a href="#toc" class="goToc">⇧</a>
 
@@ -127,7 +129,7 @@ enable_autocue2_metadata()
 
 #### <a name="custom-crossfading-code"></a>Custom crossfading code <a href="#toc" class="goToc">⇧</a>
 
-Use the example in `test_local.liq` and add your custom `amplify` and `live_aware_crossfade` code in the _third input box_ of AzuraCast’s Liquidsoap Config. You might already have modified this in your local testing above.
+Use the example in `test_autocue2.liq` and add your custom `amplify` and `live_aware_crossfade` code in the _third input box_ of AzuraCast’s Liquidsoap Config. You might already have modified this in your local testing above.
 
 To find the relevant parts, look out for
 
@@ -175,7 +177,7 @@ usage: cue_file [-h]
                 file
 
 Return cue-in, cue-out, overlay and replaygain data for an audio file as JSON.
-To be used with my Liquidsoap "autocue2:" protocol.
+To be used with my Liquidsoap "autocue:" protocol.
 
 positional arguments:
   file                  File to be processed
@@ -204,9 +206,14 @@ options:
                         begins. Don't use this with spoken or TTS-generated
                         text, as it will often cut the message short.
                         (default: False)
-  -w, --write           Write Liquidsoap tags to file (default: False)
+  -w, --write           Write Liquidsoap liq_* tags to file. Use with care, as
+                        ffmpeg can't write all tags to all file types! Ensure
+                        you have enough free space to hold a copy of the
+                        original file. (default: False)
   -f, --force           Force re-calculation, even if tags exist (default:
                         False)
+
+Please report any issues to https://github.com/Moonbase59/autocue/issues
 ```
 
 ## <a name="examples"></a>Examples <a href="#toc" class="goToc">⇧</a>
@@ -222,22 +229,23 @@ It contains the 3:48 song _Something in the Way_, followed by 10:03 of silence, 
 **Normal mode (no blank detection):**
 
 ```
-$ cue_file "Nirvana - Something in the Way _ Endless, Nameless.mp3" 
-{"duration": "1235.10", "liq_duration": "1231.60", "liq_cue_in": "0.40", "liq_cue_out": "1232.00", "liq_longtail": "false", "liq_cross_duration": "9.80", "liq_loudness": "-10.47 dB", "liq_amplify": "-7.53 dB", "liq_blank_skipped": "false"}
+$ cue_file "Nirvana - Something in the Way _ Endless, Nameless.mp3"
+{"duration": 1235.1, "liq_cue_duration": 1231.8, "liq_cue_in": 0.4, "liq_cue_out": 1232.2, "liq_cross_start_next": 1222.3, "liq_longtail": false, "liq_cross_duration": 9.900000000000091, "liq_loudness": "-10.47 dB", "liq_amplify": "-7.53 dB", "liq_blank_skipped": false}
 ```
 
 **With blank detection (cue-out at start of silence):**
 
 ```
-$ cue_file -b "Nirvana - Something in the Way _ Endless, Nameless.mp3" 
-{"duration": "1235.10", "liq_duration": "227.10", "liq_cue_in": "0.40", "liq_cue_out": "227.50", "liq_longtail": "false", "liq_cross_duration": "3.50", "liq_loudness": "-10.47 dB", "liq_amplify": "-7.53 dB", "liq_blank_skipped": "true"}
+$ cue_file -b "Nirvana - Something in the Way _ Endless, Nameless.mp3"
+{"duration": 1235.1, "liq_cue_duration": 227.1, "liq_cue_in": 0.4, "liq_cue_out": 227.5, "liq_cross_start_next": 224.1, "liq_longtail": false, "liq_cross_duration": 3.4000000000000057, "liq_loudness": "-10.47 dB", "liq_amplify": "-7.53 dB", "liq_blank_skipped": true}
 ```
 
 where
 - _duration_ — the real file duration (including silence at start/end of song), in seconds
-- _liq_duration_ — the actual playout duration (cue-in to cue-out), in seconds
+- _liq_cue_duration_ — the actual playout duration (cue-in to cue-out), in seconds
 - _liq_cue_in_ — cue-in point, in seconds
 - _liq_cue_out_ — cue-out point, in seconds
+- _liq_cross_start_next_ — suggested start point of next song, in seconds (counting from beginning of file)
 - _liq_longtail_ — flag to show if song has a "long tail", i.e. a very long fade-out (true/false)
 - _liq_cross_duration_ — suggested crossing duration for next song, in seconds backwards from cue-out point
 - _liq_loudness_ — song’s EBU R128 loudness, in dB (=LU)
@@ -253,11 +261,11 @@ _Bohemian Rhapsody_ by _Queen_ has a rather long ending, which we don’t want t
 Here are the values we get from `cue_file`:
 
 ```
-$ cue_file "Queen - Bohemian Rhapsody.flac" 
-{"duration": "355.10", "liq_duration": "353.10", "liq_cue_in": "0.00", "liq_cue_out": "353.10", "liq_longtail": "true", "liq_cross_duration": "4.70", "liq_loudness": "-15.50 dB", "liq_amplify": "-2.50 dB", "liq_blank_skipped": "false"}
+$ cue_file "Queen - Bohemian Rhapsody.flac"
+{"duration": 355.1, "liq_cue_duration": 353.0, "liq_cue_in": 0.0, "liq_cue_out": 353.0, "liq_cross_start_next": 348.5, "liq_longtail": true, "liq_cross_duration": 4.5, "liq_loudness": "-15.50 dB", "liq_amplify": "-2.50 dB", "liq_blank_skipped": false}
 ```
 
-We notice the `liq_longtail` flag is `true`, and the `liq_cross_duration` is `4.70` seconds.
+We notice the `liq_longtail` flag is `true`, and the `liq_cross_duration` is `4.5` seconds.
 
 Let’s follow the steps `cue_file` took to arrive at this result.
 
@@ -265,9 +273,9 @@ Let’s follow the steps `cue_file` took to arrive at this result.
 
 `cue_file` uses the `-s`/`--silence` parameter value (-42 LU default) to scan _backwards from the end_ for something that is louder than -42 LU below the _average (integrated) song loudness_, using the EBU R128 momentary loudness algorithm. This is _not_ a simple "level check"! Using the default (playout) reference loudness target of `-18 LUFS` (`-t`/`--target` parameter), we thus arrive at a noise floor of -60 LU, which is a good silence level to use.
 
-![Screenshot of Bohemian Rhapsody waveform, showing calculated cue-out point at 353.10 seconds (2 seconds before end)](https://github.com/Moonbase59/autocue/assets/3706922/c745989a-5f32-4aa1-a5b7-ac4bc955e568)
+![Screenshot of Bohemian Rhapsody waveform, showing calculated cue-out point at 353.0 seconds (2 seconds before end)](https://github.com/Moonbase59/autocue/assets/3706922/c745989a-5f32-4aa1-a5b7-ac4bc955e568)
 
-`cue_file` has determined the _cue-out point_ at `353.10` seconds (5:53.1).
+`cue_file` has determined the _cue-out point_ at `353.0` seconds (5:53).
 
 #### <a name="cross-duration-where-the-next-track-could-start-and-be-overlaid"></a>Cross duration (where the next track could start and be overlaid) <a href="#toc" class="goToc">⇧</a>
 
@@ -275,19 +283,19 @@ Liquidsoap uses a `liq_cross_duration` concept instead of an abolute "start next
 
 `cue_file` uses the `-o`/`--overlay` parameter value (-8 LU default) to scan _backwards from the cue-out point_ for something that is louder than -8 LU below the _average (integrated) song loudness_, thus finding a good point where the next song could start and be overlaid.
 
-![Screenshot of Bohemian Rhapsody waveform, showing the cross duration calculated in the first run: 16.7 seconds before end – way too much](https://github.com/Moonbase59/autocue/assets/3706922/20a9396b-a31a-4a11-87b4-641d6868cc49)
+![Screenshot of Bohemian Rhapsody waveform, showing the cross duration calculated in the first run: 16.5 seconds before end – way too much](https://github.com/Moonbase59/autocue/assets/3706922/20a9396b-a31a-4a11-87b4-641d6868cc49)
 
-`cue_file` has determined a _cross duration_ of `16.70` seconds, starting at 336.4 seconds (5:36.4).
+`cue_file` has determined a _cross duration_ of `16.5` seconds, starting at 336.5 seconds (5:36.5).
 
 We can see this would destroy an important part of the song’s end.
 
 #### <a name="a-long-tail"></a>A long tail! <a href="#toc" class="goToc">⇧</a>
 
-Finding that the calculated cross duration of `16.70` seconds is longer than 15 seconds (the `-l`/`--longtail` parameter), `cue_file` now _recalculates the cross duration_ automatically, using an extra -15 LU loudness offset (`-x`/`--extra` parameter), and arrives at this:
+Finding that the calculated cross duration of `16.5` seconds is longer than 15 seconds (the `-l`/`--longtail` parameter), `cue_file` now _recalculates the cross duration_ automatically, using an extra -15 LU loudness offset (`-x`/`--extra` parameter), and arrives at this:
 
-![Screenshot of Bohemian Rhapsody waveform, showing the newly calculated cross duration: 4.7 seconds before end – just right, not cutting off important parts of the song ending](https://github.com/Moonbase59/autocue/assets/3706922/9f9ec3af-89d4-4edc-9316-d53ed1fcf000)
+![Screenshot of Bohemian Rhapsody waveform, showing the newly calculated cross duration: 4.5 seconds before end – just right, not cutting off important parts of the song ending](https://github.com/Moonbase59/autocue/assets/3706922/9f9ec3af-89d4-4edc-9316-d53ed1fcf000)
 
-`cue_file` has now set `liq_cross_duration` to `4.70` seconds and `liq_longtail` to `true` so we know this song has a "long tail" and been calculated differently.
+`cue_file` has now set `liq_cross_duration` to `4.5` seconds and `liq_longtail` to `true` so we know this song has a "long tail" and been calculated differently.
 
 Much better!
 
@@ -299,7 +307,7 @@ We possibly don’t want the previous song to play "too much" into the next song
 add(normalize=false, [fade.in(duration=.1, delay=delay, new.source), fade.out(duration=2.5, delay=delay, old.source)])
 ```
 
-![Screenshot of Bohemian Rhapsody waveform, showing the user-defined fade-out of 2.5 seconds, starting 4.7 seconds before song ends](https://github.com/Moonbase59/autocue/assets/3706922/f1e96db6-2f23-4cdd-9693-24711fe91895)
+![Screenshot of Bohemian Rhapsody waveform, showing the user-defined fade-out of 2.5 seconds, starting 4.5 seconds before song ends](https://github.com/Moonbase59/autocue/assets/3706922/f1e96db6-2f23-4cdd-9693-24711fe91895)
 
 Fading area, using above settings. The rest of the ending won’t be heard.
 
@@ -309,11 +317,11 @@ Fading area, using above settings. The rest of the ending won’t be heard.
 
 ![Screenshot of Sarah McLachlan's "Fallen" waveform. The song has a long silent beginning, which makes blank detection fail, using the default settings.](https://github.com/Moonbase59/autocue/assets/3706922/c1085156-5483-4474-afd8-cb437d0d2e4b)
 
-This song works fine in "normal mode", but only a 0.6 second portion (marked) of the beginning is played in "blank detection" mode when using the default settings:
+This song works fine in "normal mode", but only a 0.5 second portion (marked) of the beginning is played in "blank detection" mode when using the default settings:
 
 ```
-$ cue_file -b "McLachlan, Sarah - Fallen (radio mix).flac" 
-{"duration": "229.00", "liq_duration": "0.60", "liq_cue_in": "2.30", "liq_cue_out": "2.90", "liq_longtail": "false", "liq_cross_duration": "0.10", "liq_loudness": "-8.97 dB", "liq_amplify": "-9.03 dB", "liq_blank_skipped": "true"}
+$ cue_file -b "McLachlan, Sarah - Fallen (radio mix).flac"
+{"duration": 229.0, "liq_cue_duration": 0.5, "liq_cue_in": 2.3, "liq_cue_out": 2.8, "liq_cross_start_next": 2.8, "liq_longtail": false, "liq_cross_duration": 0.0, "liq_loudness": "-8.97 dB", "liq_amplify": "-9.03 dB", "liq_blank_skipped": true}
 ```
 
 You can avoid such issues in several ways:
@@ -324,11 +332,11 @@ You can avoid such issues in several ways:
 Example result when reducing the silence level to -50 LU below average:
 
 ```
-$ cue_file -b -s -50 "McLachlan, Sarah - Fallen (radio mix).flac" 
-{"duration": "229.00", "liq_duration": "221.90", "liq_cue_in": "1.90", "liq_cue_out": "223.80", "liq_longtail": "false", "liq_cross_duration": "8.30", "liq_loudness": "-8.97 dB", "liq_amplify": "-9.03 dB", "liq_blank_skipped": "false"}
+$ cue_file -b -s -50 "McLachlan, Sarah - Fallen (radio mix).flac"
+{"duration": 229.0, "liq_cue_duration": 221.79999999999998, "liq_cue_in": 1.9, "liq_cue_out": 223.7, "liq_cross_start_next": 215.6, "liq_longtail": false, "liq_cross_duration": 8.099999999999994, "liq_loudness": "-8.97 dB", "liq_amplify": "-9.03 dB", "liq_blank_skipped": false}
 ```
 
-Notice the new cue-in and cue-out times as well as the long cross duration with this change!
+Notice the new cue-in and cue-out times as well as the long cross duration with this change! Additionally, `liq_blank_skipped` is `false`, showing us that no silent (blank) parts have been skipped in this case.
 
 
 ## <a name="liquidsoap-protocol"></a>Liquidsoap protocol <a href="#toc" class="goToc">⇧</a>
@@ -364,11 +372,12 @@ settings.autocue2.unify_loudness_correction := true
 
 ### <a name="minimal-working-example"></a>Minimal working example <a href="#toc" class="goToc">⇧</a>
 
-This [minimal example](minimal_example.liq) enables `autocue2` for all tracks, using default settings, and plays a nicely crossfaded playlist to your sound card, so you can get a first impression. Just change the playlist to one of your own!
+This [minimal example](minimal_example_autocue2.liq) enables `autocue2` for all tracks, using default settings, and plays a nicely crossfaded playlist to your sound card, so you can get a first impression. Just change the playlist to one of your own!
 
 ```ruby
-# minimal_example.liq
+# minimal_example_autocue2.liq
 # 2024-04-09 - Moonbase59
+# 2024-04-19 - Moonbase59 - rename to "minimal_example_autocue2.liq"
 
 # Minimal example for the `autocue2` protocol.
 # Uses one playlist and outputs to sound card.
@@ -508,20 +517,33 @@ Here `liq_amplify` has been corrected, because we have seen a different `replayg
 Typical log sample (level 3; level 4 gives much more details):
 
 ```
-2024/04/01 06:43:40 [autocue2.compute:3] Now autocueing: "annotate:title="Dancing in the Street",artist="David Bowie & Mick Jagger",duration="190.00",song_id="c7ea81945a4b20b2905cee98b05af5c3",media_id="277242",playlist_id="533":media:Tagged/Bowie, David/Bowie, David - The Singles Collection (1993 album, compilation, GB)/Bowie, David & Jagger, Mick - Dancing in the Street.flac"
+2024/04/13 14:24:12 [autocue2.metadata:3] jingle_mode=, liq_blankskip=
+2024/04/13 14:24:12 [autocue2:3] Now autocueing: "/home/matthias/Musik/Playlists/Radio/../../Tagged/Blackfoot/Blackfoot - Marauder/Blackfoot - Diary Of A Workingman.mp3"
+2024/04/13 14:24:12 [autocue2:3] Blank (silence) skipping active: true
 
 ...
 
-2024/04/01 06:43:40 [autocue2.compute:3] Blank (silence) skipping active: true
-2024/04/01 06:43:42 [autocue2.compute:3] Autocue2 result for "/var/azuracast/stations/niteradio/media/Tagged/Bowie, David/Bowie, David - The Singles Collection (1993 album, compilation, GB)/Bowie, David & Jagger, Mick - Dancing in the Street.flac": {"duration": "190.70", "liq_duration": "187.50", "liq_cue_in": "0.50", "liq_cue_out": "188.00", "liq_longtail": "false", "liq_cross_duration": "6.60", "liq_loudness": "-7.78 dB", "liq_amplify": "-10.22 dB", "liq_blank_skipped": "false"}
-2024/04/01 06:43:42 [autocue2.metadata:3] Inserted replaygain_track_gain: -10.22 dB
+2024/04/13 14:24:16 [autocue2:3] Autocue2 result for "/home/matthias/Musik/Playlists/Radio/../../Tagged/Blackfoot/Blackfoot - Marauder/Blackfoot - Diary Of A Workingman.mp3": {"duration": 336.40000000000003, "liq_cue_duration": 333.8, "liq_cue_in": 0.7, "liq_cue_out": 334.5, "liq_cross_start_next": 323.5, "liq_longtail": false, "liq_cross_duration": 11.0, "liq_loudness": "-13.35 dB", "liq_amplify": "-4.65 dB", "liq_blank_skipped": false}
+2024/04/13 14:24:16 [autocue2.metadata:3] Replaced liq_amplify=-4.65 dB with -4.66 dB from replaygain_track_gain
+2024/04/13 14:24:16 [autocue2.metadata:3] Metadata added/corrected:
+2024/04/13 14:24:16 [autocue2.metadata:3] ("duration", "336.4")
+2024/04/13 14:24:16 [autocue2.metadata:3] ("liq_amplify", "-4.66 dB")
+2024/04/13 14:24:16 [autocue2.metadata:3] ("liq_blank_skipped", "false")
+2024/04/13 14:24:16 [autocue2.metadata:3] ("liq_cross_duration", "11.")
+2024/04/13 14:24:16 [autocue2.metadata:3] ("liq_cross_start_next", "323.5")
+2024/04/13 14:24:16 [autocue2.metadata:3] ("liq_cue_duration", "333.80")
+2024/04/13 14:24:16 [autocue2.metadata:3] ("liq_cue_in", "0.7")
+2024/04/13 14:24:16 [autocue2.metadata:3] ("liq_cue_out", "334.5")
+2024/04/13 14:24:16 [autocue2.metadata:3] ("liq_longtail", "false")
+2024/04/13 14:24:16 [autocue2.metadata:3] ("liq_loudness", "-13.35 dB")
+2024/04/13 14:24:16 [autocue2.metadata:3] ("replaygain_track_gain", "-4.66 dB")
 ```
 
 #### <a name="custom-crossfading"></a>Custom crossfading <a href="#toc" class="goToc">⇧</a>
 
 I currently[^1] use these crossfade settings (third input box in AzuraCast; lots of debugging info here, could be much shorter).
 
-Be sure to check the _copy-paste sections_ in `test_local.liq`, which always holds the most current code.
+Be sure to check the _copy-paste sections_ in `test_autocue2.liq`, which always holds the most current code.
 
 ```ruby
 # Fading/crossing/segueing
@@ -551,7 +573,7 @@ def live_aware_crossfade(old, new) =
             log.important(label=label, "Song → Song transition")
         end
 
-        nd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_duration", new.metadata))
+        nd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_cue_duration", new.metadata))
         xd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_cross_duration", old.metadata))
         delay = max(0., xd - nd)
         log.important(label=label, "Cross/new/delay: #{xd} / #{nd} / #{delay} s")

@@ -1,35 +1,36 @@
-# test_local.liq
+# test_autocue.cue_file.liq
 # 2024-04-02 - Moonbase59
+# 2024-04-19 - Moonbase59 - rename to "test_autocue.cue_file.liq"
 
 # Test the `autocue2:` protocol and crossfading code locally,
 # using a "songs" and a "jingles" playlist.
 # Output to speakers and the following files:
-#   test_local.log -- the Liquidsoap log file
-#   test_local.mp3 -- recording, for later checking
-#   test_local.cue -- cue file to better find songs (open THIS in your audio player)
+#   test_autocue.cue_file.log -- the Liquidsoap log file
+#   test_autocue.cue_file.mp3 -- recording, for later checking
+#   test_autocue.cue_file.cue -- cue file to better find songs (open THIS in your audio player)
 #                     Note: `source.cue` support in LS 2.3.0+ only!
 
 # For a certain test duration, like 120 minutes, use
-#   timeout 120m liquidsoap test_local.liq
+#   timeout 120m liquidsoap test_autocue.cue_file.liq
 
 # Log to file, for later diagnosis. To follow the log in another terminal, use
-#   tail -f test_local.log
+#   tail -f test_autocue.cue_file.log
 settings.log.file := true
-settings.log.file.path := "test_local.log"
+settings.log.file.path := "test_autocue.cue_file.log"
 settings.log.file.append := false
 
 # 3=important, 4=info
-settings.log.level := 3
+settings.log.level := 4
 
 # no "live" in the local test
 to_live = ref(false)
 
 # --- Copy-paste the CONTENTS of `autocue2.liq` into AzuraCast, second input box ---
-%include "autocue2.liq"
+%include "autocue.cue_file.liq"
 
 # --- Copy-paste your settings into AzuraCast, second input box AFTER above file ---
 
-#settings.autocue.cue_file.path := "cue_file"
+settings.autocue.cue_file.path := "./cue_file"
 #settings.autocue.cue_file.fade_in := 0.1
 #settings.autocue.cue_file.fade_out := 2.5
 #settings.autocue.cue_file.metadata_override := []
@@ -48,8 +49,10 @@ settings.autocue.cue_file.blankskip := true
 # You can disable it for selected sources using 'annotate:liq_autocue2="false"'.
 # Remember you won't get `liq_amplify` data then -- expect loudness jumps!
 settings.autocue.preferred := "cue_file"
-#settings.autocue.amplify_behaviour := "override"
-#settings.autocue.metadata_override := []
+settings.autocue.amplify_behavior := "override"
+settings.autocue.cue_file.metadata_override := []
+settings.autocue.cue_file.fade_in := 0.1
+settings.autocue.cue_file.fade_out := 2.5
 enable_autocue_metadata()
 
 # --- Copy-paste END ---
@@ -102,7 +105,7 @@ def show_meta(m)
 
   # show `liq_` & other metadata in level 3
   def fl(k, _) =
-    tags = ["duration", "kind", "replaygain_track_gain"]
+  tags = ["duration", "kind", "replaygain_track_gain", "replaygain_reference_loudness"]
     string.contains(prefix="liq_", k) or list.mem(k, tags)
   end
   liq = list.assoc.filter((fl), l)
@@ -178,5 +181,5 @@ output(radio)
 # record to a file for later checking with Audacity or the like
 # also write a .cue file so we can find tracks more easily
 # --- comment out the following one line if you have a pre-2.3.0 Liquidsoap version ---
-#radio = source.cue(title="test_local.liq", file="test_local.mp3", "test_local.cue", radio)
-output.file(%mp3, "test_local.mp3", radio)
+#radio = source.cue(title="test_autocue.cue_file.liq", file="test_autocue.cue_file.mp3", "test_autocue.cue_file.cue", radio)
+output.file(%mp3, "test_autocue.cue_file.mp3", radio)
