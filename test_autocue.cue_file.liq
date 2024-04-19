@@ -49,7 +49,7 @@ settings.autocue.cue_file.blankskip := true
 # You can disable it for selected sources using 'annotate:liq_autocue2="false"'.
 # Remember you won't get `liq_amplify` data then -- expect loudness jumps!
 settings.autocue.preferred := "cue_file"
-settings.autocue.amplify_behavior := "override"
+settings.autocue.amplify_behavior := "keep"
 settings.autocue.cue_file.metadata_override := []
 settings.autocue.cue_file.fade_in := 0.1
 settings.autocue.cue_file.fade_out := 2.5
