@@ -370,12 +370,13 @@ def cue_file(req) =
         then
           (liq_fade_out, liq_cross_start_next + liq_fade_out)
         else
+          fade_out = liq_cue_out - liq_cross_start_next
           log(
             level=2,
             label=label,
-            "User-supplied fade-out duration exceeds available time!"
+            "User-supplied fade-out duration (#{liq_fade_out} s) exceeds available time, using to #{fade_out} s."
           )
-          (liq_cue_out - liq_cross_start_next, liq_cue_out)
+          (fade_out, liq_cue_out)
         end
 
       # Check for invalid fade.in
@@ -388,7 +389,7 @@ def cue_file(req) =
           log(
             level=2,
             label=label,
-            "User-supplied fade-in duration exceeds available time!"
+            "User-supplied fade-in duration (#{liq_fade_in} s) exceeds available time, using 0.1 s."
           )
           0.1
         end

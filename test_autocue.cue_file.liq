@@ -50,9 +50,6 @@ settings.autocue.cue_file.blankskip := true
 # Remember you won't get `liq_amplify` data then -- expect loudness jumps!
 settings.autocue.preferred := "cue_file"
 settings.autocue.amplify_behavior := "keep"
-settings.autocue.cue_file.metadata_override := []
-settings.autocue.cue_file.fade_in := 0.1
-settings.autocue.cue_file.fade_out := 2.5
 enable_autocue_metadata()
 
 # --- Copy-paste END ---

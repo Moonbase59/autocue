@@ -8,10 +8,11 @@
 %include "autocue.cue_file.liq"
 
 settings.autocue.cue_file.path := "./cue_file"
+#settings.autocue.cue_file.fade_in := 0.1
+#settings.autocue.cue_file.fade_out := 2.5
 #settings.autocue.cue_file.blankskip := true
 settings.autocue.preferred := "cue_file"
-#settings.autocue.amplify_behaviour := "override"
-#settings.autocue.metadata_override := []
+settings.autocue.amplify_behavior := "keep"
 enable_autocue_metadata()
 
 # --- Use YOUR playlist here! ---
@@ -20,9 +21,9 @@ radio = playlist("/home/matthias/Musik/Playlists/Radio/Classic Rock.m3u")
 # Use calculated `liq_amplify` for loudness correction
 radio = amplify(1.,override="liq_amplify",radio)
 
-# simplest crossfade possible, using `autocue2` calculated data
-# set fades to your preference
-radio = crossfade(radio, fade_in=0.1, fade_out=2.5)
+# simplest crossfade possible, using `autocue.cue_file` calculated data
+# and default settings
+radio = crossfade(radio)
 
 radio = mksafe(radio)
 output(radio)
