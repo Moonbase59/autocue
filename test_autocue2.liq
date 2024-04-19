@@ -99,7 +99,7 @@ def show_meta(m)
 
   # show `liq_` & other metadata in level 3
   def fl(k, _) =
-    tags = ["duration", "kind", "replaygain_track_gain"]
+    tags = ["duration", "kind", "replaygain_track_gain", "replaygain_reference_loudness"]
     string.contains(prefix="liq_", k) or list.mem(k, tags)
   end
   liq = list.assoc.filter((fl), l)
