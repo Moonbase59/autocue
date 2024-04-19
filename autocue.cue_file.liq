@@ -363,6 +363,10 @@ def cue_file(req) =
         end
       end
 
+      # re-add liq_amplify as extra, since autocue deletes it on the way...
+      extra_metadata :=
+        [...extra_metadata(), ("liq_amplify", liq_amplify())]
+
       # Adjust cue_out according to user-supplied fade_out
       let (liq_fade_out, liq_cue_out) =
         if
