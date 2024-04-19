@@ -147,7 +147,7 @@ def cue_file(req) =
         level=3,
         label="autocue.cue_file.metadata",
         "Could not find user-supplied value for fade-in duration, using default \
-         setting."
+         setting (#{settings.autocue.cue_file.fade_in()} s)."
       )
       settings.autocue.cue_file.fade_in()
     end
@@ -160,7 +160,7 @@ def cue_file(req) =
         level=3,
         label="autocue.cue_file.metadata",
         "Could not find user-supplied value for fade-out duration, using default \
-         setting."
+         setting (#{settings.autocue.cue_file.fade_out()} s)."
       )
       settings.autocue.cue_file.fade_out()
     end
