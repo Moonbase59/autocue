@@ -368,13 +368,23 @@ def cue_file(req) =
         if
           liq_cross_start_next + liq_fade_out < liq_cue_out
         then
-          (liq_fade_out, liq_cross_start_next + liq_fade_out)
+          cue_out = liq_cross_start_next + liq_fade_out
+          overlay_duration = liq_cue_out - liq_cross_start_next
+          log(
+            level=3,
+            label=label,
+            "User-supplied fade-out (#{liq_fade_out} s) shorter than calculated \
+             overlay duration (#{overlay_duration} s), moving cue-out point \
+             from #{liq_cue_out} s to #{cue_out} s."
+          )
+          (liq_fade_out, cue_out)
         else
           fade_out = liq_cue_out - liq_cross_start_next
           log(
             level=2,
             label=label,
-            "User-supplied fade-out duration (#{liq_fade_out} s) exceeds available time, using to #{fade_out} s."
+            "User-supplied fade-out duration (#{liq_fade_out} s) exceeds \
+             available time, using #{fade_out} s."
           )
           (fade_out, liq_cue_out)
         end
@@ -389,7 +399,8 @@ def cue_file(req) =
           log(
             level=2,
             label=label,
-            "User-supplied fade-in duration (#{liq_fade_in} s) exceeds available time, using 0.1 s."
+            "User-supplied fade-in duration (#{liq_fade_in} s) exceeds \
+             available time, using 0.1 s."
           )
           0.1
         end
