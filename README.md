@@ -4,6 +4,8 @@ On-the-fly JSON song cue-in, cue-out, overlay, replaygain calculation for Liquid
 
 Work in progress.
 
+**Note:** This documentation describes the standalone `cue_file` and the `autocue2` Liquidsoap protocol. _Documentation for the **integrated version** in the `integrate-with-liquidsoap` branch will follow later._
+
 Requires Python3 and `ffmpeg` with the _ebur128_ filter. (The AzuraCast Docker already has these.)
 
 Tested on Linux and Mac, with several `ffmpeg` versions ranging from 4.4.2–6.1.1, and running on several stations since a few weeks.
@@ -66,7 +68,7 @@ If you wish, you can now play around with it a bit (use `cue_file --help` for he
 
 ### <a name="local-testing-with-liquidsoap"></a>Local testing with Liquidsoap <a href="#toc" class="goToc">⇧</a>
 
-Use the code in `test_local.liq` for some local testing, if you have Liquidsoap installed on your machine.
+Use the code in `test_autocue2.liq` for some local testing, if you have Liquidsoap installed on your machine.
 
 Adjust the _settings_ near the beginning of the fie, then look for
 ```ruby
@@ -76,14 +78,14 @@ and put in _your_ song and jingle playlist, and a `single` for testing.
 
 Then run
 ```
-$ liquidsoap test_local.liq
+$ liquidsoap test_autocue2.liq
 ```
 
 Depending on your settings, you’ll get some result files for further study:
 
-- `test_local.log` — Log file, use `tail -f test_local.liq` in another terminal to follow
-- `test_local.mp3` — an MP3 recording, to see how well the track transitions worked out
-- `test_local.cue` — a `.cue` file to go with the MP3 recording, for finding tracks easier (open _this_ in your audio player)
+- `test_autocue2.log` — Log file, use `tail -f test_autocue2.liq` in another terminal to follow
+- `test_autocue2.mp3` — an MP3 recording, to see how well the track transitions worked out
+- `test_autocue2.cue` — a `.cue` file to go with the MP3 recording, for finding tracks easier (open _this_ in your audio player)
 
 ### <a name="install-on-azuracast"></a>Install on AzuraCast <a href="#toc" class="goToc">⇧</a>
 
@@ -127,7 +129,7 @@ enable_autocue2_metadata()
 
 #### <a name="custom-crossfading-code"></a>Custom crossfading code <a href="#toc" class="goToc">⇧</a>
 
-Use the example in `test_local.liq` and add your custom `amplify` and `live_aware_crossfade` code in the _third input box_ of AzuraCast’s Liquidsoap Config. You might already have modified this in your local testing above.
+Use the example in `test_autocue2.liq` and add your custom `amplify` and `live_aware_crossfade` code in the _third input box_ of AzuraCast’s Liquidsoap Config. You might already have modified this in your local testing above.
 
 To find the relevant parts, look out for
 
@@ -227,14 +229,14 @@ It contains the 3:48 song _Something in the Way_, followed by 10:03 of silence, 
 **Normal mode (no blank detection):**
 
 ```
-$ cue_file "Nirvana - Something in the Way _ Endless, Nameless.mp3" 
+$ cue_file "Nirvana - Something in the Way _ Endless, Nameless.mp3"
 {"duration": 1235.1, "liq_cue_duration": 1231.8, "liq_cue_in": 0.4, "liq_cue_out": 1232.2, "liq_cross_start_next": 1222.3, "liq_longtail": false, "liq_cross_duration": 9.900000000000091, "liq_loudness": "-10.47 dB", "liq_amplify": "-7.53 dB", "liq_blank_skipped": false}
 ```
 
 **With blank detection (cue-out at start of silence):**
 
 ```
-$ cue_file -b "Nirvana - Something in the Way _ Endless, Nameless.mp3" 
+$ cue_file -b "Nirvana - Something in the Way _ Endless, Nameless.mp3"
 {"duration": 1235.1, "liq_cue_duration": 227.1, "liq_cue_in": 0.4, "liq_cue_out": 227.5, "liq_cross_start_next": 224.1, "liq_longtail": false, "liq_cross_duration": 3.4000000000000057, "liq_loudness": "-10.47 dB", "liq_amplify": "-7.53 dB", "liq_blank_skipped": true}
 ```
 
@@ -318,7 +320,7 @@ Fading area, using above settings. The rest of the ending won’t be heard.
 This song works fine in "normal mode", but only a 0.5 second portion (marked) of the beginning is played in "blank detection" mode when using the default settings:
 
 ```
-$ cue_file -b "McLachlan, Sarah - Fallen (radio mix).flac" 
+$ cue_file -b "McLachlan, Sarah - Fallen (radio mix).flac"
 {"duration": 229.0, "liq_cue_duration": 0.5, "liq_cue_in": 2.3, "liq_cue_out": 2.8, "liq_cross_start_next": 2.8, "liq_longtail": false, "liq_cross_duration": 0.0, "liq_loudness": "-8.97 dB", "liq_amplify": "-9.03 dB", "liq_blank_skipped": true}
 ```
 
@@ -330,7 +332,7 @@ You can avoid such issues in several ways:
 Example result when reducing the silence level to -50 LU below average:
 
 ```
-$ cue_file -b -s -50 "McLachlan, Sarah - Fallen (radio mix).flac" 
+$ cue_file -b -s -50 "McLachlan, Sarah - Fallen (radio mix).flac"
 {"duration": 229.0, "liq_cue_duration": 221.79999999999998, "liq_cue_in": 1.9, "liq_cue_out": 223.7, "liq_cross_start_next": 215.6, "liq_longtail": false, "liq_cross_duration": 8.099999999999994, "liq_loudness": "-8.97 dB", "liq_amplify": "-9.03 dB", "liq_blank_skipped": false}
 ```
 
@@ -370,11 +372,12 @@ settings.autocue2.unify_loudness_correction := true
 
 ### <a name="minimal-working-example"></a>Minimal working example <a href="#toc" class="goToc">⇧</a>
 
-This [minimal example](minimal_example.liq) enables `autocue2` for all tracks, using default settings, and plays a nicely crossfaded playlist to your sound card, so you can get a first impression. Just change the playlist to one of your own!
+This [minimal example](minimal_example_autocue2.liq) enables `autocue2` for all tracks, using default settings, and plays a nicely crossfaded playlist to your sound card, so you can get a first impression. Just change the playlist to one of your own!
 
 ```ruby
-# minimal_example.liq
+# minimal_example_autocue2.liq
 # 2024-04-09 - Moonbase59
+# 2024-04-19 - Moonbase59 - rename to "minimal_example_autocue2.liq"
 
 # Minimal example for the `autocue2` protocol.
 # Uses one playlist and outputs to sound card.
@@ -540,7 +543,7 @@ Typical log sample (level 3; level 4 gives much more details):
 
 I currently[^1] use these crossfade settings (third input box in AzuraCast; lots of debugging info here, could be much shorter).
 
-Be sure to check the _copy-paste sections_ in `test_local.liq`, which always holds the most current code.
+Be sure to check the _copy-paste sections_ in `test_autocue2.liq`, which always holds the most current code.
 
 ```ruby
 # Fading/crossing/segueing

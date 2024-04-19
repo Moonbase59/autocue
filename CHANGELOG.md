@@ -1,5 +1,13 @@
 # autocue changelog
 
+### 2024-04-19
+
+In preparation for later merge with `integrate-with-liquidsoap` branch:
+
+- Renamed `test_local.liq` to `test_autocue2-liq`.
+- Renamed `minimal_example.liq` to `minimal_example_autocue2.liq`.
+- Updated README.md
+
 ### 2024-04-14
 
 - Added **"intelligent" tag reading** to `cue_file`. It will try to determine if enough needed data is in the tags to successfully skip the lengthy analysis stage. If so, operation can be _dramatically faster_. Depending on various tests, it is also determined if an automatic re-analysis is necessary, i.e. when the LUFS target or the desired blankskip mode have changed.

@@ -1,21 +1,22 @@
-# test_local.liq
+# test_autocue2.liq
 # 2024-04-14 - Moonbase59
+# 2024-04-19 - Moonbase59 - renamed to "test_autocue2.liq"
 
 # Test the `autocue2:` protocol and crossfading code locally,
 # using a "songs" and a "jingles" playlist.
 # Output to speakers and the following files:
-#   test_local.log -- the Liquidsoap log file
-#   test_local.mp3 -- recording, for later checking
-#   test_local.cue -- cue file to better find songs (open THIS in your audio player)
+#   test_autocue2.log -- the Liquidsoap log file
+#   test_autocue2.mp3 -- recording, for later checking
+#   test_autocue2.cue -- cue file to better find songs (open THIS in your audio player)
 #                     Note: `source.cue` support in LS 2.3.0+ only!
 
 # For a certain test duration, like 120 minutes, use
-#   timeout 120m liquidsoap test_local.liq
+#   timeout 120m liquidsoap test_autocue2.liq
 
 # Log to file, for later diagnosis. To follow the log in another terminal, use
-#   tail -f test_local.log
+#   tail -f test_autocue2.log
 settings.log.file := true
-settings.log.file.path := "test_local.log"
+settings.log.file.path := "test_autocue2.log"
 settings.log.file.append := false
 
 # 3=important, 4=info
@@ -28,7 +29,8 @@ to_live = ref(false)
 %include "autocue2.liq"
 
 # --- Copy-paste your settings into AzuraCast, second input box AFTER above file ---
-#settings.autocue2.path := "cue_file"
+
+settings.autocue2.path := "./cue_file"
 #settings.autocue2.timeout := 60.
 #settings.autocue2.target := -18
 #settings.autocue2.silence := -42
@@ -173,5 +175,5 @@ output(radio)
 # record to a file for later checking with Audacity or the like
 # also write a .cue file so we can find tracks more easily
 # --- comment out the following one line if you have a pre-2.3.0 Liquidsoap version ---
-#radio = source.cue(title="test_local.liq", file="test_local.mp3", "test_local.cue", radio)
-output.file(%mp3, "test_local.mp3", radio)
+#radio = source.cue(title="test_autocue2.liq", file="test_autocue2.mp3", "test_autocue2.cue", radio)
+output.file(%mp3, "test_autocue2.mp3", radio)

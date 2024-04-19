@@ -1,5 +1,6 @@
-# minimal_example.liq
+# minimal_example_autocue2.liq
 # 2024-04-09 - Moonbase59
+# 2024-04-19 - Moonbase59 - rename to "minimal_example_autocue2.liq"
 
 # Minimal example for the `autocue2` protocol.
 # Uses one playlist and outputs to sound card.

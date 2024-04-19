@@ -10,17 +10,6 @@
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
 
-# TODO: Allow reading tags and possibly return a partial result if these are incomplete.
-# Maybe use ffmpeg for this:
-#   ffmpeg -i file.ext -f ffmetadata - 2>/dev/null | grep -v '^;'
-# and split key=value pairs.
-# For partial result JSON, the Liquidsoap protocol must also be modified.
-
-# TODO: Allow writing tags. Difficult, because ffmpeg messes up FLAC tags at least.
-# (Concatenates multiple values into one tag, separated by ';'.)
-# Could use Mutagen, but need to differentiate lots of file types in this case,
-# plus have Mutagen installed in AzuraCast Docker.
-
 import os
 import tempfile
 import subprocess
@@ -93,13 +82,13 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False):
 
     result = json.loads(r)
     #print(json.dumps(result, indent=2))
-    
+
     # get tags in stream #0 (mka, opus, etc.)
     try:
         stream_items = result['streams'][0]['tags'].items()
     except KeyError:
         stream_items = {}
-    
+
     # get tags in format (flac, mp3, etc.)
     try:
         format_items = result['format']['tags'].items()
@@ -110,7 +99,7 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False):
     tags_in_format = {k.lower(): v for k, v in format_items if k.lower() in tags_to_check}
     # unify, right overwrites left if key in both
     tags_found = tags_in_stream | tags_in_format
-    
+
     # add duration of stream #0
     try:
         tags_found["duration"] = result['streams'][0]['duration']
@@ -120,7 +109,7 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False):
             del tags_found["duration"]
         except KeyError:
             pass
-    
+
     # remove " dB"/" LU" from liq_amplify
     if "liq_amplify" in tags_found:
         if tags_found["liq_amplify"].endswith((" dB", " LU")):
@@ -159,14 +148,14 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False):
     # replace liq_amplify with replaygain_track_gain, if we have that
     if (not "liq_amplify" in tags_found) and ("replaygain_track_gain" in tags_found):
         tags_found["liq_amplify"] = tags_found["replaygain_track_gain"]
-    
+
     # convert tag string values to the correct types, listed in tags_to_check
     tags_found = {k: tags_to_check[k](v) for k, v in tags_found.items()}
 
     # if both liq_cue_in & liq_cue_out available, we can calculate liq_cue_duration
     if "liq_cue_in" in tags_found and "liq_cue_out" in tags_found:
         tags_found["liq_cue_duration"] = tags_found["liq_cue_out"] - tags_found["liq_cue_in"]
-    
+
     # see if we need a re-analysis
     skip_analysis = tags_mandatory.issubset(tags_found.keys())
 
@@ -377,12 +366,12 @@ def analyse(
     cross_duration = cue_out_time - start_next_time
 
     # We now also return start_next_time
-    
+
     # NOTE: Liquidsoap doesn’t currently accept `liq_cross_duration=0.`,
     # or `liq_cross_start_next == liq_cue_out`, but this can happen.
     # We adjust for that in the Liquidsoap protocol, because other AutoDJ
     # applications might want the correct values.
-    
+
     # return a dict
     return ({
         "duration": duration,
@@ -404,13 +393,13 @@ def write_tags(filename, tags={}):
     # Don’t touch replaygain_track_gain or R128_TRACK_GAIN
     # NOTE: This won’t work with all file types! (.m4a)
     filename = Path(filename)
-    
+
     # This doesn’t work cross-device!
     #temp_file_handle, temp = tempfile.mkstemp(prefix="cue_file.", suffix=filename.suffix)
     # So we use the same folder, to be able to do an atomic move.
     temp = filename.with_suffix('.tmp' + filename.suffix)
     #print(temp)
-    
+
     # copy only `liq_*`, float with 2 decimals, bools and strings lowercase
     tags_new = {k: "{:.2f}".format(v)
         if isinstance(v, float) else str(v).lower()
@@ -438,7 +427,7 @@ def write_tags(filename, tags={}):
         str(temp)
     ]
     proc = subprocess.run(args, stdout=subprocess.PIPE, check=True)
-    
+
     # mv temp original; atomic
     os.replace(str(temp), str(filename.absolute()))
 
