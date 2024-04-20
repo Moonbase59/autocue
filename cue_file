@@ -6,6 +6,7 @@
 # 2024-04-11 Moonbase59 - Added liq_cross_start_next
 # 2024-04-12 Moonbase59 - Rename `liq_duration` -> `liq_cue_duration`
 #                       - Change to create correctly typed JSON (thanks @toots!)
+# 2024-04-20 Moonbase59 - optimized skip_analysis for different loudness targets
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
@@ -110,44 +111,35 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False):
         except KeyError:
             pass
 
-    # remove " dB"/" LU" from liq_amplify
-    if "liq_amplify" in tags_found:
-        if tags_found["liq_amplify"].endswith((" dB", " LU")):
-            tags_found["liq_amplify"] = \
-                tags_found["liq_amplify"][:-3]
+    # remove " dB", " LU", " dBFS", and " LUFS" suffixes from tags_found
+    def remove_suffix(tags):
+        suffixed_tags = [
+            "liq_amplify", "liq_loudness", "liq_reference_loudness",
+            "replaygain_track_gain", "replaygain_reference_loudness"
+        ]
+        for tag in suffixed_tags:
+            if tag in tags:
+                if tags[tag].endswith((" dB", " LU", " dBFS", " LUFS")):
+                    number, _, _ = tags[tag].rpartition(" ")
+                    tags[tag] = number
+        return tags
 
-    # remove " dB"/" LU" from liq_loudness
-    if "liq_loudness" in tags_found:
-        if tags_found["liq_loudness"].endswith((" dB", " LU")):
-            tags_found["liq_loudness"] = \
-                tags_found["liq_loudness"][:-3]
-
-    # remove " dB"/" LU" from replaygain_track_gain
-    if "replaygain_track_gain" in tags_found:
-        if tags_found["replaygain_track_gain"].endswith((" dB", " LU")):
-            tags_found["replaygain_track_gain"] = \
-                tags_found["replaygain_track_gain"][:-3]
-
-    # remove " dB"/"dBFS"/"LUFS" from replaygain_reference_loudness
-    if "replaygain_reference_loudness" in tags_found:
-        if tags_found["replaygain_reference_loudness"].endswith((" dB", " dBFS", " LUFS")):
-            number, _, _ = tags_found["replaygain_reference_loudness"].rpartition(" ")
-            tags_found["replaygain_reference_loudness"] = number
-
-    # remove " dB"/"dBFS"/"LUFS" from liq_reference_loudness
-    if "liq_reference_loudness" in tags_found:
-        if tags_found["liq_reference_loudness"].endswith((" dB", " dBFS", " LUFS")):
-            number, _, _ = tags_found["liq_reference_loudness"].rpartition(" ")
-            tags_found["liq_reference_loudness"] = number
+    # remove suffixes from several tags
+    tags_found = remove_suffix(tags_found)
 
     # create replaygain_track_gain from Opus R128_TRACK_GAIN (ref: -23 LUFS)
     if "r128_track_gain" in tags_found:
         rg = float(tags_found["r128_track_gain"]) / 256 + (target - -23.0)
         tags_found["replaygain_track_gain"] = rg
 
-    # replace liq_amplify with replaygain_track_gain, if we have that
+    # add missing liq_amplify, if we have replaygain_track_gain
     if (not "liq_amplify" in tags_found) and ("replaygain_track_gain" in tags_found):
         tags_found["liq_amplify"] = tags_found["replaygain_track_gain"]
+
+    # add missing liq_reference_loudness, if we have replaygain_reference_loudness
+    if ((not "liq_reference_loudness" in tags_found)
+        and ("replaygain_reference_loudness" in tags_found)):
+        tags_found["liq_reference_loudness"] = tags_found["replaygain_reference_loudness"]
 
     # convert tag string values to the correct types, listed in tags_to_check
     tags_found = {k: tags_to_check[k](v) for k, v in tags_found.items()}
@@ -159,19 +151,17 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False):
     # see if we need a re-analysis
     skip_analysis = tags_mandatory.issubset(tags_found.keys())
 
-    # if replaygain_reference_loudness != target, we need a re-analysis
-    if (skip_analysis
-        and not "liq_reference_loudness" in tags_found
-        and "replaygain_reference_loudness" in tags_found
-        and (tags_found["replaygain_reference_loudness"] != target)
-    ):
-        skip_analysis = False
-
-    # if liq_reference_loudness != target, we need a re-analysis
-    if (skip_analysis
+    # try to avoid re-analysis if we have enough data but different loudness target
+    if (
+        skip_analysis
+        and "liq_amplify" in tags_found
         and "liq_reference_loudness" in tags_found
-        and (tags_found["liq_reference_loudness"] != target)
     ):
+        # adjust liq_amplify by loudness target difference, set reference
+        tags_found["liq_amplify"] += (target - tags_found["liq_reference_loudness"])
+        tags_found["liq_reference_loudness"] = target
+    else:
+        # liq_amplify or liq_reference_loudness missing, must re-analyse
         skip_analysis = False
 
     # if liq_blankskip different from requested, we need a re-analysis
@@ -185,7 +175,7 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False):
     return skip_analysis, tags_found
 
 def add_missing(tags_found, target=TARGET_LUFS, blankskip=False):
-    # we need not check those in tags_madatory and those calculated by read_tags
+    # we need not check those in tags_mandatory and those calculated by read_tags
 
     if not "liq_longtail" in tags_found:
         tags_found["liq_longtail"] = False
