@@ -7,6 +7,7 @@
 # 2024-04-12 Moonbase59 - Rename `liq_duration` -> `liq_cue_duration`
 #                       - Change to create correctly typed JSON (thanks @toots!)
 # 2024-04-20 Moonbase59 - optimized skip_analysis for different loudness targets
+#                       - allow loudness values as floats
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
@@ -432,20 +433,20 @@ parser = argparse.ArgumentParser(
 
 parser.add_argument("file", help="File to be processed")
 parser.add_argument("-t", "--target", help="LUFS reference target",
-                    default=TARGET_LUFS, type=int, choices=range(-23, 1))
+                    default=TARGET_LUFS, type=float)
 parser.add_argument(
     "-s",
     "--silence",
     help="LU/dB below integrated track loudness for cue-in & cue-out points " \
     "(silence removal at beginning & end of a track)",
     default=SILENCE,
-    type=int)
+    type=float)
 parser.add_argument(
     "-o",
     "--overlay",
     help="LU/dB below integrated track loudness to trigger next track",
     default=OVERLAY_LU,
-    type=int)
+    type=float)
 parser.add_argument(
     "-l",
     "--longtail",
@@ -460,7 +461,7 @@ parser.add_argument(
     help="Extra LU/dB below overlay loudness to trigger next track for songs " \
     "with long tail",
     default=LONGTAIL_EXTRA_LU,
-    type=int)
+    type=float)
 parser.add_argument(
     "-b",
     "--blankskip",

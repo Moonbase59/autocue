@@ -35,13 +35,13 @@ settings.autocue.cue_file.path := "./cue_file"
 #settings.autocue.cue_file.fade_out := 2.5
 #settings.autocue.cue_file.metadata_override := []
 #settings.autocue.cue_file.timeout := 60.
-#settings.autocue.cue_file.target := -18
-#settings.autocue.cue_file.silence := -42
-#settings.autocue.cue_file.overlay := -8
-#settings.autocue.cue_file.longtail := 15.
-#settings.autocue.cue_file.overlay_longtail := -15
+settings.autocue.cue_file.target := -14.0
+#settings.autocue.cue_file.silence := -42.0
+#settings.autocue.cue_file.overlay := -8.0
+#settings.autocue.cue_file.longtail := 15.0
+#settings.autocue.cue_file.overlay_longtail := -15.0
 #settings.autocue.cue_file.blankskip := false
-#settings.autocue.cue_file.unify_loudness_correction := true
+settings.autocue.cue_file.unify_loudness_correction := false
 
 settings.autocue.cue_file.blankskip := true
 

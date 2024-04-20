@@ -4,6 +4,7 @@
 # 2024-04-12 - Moonbase59 - re-introduce `liq_duration` as `liq_cue_duration`.
 # 2024-04-19 - Moonbase59 - rename to "autocue.cue_file.liq"
 #                         - update to use same `cue_file` as master branch
+# 2024-04-20 - Moonbase59 - allow floats as loudness values
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -44,28 +45,28 @@ let settings.autocue.cue_file.timeout =
   settings.make(
     description=
       "Timeout (in seconds) for cue_file executions.",
-    60.
+    60.0
   )
 
 let settings.autocue.cue_file.target =
   settings.make(
     description=
       "Loudness target in LUFS.",
-    -18
+    -18.0
   )
 
 let settings.autocue.cue_file.silence =
   settings.make(
     description=
       "Silence level (for cue points) in LU/dB below track loudness.",
-    -42
+    -42.0
   )
 
 let settings.autocue.cue_file.overlay =
   settings.make(
     description=
       "Start overlay level in LU/dB below track loudness.",
-    -8
+    -8.0
   )
 
 let settings.autocue.cue_file.longtail =
@@ -81,7 +82,7 @@ let settings.autocue.cue_file.overlay_longtail =
     description=
       "Extra LU/dB level below overlay loudness, to recalculate songs with long \
        tails.",
-    -15
+    -15.0
   )
 
 let settings.autocue.cue_file.blankskip =
@@ -234,15 +235,15 @@ def cue_file(req) =
       ref(
         [
           '-t',
-          string(target),
+          string.float(target, decimal_places=2),
           '-s',
-          string(silence),
+          string.float(silence, decimal_places=2),
           '-o',
-          string(overlay),
+          string.float(overlay, decimal_places=2),
           '-l',
-          string(longtail),
+          string.float(longtail, decimal_places=2),
           '-x',
-          string(overlay_longtail),
+          string.float(overlay_longtail, decimal_places=2),
           request.filename(req)
         ]
       )
