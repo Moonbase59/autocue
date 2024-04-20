@@ -20,7 +20,7 @@ settings.log.file.path := "test_autocue2.log"
 settings.log.file.append := false
 
 # 3=important, 4=info
-settings.log.level := 3
+settings.log.level := 4
 
 # no "live" in the local test
 to_live = ref(false)
@@ -31,16 +31,16 @@ to_live = ref(false)
 # --- Copy-paste your settings into AzuraCast, second input box AFTER above file ---
 
 settings.autocue2.path := "./cue_file"
-#settings.autocue2.timeout := 60.
-#settings.autocue2.target := -18
-#settings.autocue2.silence := -42
-#settings.autocue2.overlay := -8
+#settings.autocue2.timeout := 60.0
+settings.autocue2.target := -14.0
+#settings.autocue2.silence := -42.0
+#settings.autocue2.overlay := -8.0
 #settings.autocue2.longtail := 15.0
-#settings.autocue2.overlay_longtail := -15
+#settings.autocue2.overlay_longtail := -15.0
 # The following can be overridden by the `liq_blankskip` annotation
 # on a per-request or per-playlist basis
 settings.autocue2.blankskip := true
-#settings.autocue2.unify_loudness_correction := true
+settings.autocue2.unify_loudness_correction := true
 #settings.autocue2.write_tags := false
 #settings.autocue2.force_analysis := false
 

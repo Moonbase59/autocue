@@ -22,28 +22,28 @@ let settings.autocue2.timeout =
   settings.make(
     description=
       "Timeout (in seconds) for autocue2 executions.",
-    60.
+    60.0
   )
 
 let settings.autocue2.target =
   settings.make(
     description=
       "Loudness target in LUFS.",
-    -18
+    -18.0
   )
 
 let settings.autocue2.silence =
   settings.make(
     description=
       "Silence level (for cue points) in LU/dB below track loudness.",
-    -42
+    -42.0
   )
 
 let settings.autocue2.overlay =
   settings.make(
     description=
       "Start overlay level in LU/dB below track loudness.",
-    -8
+    -8.0
   )
 
 let settings.autocue2.longtail =
@@ -57,7 +57,7 @@ let settings.autocue2.overlay_longtail =
   settings.make(
     description=
       "Extra LU/dB level below overlay loudness, to recalculate songs with long tails.",
-    -15
+    -15.0
   )
 
 let settings.autocue2.blankskip =
@@ -137,12 +137,13 @@ def replaces file.autocue2(
   log.important(label=label, "Blank (silence) skipping active: #{blankskip}")
 
   # set up CLI arguments
+  # cue_file doesn’t understand floats like "-18.", so use 2 decimals
   args=ref([
-    '-t', string(target),
-    '-s', string(silence),
-    '-o', string(overlay),
-    '-l', string(longtail),
-    '-x', string(overlay_longtail),
+    '-t', string.float(target, decimal_places=2),
+    '-s', string.float(silence, decimal_places=2),
+    '-o', string.float(overlay, decimal_places=2),
+    '-l', string.float(longtail, decimal_places=2),
+    '-x', string.float(overlay_longtail, decimal_places=2),
     uri
   ])
 
@@ -174,18 +175,18 @@ def replaces file.autocue2(
     log(level=2, label=label, 'Autocue2 Error: #{error.message(err)}')
     result := ""
   end
-  
+
   if result() != "" then
     log(
       level=3,
       label=label,
       'Autocue2 result for "#{uri}": #{result()}'
     )
-    
+
     # TODO: How to handle an incomplete result (not all values in JSON)?
     # Could happen if cue_file only read (incomplete) file tags instead of
     # doing a full recalculation (for speed reasons).
-    
+
     let json.parse (
       {
         duration,
@@ -217,7 +218,7 @@ def replaces file.autocue2(
         liq_blank_skipped: bool
       }
     ) = result()
-    
+
     # TODO: How to return an incomplete assoc list from above?
     [
       ("duration", string(duration)),
@@ -278,7 +279,7 @@ def file.autocue2.metadata(
     # resolved local filename
     fname = request.filename(r)
     m = ref(request.metadata(r))
-    
+
     # Work around metadata quirk:
     # If coming from `enable_autocue2_metadata()`, we must use the "handed-down" metadata.
     # Otherwise, we’d not see extra annotated values.
@@ -286,7 +287,7 @@ def file.autocue2.metadata(
     if initial_metadata != [] then
       m := initial_metadata
     end
-    
+
     meta = m()  # so we can use meta["something"]
 
     if meta["liq_autocue2"] == "false" then
@@ -330,7 +331,7 @@ def file.autocue2.metadata(
         # only use calculated values if not already existent in AzuraCast
         # so we don't overwrite manually set values in the database
         result := list.fold(
-          fun(res, entry) -> 
+          fun(res, entry) ->
             if list.assoc.mem(fst(entry), res) then
               res
             else
@@ -340,6 +341,21 @@ def file.autocue2.metadata(
             result()
         )
 
+        # Override liq_amplify, liq_reference_loudness if target changed
+        # adjust liq_amplify by loudness target difference, set reference
+        if list.assoc.mem("liq_amplify", result()) and list.assoc.mem("liq_reference_loudness", result()) then
+          la = list.assoc(default="0.00 dB", "liq_amplify", result())
+          laf = float_of_string(string.replace(pattern=" (dB|LU)", fun(_) -> "", la))
+          lr = list.assoc(default=string.float(decimal_places=2, target)^" dB", "liq_reference_loudness", result())
+          lrf = float_of_string(string.replace(pattern=" (dB|dBFS|LUFS)", fun(_) -> "", lr))
+
+          result := list.assoc.remove("liq_amplify", result())
+          result := list.add(("liq_amplify", string.float(decimal_places=2, laf + (target - lrf)) ^ " dB"), result())
+
+          result := list.assoc.remove("liq_reference_loudness", result())
+          result := list.add(("liq_reference_loudness", string.float(decimal_places=2, target) ^ " LUFS"), result())
+        end
+
         # TODO: Add some plausibility checks here, to prevent user error
         # cue_out <= duration || cue_out = duration
         # cue_out >= cue_in || cue_out = duration ?
@@ -348,7 +364,7 @@ def file.autocue2.metadata(
         # fade_in_delay + fade_in < liq_cue_duration || let LS handle?
         # fade_out_delay + fade_out < liq_curation || let LS handle?
         # fade_in_delay + fade_in + fade_out_delay + fade_out <= liq_cue_duration || let LS handle?
-        
+
         # `liq_cross_duration` < 0.1 handled ok in Liquidsoap 2.2.5+git@7f0bc4b40 and up
         # same for `liq_cross_start_next == liq_cue_out`
 
@@ -365,19 +381,35 @@ def file.autocue2.metadata(
         if settings.autocue2.unify_loudness_correction() then
           # We wish to avoid loudness jumps in all possible cases,
           # so bring `replaygain_track_gain` and `liq_amplify` in line.
-          # NOTE: This can only work correctly if your files have been replaygained
-          # to the same LUFS target as your `settings.autocue2.target`!
-          if list.assoc.mem("replaygain_track_gain", meta) then
-            # `replaygain_track_gain` available: override `liq_amplify`
-            la = list.assoc(default="0.00 dB", "liq_amplify", result())
-            rg = list.assoc(default="0.00 dB", "replaygain_track_gain", meta)
-            r = list.assoc.remove("liq_amplify", result())
-            result := list.add(("liq_amplify", "#{rg}"), r)
-            log(level=3, label=label, 'Replaced liq_amplify=#{la} with #{rg} from replaygain_track_gain')
+          # NOTE: This also works for different loudness targets, if your
+          # files have been tagged with a valid replaygain_reference_loudness.
+          # This does NOT include mp3gain’s ominous positive dB SPL values!
+          if list.assoc.mem("replaygain_track_gain", result()) then
+            if list.assoc.mem("replaygain_reference_loudness", result()) then
+              la = list.assoc(default="0.00 dB", "liq_amplify", result())
+              rg = list.assoc(default="0.00 dB", "replaygain_track_gain", result())
+              rgf = float_of_string(string.replace(pattern=" (dB|LU)", fun(_) -> "", rg))
+              rgr = list.assoc(default=string.float(decimal_places=2, target)^" dB", "replaygain_reference_loudness", result())
+              rgrf = float_of_string(string.replace(pattern=" (dB|dBFS|LUFS)", fun(_) -> "", rgr))
+              # adjust replaygain_track_gain by loudness target difference, set reference
+              # we can safely do that since we NEVER write back replaygain_* tags
+              rg = string.float(decimal_places=2, rgf + (target - rgrf)) ^ " dB"
+              rgr = string.float(decimal_places=2, target) ^ " LUFS"
+              result := list.assoc.remove("replaygain_track_gain", result())
+              result := list.add(("replaygain_track_gain", rg), result())
+              result := list.assoc.remove("replaygain_reference_loudness", result())
+              result := list.add(("replaygain_reference_loudness", rgr), result())
+              # Now set liq_amplify to the same value
+              result := list.assoc.remove("liq_amplify", result())
+              result := list.add(("liq_amplify", rg), result())
+              log(level=3, label=label, 'Replaced liq_amplify=#{la} with #{rg} from adjusted replaygain_track_gain')
+            else
+              log(level=3, label=label, "Can't override liq_amplify from replaygain_track_gain, replaygain_reference_loudness missing.")
+            end
           else
             # no `replaygain_track_gain` seen? insert one, using calculated `liq_amplify`
             rg = list.assoc(default="0.00 dB", "liq_amplify", result())
-            result := list.add(("replaygain_track_gain", "#{rg}"), result())
+            result := list.add(("replaygain_track_gain", rg), result())
             log(level=3, label=label, 'Inserted replaygain_track_gain: #{rg}')
           end
         end
@@ -385,7 +417,7 @@ def file.autocue2.metadata(
         # now remove everything that’s not autocue2-relevant
         # so we don’t blow up decoder and annotation metadata
         def fl(k, _) =
-          tags = ["duration", "replaygain_track_gain"]
+          tags = ["duration", "replaygain_track_gain", "replaygain_reference_loudness"]
           string.contains(prefix="liq_", k) or list.mem(k, tags)
         end
         result := list.assoc.filter((fl), result())
