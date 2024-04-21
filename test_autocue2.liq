@@ -32,7 +32,7 @@ to_live = ref(false)
 
 settings.autocue2.path := "./cue_file"
 #settings.autocue2.timeout := 60.0
-settings.autocue2.target := -14.0
+settings.autocue2.target := -14.0  # not recommended, but user preference
 #settings.autocue2.silence := -42.0
 #settings.autocue2.overlay := -8.0
 #settings.autocue2.longtail := 15.0
@@ -52,7 +52,8 @@ enable_autocue2_metadata()
 # --- Copy-paste END ---
 
 # --- Use YOUR playlist here! ---
-uri = "/home/matthias/Musik/Playlists/Radio/Classic Rock.m3u"
+#uri = "/home/matthias/Musik/Playlists/Radio/Classic Rock.m3u"
+uri = "/home/matthias/media/videostream/yyy"
 #songs = playlist(prefix="autocue2:", uri)
 songs = playlist(uri)
 
