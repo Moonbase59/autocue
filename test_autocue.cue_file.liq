@@ -35,18 +35,17 @@ settings.autocue.cue_file.path := "./cue_file"
 #settings.autocue.cue_file.fade_out := 2.5
 #settings.autocue.cue_file.metadata_override := []
 #settings.autocue.cue_file.timeout := 60.
-settings.autocue.cue_file.target := -14.0
+settings.autocue.cue_file.target := -14.0  # not recommended, but user preference
 #settings.autocue.cue_file.silence := -42.0
 #settings.autocue.cue_file.overlay := -8.0
 #settings.autocue.cue_file.longtail := 15.0
 #settings.autocue.cue_file.overlay_longtail := -15.0
 #settings.autocue.cue_file.blankskip := false
-settings.autocue.cue_file.unify_loudness_correction := false
-
+settings.autocue.cue_file.unify_loudness_correction := true
 settings.autocue.cue_file.blankskip := true
 
-# `enable_autocue2_metadata()` will autocue ALL files Liquidsoap processes.
-# You can disable it for selected sources using 'annotate:liq_autocue2="false"'.
+# `enable_autocue_metadata()` will autocue ALL files Liquidsoap processes.
+# You can disable it for selected sources using 'annotate:liq_cue_file=false'.
 # Remember you won't get `liq_amplify` data then -- expect loudness jumps!
 settings.autocue.preferred := "cue_file"
 settings.autocue.amplify_behavior := "keep"
@@ -55,7 +54,8 @@ enable_autocue_metadata()
 # --- Copy-paste END ---
 
 # --- Use YOUR playlist here! ---
-uri = "/home/matthias/Musik/Playlists/Radio/Classic Rock.m3u"
+#uri = "/home/matthias/Musik/Playlists/Radio/Classic Rock.m3u"
+uri = "/home/matthias/media/videostream/yyy"
 #songs = playlist(prefix="autocue2:", uri)
 songs = playlist(uri)
 
