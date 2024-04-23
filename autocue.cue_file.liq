@@ -198,7 +198,7 @@ def cue_file(req) =
     log(
       level=4,
       label=label,
-      "Metadata seen:"
+      'Metadata seen for "#{request.filename(req)}":'
     )
     list.iter(fun (v) -> log(level=4, label=label, "#{v}"), l)
 
@@ -431,6 +431,8 @@ def cue_file(req) =
 end
 
 autocue.register(name="cue_file", cue_file)
+# set this so annotations (priority 5) can still override autocue values
+settings.autocue.metadata.priority := 4
 
 # --- Copy-paste Azuracast LS Config, second input box END ---
 
