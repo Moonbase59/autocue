@@ -459,7 +459,7 @@ def enable_autocue2_metadata() =
     # "Hand down" metadata since we can't rely on having it later.
     file.autocue2.metadata(initial_metadata=metadata, fname)
   end
-  decoder.metadata.add(priority=9, "autocue2", autocue2_metadata)
+  decoder.metadata.add(priority=4, "autocue2", autocue2_metadata)
 end
 
 # Define autocue2 protocol
