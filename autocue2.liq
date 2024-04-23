@@ -299,7 +299,7 @@ def file.autocue2.metadata(
       []
     else
       l = list.sort.natural(metadata.cover.remove(meta))
-      log(level=4, label=label, "Metadata seen:")
+      log(level=4, label=label, 'Metadata seen for "#{fname}":')
       list.iter(fun(v) -> log(level=4, label=label, "#{v}"), l)
 
       log(level=3, label=label, 'jingle_mode=#{meta["jingle_mode"]}, liq_blankskip=#{meta["liq_blankskip"]}')
@@ -423,7 +423,7 @@ def file.autocue2.metadata(
         result := list.assoc.filter((fl), result())
 
         l = list.sort.natural(metadata.cover.remove(result()))
-        log.important(label=label, "Metadata added/corrected:")
+        log.important(label=label, 'Metadata added/corrected for "#{fname}":')
         list.iter(fun(v) -> log.important(label=label, "#{v}"), l)
 
         result()
@@ -459,7 +459,7 @@ def enable_autocue2_metadata() =
     # "Hand down" metadata since we can't rely on having it later.
     file.autocue2.metadata(initial_metadata=metadata, fname)
   end
-  decoder.metadata.add("autocue2", autocue2_metadata)
+  decoder.metadata.add(priority=9, "autocue2", autocue2_metadata)
 end
 
 # Define autocue2 protocol
