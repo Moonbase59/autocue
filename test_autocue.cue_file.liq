@@ -20,7 +20,7 @@ settings.log.file.path := "test_autocue.cue_file.log"
 settings.log.file.append := false
 
 # 3=important, 4=info
-settings.log.level := 4
+settings.log.level := 3
 
 # no "live" in the local test
 to_live = ref(false)
