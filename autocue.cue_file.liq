@@ -158,7 +158,7 @@ def cue_file(req) =
     list.iter(fun (v) -> log(level=4, label=label, "#{v}"), l)
 
     log(
-      level=3,
+      level=4,
       label=label,
       'jingle_mode=#{meta["jingle_mode"]}, liq_blankskip=#{
         meta["liq_blankskip"]
