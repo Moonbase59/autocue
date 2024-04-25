@@ -367,7 +367,7 @@ def cue_file(req) =
         catch _ do
           log(
             level=3,
-            label="autocue.cue_file.metadata",
+            label=label,
             "No fade-in duration given, using default setting \
              (#{settings.autocue.cue_file.fade_in()} s)."
           )
@@ -380,7 +380,7 @@ def cue_file(req) =
         catch _ do
           log(
             level=3,
-            label="autocue.cue_file.metadata",
+            label=label,
             "No fade-out duration given, using default setting \
              (#{settings.autocue.cue_file.fade_out()} s)."
           )
