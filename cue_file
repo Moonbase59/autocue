@@ -10,6 +10,7 @@
 #                       - allow loudness values as floats
 # 2024-04-24 Moonbase59 - completely remove `liq_cross_duration`, so it won’t
 #                         be written to file’s tags
+# 2024-04-25 Moonbase59 - handle old RG1/mp3gain positive loudness reference
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
