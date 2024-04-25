@@ -5,6 +5,7 @@
 # 2024-04-14 - Moonbase59 - Add new cue_file parameters
 # 2024-04-25 - Moonbase59 - remove `liq_cross_duration`,
 #                         - rename `liq_autocue2` to `liq_cue_file`
+# 2024-04-25 - Moonbase59 - handle old RG1/mp3gain positive loudness reference
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
