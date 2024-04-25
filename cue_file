@@ -10,6 +10,7 @@
 #                       - allow loudness values as floats
 # 2024-04-24 Moonbase59 - completely remove `liq_cross_duration`, so it won’t
 #                         be written to file’s tags
+# 2024-04-25 Moonbase59 - handle old RG1/mp3gain positive loudness reference
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
@@ -139,13 +140,20 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False):
     if (not "liq_amplify" in tags_found) and ("replaygain_track_gain" in tags_found):
         tags_found["liq_amplify"] = tags_found["replaygain_track_gain"]
 
+    # convert tag string values to the correct types, listed in tags_to_check
+    tags_found = {k: tags_to_check[k](v) for k, v in tags_found.items()}
+
+    # Handle old RG1/mp3gain positive loudness reference
+    # "89 dB" (SPL) should actually be -14 LUFS, but as a reference
+    # it is usually set equal to the RG2 -18 LUFS reference point
+    if (("replaygain_reference_loudness" in tags_found)
+        and tags_found["replaygain_reference_loudness"] > 0.0):
+        tags_found["replaygain_reference_loudness"] -= 107.0
+
     # add missing liq_reference_loudness, if we have replaygain_reference_loudness
     if ((not "liq_reference_loudness" in tags_found)
         and ("replaygain_reference_loudness" in tags_found)):
         tags_found["liq_reference_loudness"] = tags_found["replaygain_reference_loudness"]
-
-    # convert tag string values to the correct types, listed in tags_to_check
-    tags_found = {k: tags_to_check[k](v) for k, v in tags_found.items()}
 
     # if both liq_cue_in & liq_cue_out available, we can calculate liq_cue_duration
     if "liq_cue_in" in tags_found and "liq_cue_out" in tags_found:

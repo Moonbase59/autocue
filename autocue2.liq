@@ -345,6 +345,8 @@ def file.autocue2.metadata(
 
         # Override liq_amplify, liq_reference_loudness if target changed
         # adjust liq_amplify by loudness target difference, set reference
+        # Note: `liq_reference_loudness` is ALWAYS in negative LUFS,
+        # NEVER in positive dB (SPL) like old RG1/mp3gain values!
         if list.assoc.mem("liq_amplify", result()) and list.assoc.mem("liq_reference_loudness", result()) then
           la = list.assoc(default="0.00 dB", "liq_amplify", result())
           laf = float_of_string(string.replace(pattern=" (dB|LU)", fun(_) -> "", la))
@@ -393,6 +395,10 @@ def file.autocue2.metadata(
               rgf = float_of_string(string.replace(pattern=" (dB|LU)", fun(_) -> "", rg))
               rgr = list.assoc(default=string.float(decimal_places=2, target)^" dB", "replaygain_reference_loudness", result())
               rgrf = float_of_string(string.replace(pattern=" (dB|dBFS|LUFS)", fun(_) -> "", rgr))
+              # Handle old RG1/mp3gain positive loudness reference
+              # "89 dB" (SPL) should actually be -14 LUFS, but as a reference
+              # it is usually set equal to the RG2 -18 LUFS reference point
+              if rgrf > 0. then rgrf -= 107. end
               # adjust replaygain_track_gain by loudness target difference, set reference
               # we can safely do that since we NEVER write back replaygain_* tags
               rg = string.float(decimal_places=2, rgf + (target - rgrf)) ^ " dB"
@@ -412,7 +418,11 @@ def file.autocue2.metadata(
             # no `replaygain_track_gain` seen? insert one, using calculated `liq_amplify`
             rg = list.assoc(default="0.00 dB", "liq_amplify", result())
             result := list.add(("replaygain_track_gain", rg), result())
-            log(level=3, label=label, 'Inserted replaygain_track_gain: #{rg}')
+            # also insert a `replaygain_reference_loudness`
+            rgr = string.float(decimal_places=2, target) ^ " LUFS"
+            result := list.assoc.remove("replaygain_reference_loudness", result())
+            result := list.add(("replaygain_reference_loudness", rgr), result())
+            log(level=3, label=label, 'Inserted replaygain_track_gain #{rg} and replaygain_reference_loudness #{rgr}')
           end
         end
 
