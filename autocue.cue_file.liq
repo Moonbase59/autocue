@@ -1,4 +1,4 @@
-# autocue2.liq
+# autocue.cue_file.liq
 # 2024-04-10 - Moonbase59
 # 2024-04-12 - Toots: re-organize to integrate as core autocue implementation.
 # 2024-04-12 - Moonbase59 - re-introduce `liq_duration` as `liq_cue_duration`.
@@ -6,6 +6,7 @@
 #                         - update to use same `cue_file` as master branch
 # 2024-04-20 - Moonbase59 - allow floats as loudness values
 # 2024-04-24 - Moonbase59 - rework to follow same logic as autocue2
+# 2024-04-25 - Moonbase59 - handle old RG1/mp3gain positive loudness reference
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
