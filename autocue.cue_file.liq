@@ -334,10 +334,14 @@ def cue_file(req) =
             rg = list.assoc(default="0.00 dB", "replaygain_track_gain", result())
             rgf = float_of_string(string.replace(pattern=" (dB|LU)", fun(_) -> "", rg))
             rgr = list.assoc(default=string.float(decimal_places=2, target)^" dB", "replaygain_reference_loudness", result())
-            rgrf = float_of_string(string.replace(pattern=" (dB|dBFS|LUFS)", fun(_) -> "", rgr))
+            rgrf = ref(float_of_string(string.replace(pattern=" (dB|dBFS|LUFS)", fun(_) -> "", rgr)))
+            # Handle old RG1/mp3gain positive loudness reference
+            # "89 dB" (SPL) should actually be -14 LUFS, but as a reference
+            # it is usually set equal to the RG2 -18 LUFS reference point
+            if rgrf() > 0. then rgrf := rgrf() - 107. end
             # adjust replaygain_track_gain by loudness target difference, set reference
             # we can safely do that since we NEVER write back replaygain_* tags
-            rg = string.float(decimal_places=2, rgf + (target - rgrf)) ^ " dB"
+            rg = string.float(decimal_places=2, rgf + (target - rgrf())) ^ " dB"
             rgr = string.float(decimal_places=2, target) ^ " LUFS"
             result := list.assoc.remove("replaygain_track_gain", result())
             result := list.add(("replaygain_track_gain", rg), result())
