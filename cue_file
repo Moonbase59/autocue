@@ -8,6 +8,8 @@
 #                       - Change to create correctly typed JSON (thanks @toots!)
 # 2024-04-20 Moonbase59 - optimized skip_analysis for different loudness targets
 #                       - allow loudness values as floats
+# 2024-04-24 Moonbase59 - completely remove `liq_cross_duration`, so it won’t
+#                         be written to file’s tags
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
@@ -181,8 +183,8 @@ def add_missing(tags_found, target=TARGET_LUFS, blankskip=False):
     if not "liq_longtail" in tags_found:
         tags_found["liq_longtail"] = False
 
-    if not "liq_cross_duration" in tags_found:
-        tags_found["liq_cross_duration"] = tags_found["liq_cue_out"] - tags_found["liq_cross_start_next"]
+    #if not "liq_cross_duration" in tags_found:
+    #    tags_found["liq_cross_duration"] = tags_found["liq_cue_out"] - tags_found["liq_cross_start_next"]
 
     if not "liq_amplify" in tags_found:
         tags_found["liq_amplify"] = tags_found["replaygain_track_gain"]
@@ -371,7 +373,7 @@ def analyse(
         "liq_cue_out": cue_out_time,
         "liq_cross_start_next": start_next_time,
         "liq_longtail": longtail,
-        "liq_cross_duration": cross_duration,
+        #"liq_cross_duration": cross_duration,
         "liq_loudness": loudness,
         "liq_amplify": (target - loudness),
         "liq_reference_loudness": target,
@@ -517,7 +519,7 @@ liq_result = {
     "liq_cue_out": result['liq_cue_out'],
     "liq_cross_start_next": result['liq_cross_start_next'],
     "liq_longtail": result["liq_longtail"],
-    "liq_cross_duration": result['liq_cross_duration'],
+    #"liq_cross_duration": result['liq_cross_duration'],
     "liq_loudness": f"{result['liq_loudness']:.2f} dB",
     "liq_amplify": f"{result['liq_amplify']:.2f} dB",
     "liq_reference_loudness": f"{result['liq_reference_loudness']:.2f} LUFS",

@@ -3,6 +3,8 @@
 # 2024-04-13 - Moonbase59 - Rename `liq_duration` to `liq_cue_duration`
 #                         - Change to use new typed JSON `cue_file` executable
 # 2024-04-14 - Moonbase59 - Add new cue_file parameters
+# 2024-04-25 - Moonbase59 - remove `liq_cross_duration`,
+#                         - rename `liq_autocue2` to `liq_cue_file`
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -195,7 +197,7 @@ def replaces file.autocue2(
         liq_cue_out,
         liq_cross_start_next,
         liq_longtail,
-        liq_cross_duration,
+        #liq_cross_duration,
         liq_loudness,
         liq_amplify,
         liq_reference_loudness,
@@ -210,7 +212,7 @@ def replaces file.autocue2(
         liq_cue_out: float,
         liq_cross_start_next: float,
         liq_longtail: bool,
-        liq_cross_duration: float,
+        #liq_cross_duration: float,
         liq_loudness: string,
         liq_amplify: string,
         liq_reference_loudness: string,
@@ -227,7 +229,7 @@ def replaces file.autocue2(
       ("liq_cue_out", string(liq_cue_out)),
       ("liq_cross_start_next", string(liq_cross_start_next)),
       ("liq_longtail", string(liq_longtail)),
-      ("liq_cross_duration", string(liq_cross_duration)),
+      #("liq_cross_duration", string(liq_cross_duration)),
       ("liq_loudness", liq_loudness),
       ("liq_amplify", liq_amplify),
       ("liq_reference_loudness", liq_reference_loudness),
@@ -290,11 +292,11 @@ def file.autocue2.metadata(
 
     meta = m()  # so we can use meta["something"]
 
-    if meta["liq_autocue2"] == "false" then
+    if meta["liq_cue_file"] == "false" then
       log(
         level=2,
         label=label,
-        'Skipping autocue2 for file "#{fname}" because liq_autocue2=false forbids it.'
+        'Skipping autocue2 for file "#{fname}" because liq_cue_file=false forbids it.'
       )
       []
     else
@@ -451,7 +453,7 @@ end
 # values can be computed. This function sets `settings.request.prefetch` to `2`
 # to account for the latency introduced by the `autocue2` computation when resolving
 # requsts. For a finer-grained processing, use the `autocue2:` protocol.
-# NOTE: You might want to annotate VIDEO sources with `liq_autocue2=false`!
+# NOTE: You might want to annotate VIDEO sources with `liq_cue_file=false`!
 # Autocueing a multi-GB video works, but can really eat up CPU.
 # @category Liquidsoap
 def enable_autocue2_metadata() =
