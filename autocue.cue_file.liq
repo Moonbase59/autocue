@@ -535,6 +535,8 @@ autocue.register(name="cue_file", cue_file)
 # set this so annotations (priority 5) can still override autocue values
 settings.autocue.metadata.priority := 10
 settings.autocue.preferred := "cue_file"
+# avoid dead air from reconcile, reset default 3.0s to our fade_out duration
+settings.autocue.target_cross_duration := settings.autocue.cue_file.fade_out()
 
 # --- Copy-paste Azuracast LS Config, second input box END ---
 
