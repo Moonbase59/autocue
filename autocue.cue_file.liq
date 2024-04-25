@@ -313,16 +313,6 @@ def cue_file(req) =
         result := list.add(("liq_reference_loudness", string.float(decimal_places=2, target) ^ " LUFS"), result())
       end
 
-      # correct `liq_cue_duration`
-      cue_in = float_of_string(list.assoc(default="0.00", "liq_cue_in", result()))
-      cue_out = float_of_string(list.assoc(default="0.00", "liq_cue_out", result()))
-      liq_cue_duration = cue_out - cue_in
-      if liq_cue_duration > 0. then
-        result := list.assoc.remove("liq_cue_duration", result())
-        result := list.add(("liq_cue_duration",
-          string.float(decimal_places=2, liq_cue_duration)), result())
-      end
-
       if settings.autocue.cue_file.unify_loudness_correction() then
         # We wish to avoid loudness jumps in all possible cases,
         # so bring `replaygain_track_gain` and `liq_amplify` in line.
@@ -397,6 +387,35 @@ def cue_file(req) =
           settings.autocue.cue_file.fade_out()
         end
 
+      # User might have set cue-out but not start_next, correct
+      liq_cross_start_next =
+        if liq_cross_start_next <= liq_cue_out
+        then
+          liq_cross_start_next
+        else
+          start_next = liq_cue_out - liq_fade_out
+          if start_next > liq_cue_in
+          then
+            # we have enough room for the fade-out
+            log(
+              level=3,
+              label=label,
+              "Given liq_cross_start_next (#{liq_cross_start_next} s) > \
+               cue-out point (#{liq_cue_out} s), set to #{start_next} s."
+            )
+            start_next
+          else
+            # not enough room for fade-out, set to cue-out
+            log(
+              level=3,
+              label=label,
+              "Given liq_cross_start_next (#{liq_cross_start_next} s) > \
+               cue-out point (#{liq_cue_out} s), set to #{liq_cue_out} s."
+            )
+            liq_cue_out
+          end
+        end
+
       # Adjust cue_out according to user-supplied fade_out
       let (liq_fade_out, liq_cue_out) =
         if
@@ -439,9 +458,17 @@ def cue_file(req) =
           0.1
         end
 
+      # correct `liq_cue_duration`
+      liq_cue_duration = liq_cue_out - liq_cue_in
+      result := list.assoc.remove("liq_cue_duration", result())
+      result := list.add(("liq_cue_duration",
+        string.float(decimal_places=2, liq_cue_duration)), result())
+
       # Update result
       result := list.assoc.remove("liq_cue_out", result())
       result := list.add(("liq_cue_out", string(liq_cue_out)), result())
+      result := list.assoc.remove("liq_cross_start_next", result())
+      result := list.add(("liq_cross_start_next", string(liq_cross_start_next)), result())
       result := list.assoc.remove("liq_fade_in", result())
       result := list.add(("liq_fade_in", string(liq_fade_in)), result())
       result := list.assoc.remove("liq_fade_out", result())
