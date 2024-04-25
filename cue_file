@@ -11,6 +11,8 @@
 # 2024-04-24 Moonbase59 - completely remove `liq_cross_duration`, so it won’t
 #                         be written to file’s tags
 # 2024-04-25 Moonbase59 - handle old RG1/mp3gain positive loudness reference
+#                       - more sanity checks & adjustments
+#                       - add -n/--nice option, increases nice value by 10
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
@@ -34,6 +36,7 @@ OVERLAY_LU = -8.0  # LU below average for overlay trigger (start next song)
 # more than LONGTAIL_SECONDS below OVERLAY_LU are considered a "long tail"
 LONGTAIL_SECONDS = 15.0
 LONGTAIL_EXTRA_LU = -15.0  # reduce 15 dB extra on long tail songs to find overlap point
+NICE=False  # use Linux nice?
 
 # minimum set of tags after "read_tags" that must be there before skipping analysis
 tags_mandatory = set([
@@ -218,7 +221,8 @@ def analyse(
         silence=SILENCE,
         longtail_seconds=LONGTAIL_SECONDS,
         extra=LONGTAIL_EXTRA_LU,
-        blankskip=False):
+        blankskip=False,
+        nice=NICE):
     # ffmpeg -v quiet -i audiofile.ext -vn -af ebur128=target=-18:metadata=1,ametadata=mode=print:file=- -f null null
     # Output:
     # frame:448  pts:2150400 pts_time:44.8
@@ -229,8 +233,7 @@ def analyse(
     # lavfi.r128.LRA.low=-23.470
     # lavfi.r128.LRA.high=-18.240
 
-    result = subprocess.run(
-        [
+    args = [
             FFMPEG,
             "-v",
             "quiet",
@@ -244,7 +247,12 @@ def analyse(
             ":metadata=1,ametadata=mode=print:file=-",
             "-f",
             "null",
-            "null"],
+            "null"]
+    if nice:
+        args.insert(0, "nice")  # adds 10 to nice value
+
+    result = subprocess.run(
+        args,
         stdout=subprocess.PIPE,
         # stderr=subprocess.STDOUT,
         check=True,
@@ -494,6 +502,12 @@ parser.add_argument(
     help="Force re-calculation, even if tags exist",
     default=False,
     action='store_true')
+parser.add_argument(
+    "-n",
+    "--nice",
+    help="Linux only: Use nice?",
+    default=False,
+    action='store_true')
 
 args = parser.parse_args()
 args.target = float(args.target)
@@ -508,7 +522,8 @@ if args.force or not skip_analysis:
         silence=args.silence,
         longtail_seconds=args.longtail,
         extra=args.extra,
-        blankskip=args.blankskip
+        blankskip=args.blankskip,
+        nice=args.nice
     )
 else:
     result = add_missing(tags_found, args.target, args.blankskip)

@@ -7,6 +7,7 @@
 # 2024-04-20 - Moonbase59 - allow floats as loudness values
 # 2024-04-24 - Moonbase59 - rework to follow same logic as autocue2
 # 2024-04-25 - Moonbase59 - handle old RG1/mp3gain positive loudness reference
+#                         - add nice option (+10) for Linux users
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -113,6 +114,13 @@ let settings.autocue.cue_file.force_analysis =
     false
   )
 
+let settings.autocue.cue_file.nice =
+  settings.make(
+    description=
+      'Linux only: Use nice for `cue_file` operations?',
+    false
+  )
+
 # Compute cue_file data
 # @flag extra
 def cue_file(req) =
@@ -125,6 +133,7 @@ def cue_file(req) =
   blankskip = settings.autocue.cue_file.blankskip()
   write_tags = settings.autocue.cue_file.write_tags()
   force_analysis = settings.autocue.cue_file.force_analysis()
+  nice = settings.autocue.cue_file.nice()
 
   label = "autocue.cue_file"
 
@@ -206,6 +215,7 @@ def cue_file(req) =
     if blankskip() then args := list.add('-b', args()) end
     if write_tags then args := list.add('-w', args()) end
     if force_analysis then args := list.add('-f', args()) end
+    if nice then args := list.add('-n', args()) end
 
     res = ref("")
     try

@@ -31,17 +31,19 @@ to_live = ref(false)
 # --- Copy-paste your settings into AzuraCast, second input box AFTER above file ---
 
 settings.autocue.cue_file.path := "./cue_file"
-#settings.autocue.cue_file.fade_in := 0.1
-#settings.autocue.cue_file.fade_out := 2.5
-#settings.autocue.cue_file.timeout := 60.
-settings.autocue.cue_file.target := -14.0  # not recommended, but user preference
-#settings.autocue.cue_file.silence := -42.0
-#settings.autocue.cue_file.overlay := -8.0
-#settings.autocue.cue_file.longtail := 15.0
-#settings.autocue.cue_file.overlay_longtail := -15.0
-#settings.autocue.cue_file.blankskip := false
-settings.autocue.cue_file.unify_loudness_correction := true
+# settings.autocue.cue_file.fade_in := 0.1
+# settings.autocue.cue_file.fade_out := 2.5
+# settings.autocue.cue_file.timeout := 60.0
+settings.autocue.cue_file.target := -14.0
+# settings.autocue.cue_file.silence := -42.0
+# settings.autocue.cue_file.overlay := -8.0
+# settings.autocue.cue_file.longtail := 15.0
+# settings.autocue.cue_file.overlay_longtail := -15.0
 settings.autocue.cue_file.blankskip := true
+# settings.autocue.cue_file.unify_loudness_correction := true
+# settings.autocue.cue_file.write_tags := false
+# settings.autocue.cue_file.force_analysis := false
+settings.autocue.cue_file.nice := true  # Linux only!
 
 # `enable_autocue_metadata()` will autocue ALL files Liquidsoap processes.
 # You can disable it for selected sources using 'annotate:liq_cue_file=false'.
