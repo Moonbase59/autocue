@@ -33,7 +33,6 @@ to_live = ref(false)
 settings.autocue.cue_file.path := "./cue_file"
 #settings.autocue.cue_file.fade_in := 0.1
 #settings.autocue.cue_file.fade_out := 2.5
-#settings.autocue.cue_file.metadata_override := []
 #settings.autocue.cue_file.timeout := 60.
 settings.autocue.cue_file.target := -14.0  # not recommended, but user preference
 #settings.autocue.cue_file.silence := -42.0
