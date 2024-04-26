@@ -92,7 +92,7 @@ radio = amplify(1.,override="liq_amplify",radio)
 def show_meta(m)
   label="show_meta"
   l = list.sort.natural(metadata.cover.remove(m))
-  list.iter(fun(v) -> log.info(label=label, "#{v}"), l)
+  list.iter(fun(v) -> log(level=4, label=label, "#{v}"), l)
   nowplaying = ref(m["artist"] ^ " - " ^ m["title"])
   if m["artist"] == "" then
     if string.contains(substring=" - ", m["title"]) then
@@ -103,18 +103,18 @@ def show_meta(m)
 
   # show `liq_` & other metadata in level 3
   def fl(k, _) =
-  tags = ["duration", "kind", "replaygain_track_gain", "replaygain_reference_loudness"]
+    tags = ["duration", "kind", "replaygain_track_gain", "replaygain_reference_loudness"]
     string.contains(prefix="liq_", k) or list.mem(k, tags)
   end
   liq = list.assoc.filter((fl), l)
-  list.iter(fun(v) -> log.important(label=label, "#{v}"), liq)
+  list.iter(fun(v) -> log(level=3, label=label, "#{v}"), liq)
 
-  log.important(label=label, "Now playing: #{nowplaying()}")
+  log(level=3, label=label, "Now playing: #{nowplaying()}")
   if m["liq_amplify"] == "" then
-    log.severe(label=label, "Warning: No liq_amplify found, expect loudness jumps!")
+    log(level=2, label=label, "Warning: No liq_amplify found, expect loudness jumps!")
   end
   if m["liq_blank_skipped"] == "true" then
-    log.severe(label=label, "Blank (silence) detected in track, ending early.")
+    log(level=2, label=label, "Blank (silence) detected in track, ending early.")
   end
 end
 
@@ -129,31 +129,30 @@ def live_aware_crossfade(old, new) =
         sequence([fade.out(duration=2.5,old.source),fade.in(duration=0.1,new.source)])
     else
         # Otherwise, use the simple transition
-        log.important(label=label, "Using custom crossfade")
+        log(level=3, label=label, "Using custom crossfade")
         if (old.metadata["jingle_mode"] == "true")
           and (new.metadata["jingle_mode"] == "true") then
-            log.important(label=label, "Jingle → Jingle transition")
+            log(level=3, label=label, "Jingle → Jingle transition")
         end
         if (old.metadata["jingle_mode"] == "true")
           and (new.metadata["jingle_mode"] == "") then
-            log.important(label=label, "Jingle → Song transition")
+            log(level=3, label=label, "Jingle → Song transition")
         end
         if (old.metadata["jingle_mode"] == "")
           and (new.metadata["jingle_mode"] == "true") then
-            log.important(label=label, "Song → Jingle transition")
+            log(level=3, label=label, "Song → Jingle transition")
         end
         if (old.metadata["jingle_mode"] == "")
           and (new.metadata["jingle_mode"] == "") then
-            log.important(label=label, "Song → Song transition")
+            log(level=3, label=label, "Song → Song transition")
         end
 
-        nd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_duration", new.metadata))
+        nd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_cue_duration", new.metadata))
         xd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_cross_duration", old.metadata))
         delay = max(0., xd - nd)
-        log.important(label=label, "Cross/new/delay: #{xd} / #{nd} / #{delay} s")
+        log(level=3, label=label, "Cross/new/delay: #{xd} / #{nd} / #{delay} s")
         if (xd > nd) then
-          log.severe(label=label, "Cross duration #{xd} s longer than next track (#{nd} s)!")
-          #log.severe(label=label, "Delaying fade-out & next track fade-in by #{delay} s.")
+          log(level=2, label=label, "Cross duration #{xd} s longer than next track (#{nd} s)!")
         end
 
         # Starting with LS 2.2.5+git@cadd05596, we don’t need the delay anymore
@@ -162,13 +161,13 @@ def live_aware_crossfade(old, new) =
            fade.out(initial_metadata=old.metadata, duration=2.5, old.source)]
         )
 
-        #cross.simple(old.source, new.source, fade_in=0.1, fade_out=2.5,
-        #  initial_fade_out_metadata=old.metadata, initial_fade_in_metadata=new.metadata)
+        # Other options:
+        #cross.simple(old.source, new.source, fade_in=0.1, fade_out=2.5)
         #cross.smart(old, new, fade_in=0.1, fade_out=2.5, margin=8.)
     end
 end
 
-radio = cross(duration=3.0, width=2.0, live_aware_crossfade, radio)
+radio = cross(duration=2.5, live_aware_crossfade, radio)
 
 # --- Copy-paste Azuracast LS Config, third input box END ---
 
