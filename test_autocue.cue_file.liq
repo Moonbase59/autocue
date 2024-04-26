@@ -58,7 +58,7 @@ enable_autocue_metadata()
 #uri = "/home/matthias/Musik/Playlists/Radio/Classic Rock.m3u"
 uri = "/home/matthias/media/videostream/yyy"
 #songs = playlist(prefix="autocue2:", uri)
-songs = playlist(uri)
+songs = playlist(prefix='annotate:liq_dummy="DUMMY":', uri)
 
 # --- Use YOUR playlist here! ---
 uri = "/home/matthias/Musik/Other/Jingles/Short"
