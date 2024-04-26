@@ -249,7 +249,10 @@ def analyse(
             "null",
             "null"]
     if nice:
-        args.insert(0, "nice")  # adds 10 to nice value
+        # adds 18 to nice value (almost "ultimately nice", max. is 19)
+        args.insert(0, "nice")
+        args.insert(1, "-n")
+        args.insert(2, "18")
 
     result = subprocess.run(
         args,
