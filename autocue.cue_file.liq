@@ -121,9 +121,11 @@ let settings.autocue.cue_file.nice =
     false
   )
 
+stdlib_metadata = metadata
+
 # Compute cue_file data
 # @flag extra
-def cue_file(req) =
+def cue_file(~metadata, filename) =
   timeout = settings.autocue.cue_file.timeout()
   target = settings.autocue.cue_file.target()
   silence = settings.autocue.cue_file.silence()
@@ -137,7 +139,7 @@ def cue_file(req) =
 
   label = "autocue.cue_file"
 
-  m = ref(request.metadata(req))
+  m = ref(metadata)
 
   # so we can use meta["something"]
   meta = m()
@@ -154,7 +156,7 @@ def cue_file(req) =
     log(
       level=2,
       label=label,
-      'Skipping cue_file for "#{request.uri(req)}" because liq_cue_file=false \
+      'Skipping cue_file for "#{filename}" because liq_cue_file=false \
        forbids it.'
     )
     null()
@@ -162,14 +164,14 @@ def cue_file(req) =
     log(
       level=3,
       label=label,
-      'Now autocueing: "#{request.uri(req)}"'
+      'Now autocueing: "#{filename}"'
     )
 
-    l = list.sort.natural(metadata.cover.remove(meta))
+    l = list.sort.natural(stdlib_metadata.cover.remove(meta))
     log(
       level=4,
       label=label,
-      'Metadata seen for "#{request.uri(req)}":'
+      'Metadata seen for "#{filename}":'
     )
     list.iter(fun (v) -> log(level=4, label=label, "#{v}"), l)
 
@@ -215,7 +217,7 @@ def cue_file(req) =
           string.float(longtail, decimal_places=2),
           '-x',
           string.float(overlay_longtail, decimal_places=2),
-          request.filename(req)
+          filename
         ]
       )
     if blankskip() then args := list.add('-b', args()) end
@@ -248,7 +250,7 @@ def cue_file(req) =
       log(
         level=3,
         label=label,
-        'cue_file result for "#{request.uri(req)}": #{res()}'
+        'cue_file result for "#{filename}": #{res()}'
       )
 
       let json.parse (
@@ -498,8 +500,8 @@ def cue_file(req) =
       end
       result := list.assoc.filter((fl), result())
 
-      l = list.sort.natural(metadata.cover.remove(result()))
-      log.important(label=label, 'Metadata added/corrected for "#{request.uri(req)}":')
+      l = list.sort.natural(stdlib_metadata.cover.remove(result()))
+      log.important(label=label, 'Metadata added/corrected for "#{filename}":')
       list.iter(fun(v) -> log.important(label=label, "#{v}"), l)
 
       extra_metadata =
@@ -530,7 +532,7 @@ def cue_file(req) =
       log(
         level=2,
         label=label,
-        'No autocue data found for "#{request.uri(req)}"'
+        'No autocue data found for "#{filename}"'
       )
       null()
     end
