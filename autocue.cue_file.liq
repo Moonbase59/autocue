@@ -125,7 +125,7 @@ stdlib_metadata = metadata
 
 # Compute cue_file data
 # @flag extra
-def cue_file(~metadata, filename) =
+def cue_file(~request_metadata, ~file_metadata, filename) =
   timeout = settings.autocue.cue_file.timeout()
   target = settings.autocue.cue_file.target()
   silence = settings.autocue.cue_file.silence()
@@ -138,6 +138,19 @@ def cue_file(~metadata, filename) =
   nice = settings.autocue.cue_file.nice()
 
   label = "autocue.cue_file"
+
+  # combine request & file metadata into one list, where
+  # request_metadata (annotations) takes precedence
+  metadata = list.fold(
+    fun(res, entry) ->
+      if list.assoc.mem(fst(entry), res) then
+        res
+      else
+        [...res, entry]
+      end,
+      request_metadata,
+      file_metadata
+  )
 
   m = ref(metadata)
 
