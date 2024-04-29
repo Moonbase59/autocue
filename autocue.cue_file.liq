@@ -144,12 +144,6 @@ def cue_file(~metadata, filename) =
   # so we can use meta["something"]
   meta = m()
 
-  if meta["liq_dummy"] == "" then
-    log(level=2, label=label, "Haven’t seen liq_dummy!")
-  else
-    log(level=2, label=label, 'liq_dummy is "#{meta["liq_dummy"]}".')
-  end
-
   if
     meta["liq_cue_file"] == "false"
   then

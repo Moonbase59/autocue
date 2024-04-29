@@ -20,7 +20,7 @@ settings.log.file.path := "test_autocue.cue_file.log"
 settings.log.file.append := false
 
 # 3=important, 4=info
-settings.log.level := 3
+settings.log.level := 4
 
 # no "live" in the local test
 to_live = ref(false)
@@ -75,7 +75,7 @@ jingles = playlist(prefix='annotate:jingle_mode="true",liq_blankskip="false",'
 # Trying to exclude a single from autocue processing here, just for testing.
 # Should say "Skipping autocue..." in log
 uri = "/home/matthias/Musik/Other/Jingles/Short/Magenta - How sentimental.flac"
-single = single('annotate:liq_cue_file=true,dummy="A Test!":#{uri}')
+single = single('annotate:liq_cue_file=true,liq_blankskip=false,liq_dummy="A single!":#{uri}')
 
 radio = random(weights=[1,1,1], [songs, jingles, single])
 radio = amplify(1.,override="liq_amplify",radio)
