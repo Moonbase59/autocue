@@ -188,9 +188,8 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
     log(
       level=4,
       label=label,
-      'jingle_mode=#{meta["jingle_mode"]}, liq_blankskip=#{
-        meta["liq_blankskip"]
-      }'
+      'liq_blankskip=#{meta["liq_blankskip"]}, songtype=#{meta["songtype"]}, \
+       jingle_mode=#{meta["jingle_mode"]}'
     )
 
     # Blank skipping can be set globally using `settings.autocue.cue_file.blankskip`.
@@ -201,14 +200,20 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
     blankskip = ref(blankskip)
     blankskip := list.assoc.mem("jingle_mode", meta) ? false : blankskip()
 
-    # Handle annotated `liq_blankskip`
-    if
-      list.assoc.mem("liq_blankskip", meta)
-    then
+    # SAM Broadcaster compat: Switch blankskip off for all songtypes != "S"
+    if list.assoc.mem("songtype", meta) then
+      if meta["songtype"] != "S" then
+        blankskip := false
+      end
+    end
+
+    # Handle annotated `liq_blankskip`, the ultimate switch
+    if list.assoc.mem("liq_blankskip", meta) then
       blankskip := bool_of_string(default=false, meta["liq_blankskip"])
     end
 
-    log.important(
+    log(
+      level=3,
       label=label,
       "Blank (silence) skipping active: #{blankskip()}"
     )
