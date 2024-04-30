@@ -8,6 +8,9 @@
 # 2024-04-24 - Moonbase59 - rework to follow same logic as autocue2
 # 2024-04-25 - Moonbase59 - handle old RG1/mp3gain positive loudness reference
 #                         - add nice option (+10) for Linux users
+# 2024-04-30 - Toots & Moonbase59 - Fix extra_metadata bug, make these optional
+#                                   replaygain_track_gain,
+#                                   replaygain_reference_loudness
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -511,22 +514,29 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
       log.important(label=label, 'Metadata added/corrected for "#{filename}":')
       list.iter(fun(v) -> log.important(label=label, "#{v}"), l)
 
-      extra_metadata =
-        ref(
-          [
-            ("duration", list.assoc("duration", result())),
-            ("liq_amplify", list.assoc("liq_amplify", result())),
-            ("liq_cue_duration", list.assoc("liq_cue_duration", result())),
-            ("liq_longtail", list.assoc("liq_longtail", result())),
-            ("liq_loudness", list.assoc("liq_loudness", result())),
-            ("liq_reference_loudness", list.assoc("liq_reference_loudness", result())),
-            ("liq_blank_skipped", list.assoc("liq_blank_skipped", result())),
-            ("replaygain_track_gain", list.assoc("replaygain_track_gain", result())),
-            ("replaygain_reference_loudness", list.assoc("replaygain_reference_loudness", result()))
-          ]
-        )
+      # for optional meta elements that aren’t guaranteed to be in result,
+      # like replaygain_track_gain, replaygain_reference_loudness
+      def optional_meta(lbl, meta) =
+        if list.assoc.mem(lbl, meta) then
+          [(lbl, list.assoc(lbl, meta))]
+        else
+          []
+        end
+      end
 
-      log(level=3, label=label, 'extra_metadata: #{extra_metadata()}')
+      extra_metadata =
+        [
+          ("duration", list.assoc("duration", result())),
+          ("liq_amplify", list.assoc("liq_amplify", result())),
+          ("liq_cue_duration", list.assoc("liq_cue_duration", result())),
+          ("liq_longtail", list.assoc("liq_longtail", result())),
+          ("liq_loudness", list.assoc("liq_loudness", result())),
+          ("liq_reference_loudness", list.assoc("liq_reference_loudness", result())),
+          ("liq_blank_skipped", list.assoc("liq_blank_skipped", result())),
+          ...optional_meta("replaygain_track_gain", result()),
+          ...optional_meta("replaygain_reference_loudness", result())
+        ]
+
       {
         amplify = list.assoc("liq_amplify", result()),
         cue_in = float_of_string(list.assoc("liq_cue_in", result())),
@@ -534,7 +544,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
         fade_in = float_of_string(list.assoc("liq_fade_in", result())),
         fade_out = float_of_string(list.assoc("liq_fade_out", result())),
         start_next = float_of_string(list.assoc("liq_cross_start_next", result())),
-        extra_metadata=extra_metadata()
+        extra_metadata=extra_metadata
       }
     else
       log(
