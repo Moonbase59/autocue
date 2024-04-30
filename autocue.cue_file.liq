@@ -526,6 +526,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           ]
         )
 
+      log(level=3, label=label, 'extra_metadata: #{extra_metadata()}')
       {
         amplify = list.assoc("liq_amplify", result()),
         cue_in = float_of_string(list.assoc("liq_cue_in", result())),
