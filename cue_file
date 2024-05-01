@@ -13,6 +13,7 @@
 # 2024-04-25 Moonbase59 - handle old RG1/mp3gain positive loudness reference
 #                       - more sanity checks & adjustments
 #                       - add -n/--nice option, increases nice value by 10
+# 2024-05-01 Moonbase59 - Add (future) ramp & hook points to `tags_to_check`
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
