@@ -13,6 +13,7 @@
 # 2024-04-25 Moonbase59 - handle old RG1/mp3gain positive loudness reference
 #                       - more sanity checks & adjustments
 #                       - add -n/--nice option, increases nice value by 10
+# 2024-05-01 Moonbase59 - Add (future) ramp & hook points to `tags_to_check`
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
@@ -68,6 +69,16 @@ tags_to_check = {
     "replaygain_track_gain": float,
     "replaygain_reference_loudness": float,
     "r128_track_gain": int,
+    # reserved for future expansion
+    "liq_ramp1": float,
+    "liq_ramp2": float,
+    "liq_ramp3": float,
+    "liq_hook1_in": float,
+    "liq_hook1_out": float,
+    "liq_hook2_in": float,
+    "liq_hook2_out": float,
+    "liq_hook3_in": float,
+    "liq_hook3_out": float,
 }
 
 def read_tags(filename, target=TARGET_LUFS, blankskip=False):
@@ -249,7 +260,10 @@ def analyse(
             "null",
             "null"]
     if nice:
-        args.insert(0, "nice")  # adds 10 to nice value
+        # adds 18 to nice value (almost "ultimately nice", max. is 19)
+        args.insert(0, "nice")
+        args.insert(1, "-n")
+        args.insert(2, "18")
 
     result = subprocess.run(
         args,
