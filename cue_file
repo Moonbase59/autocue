@@ -68,6 +68,16 @@ tags_to_check = {
     "replaygain_track_gain": float,
     "replaygain_reference_loudness": float,
     "r128_track_gain": int,
+    # reserved for future expansion
+    "liq_ramp1": float,
+    "liq_ramp2": float,
+    "liq_ramp3": float,
+    "liq_hook1_in": float,
+    "liq_hook1_out": float,
+    "liq_hook2_in": float,
+    "liq_hook2_out": float,
+    "liq_hook3_in": float,
+    "liq_hook3_out": float,
 }
 
 def read_tags(filename, target=TARGET_LUFS, blankskip=False):
