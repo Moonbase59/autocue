@@ -11,6 +11,7 @@
 # 2024-04-30 - Toots & Moonbase59 - Fix extra_metadata bug, make these optional
 #                                   replaygain_track_gain,
 #                                   replaygain_reference_loudness
+# 2024-05-02 - Moonbase59 - add clipping prevention logic (cue_file -k)
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -84,6 +85,14 @@ let settings.autocue.cue_file.overlay_longtail =
     -15.0
   )
 
+let settings.autocue.cue_file.noclip =
+  settings.make(
+    description=
+      "Clipping prevention: Lowers track gain if needed, to avoid peaks \
+       going above -1 dBFS. Uses true peak values of all audio channels.",
+    false
+  )
+
 let settings.autocue.cue_file.blankskip =
   settings.make(
     description=
@@ -139,6 +148,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
   write_tags = settings.autocue.cue_file.write_tags()
   force_analysis = settings.autocue.cue_file.force_analysis()
   nice = settings.autocue.cue_file.nice()
+  noclip = settings.autocue.cue_file.noclip()
 
   label = "autocue.cue_file"
 
@@ -218,6 +228,12 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
       "Blank (silence) skipping active: #{blankskip()}"
     )
 
+    log(
+      level=3,
+      label=label,
+      "Clipping prevention active: #{noclip}"
+    )
+
     # set up CLI arguments
     args =
       ref(
@@ -235,6 +251,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           filename
         ]
       )
+    if noclip then args := list.add('-k', args()) end
     if blankskip() then args := list.add('-b', args()) end
     if write_tags then args := list.add('-w', args()) end
     if force_analysis then args := list.add('-f', args()) end
@@ -279,9 +296,11 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           #liq_cross_duration,
           liq_loudness,
           liq_amplify,
+          liq_amplify_adjustment,
           liq_reference_loudness,
           liq_blankskip,
-          liq_blank_skipped
+          liq_blank_skipped,
+          liq_true_peak
         }
       :
         {
@@ -294,9 +313,11 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           #liq_cross_duration: float,
           liq_loudness: string,
           liq_amplify: string,
+          liq_amplify_adjustment: string,
           liq_reference_loudness: string,
           liq_blankskip: bool,
-          liq_blank_skipped: bool
+          liq_blank_skipped: bool,
+          liq_true_peak: string
         }
       ) = res()
 
@@ -312,9 +333,11 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           #("liq_cross_duration", string(liq_cross_duration)),
           ("liq_loudness", liq_loudness),
           ("liq_amplify", liq_amplify),
+          ("liq_amplify_adjustment", liq_amplify_adjustment),
           ("liq_reference_loudness", liq_reference_loudness),
           ("liq_blankskip", string(liq_blankskip)),
-          ("liq_blank_skipped", string(liq_blank_skipped))
+          ("liq_blank_skipped", string(liq_blank_skipped)),
+          ("liq_true_peak", liq_true_peak)
         ]
       )
 
@@ -331,50 +354,89 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           result()
       )
 
-      # Override liq_amplify, liq_reference_loudness if target changed
-      # adjust liq_amplify by loudness target difference, set reference
-      if list.assoc.mem("liq_amplify", result()) and list.assoc.mem("liq_reference_loudness", result()) then
-        la = list.assoc(default="0.00 dB", "liq_amplify", result())
-        laf = float_of_string(string.replace(pattern=" (dB|LU)", fun(_) -> "", la))
-        lr = list.assoc(default=string.float(decimal_places=2, target)^" dB", "liq_reference_loudness", result())
-        lrf = float_of_string(string.replace(pattern=" (dB|dBFS|LUFS)", fun(_) -> "", lr))
-
-        result := list.assoc.remove("liq_amplify", result())
-        result := list.add(("liq_amplify", string.float(decimal_places=2, laf + (target - lrf)) ^ " dB"), result())
-
-        result := list.assoc.remove("liq_reference_loudness", result())
-        result := list.add(("liq_reference_loudness", string.float(decimal_places=2, target) ^ " LUFS"), result())
+      # make a suffixed string a float
+      def make_float(s) =
+        float_of_string(
+          string.replace(pattern=" (dBFS|LUFS|dB|LU)", fun(_) -> "", s)
+        )
       end
+
+      # Re-calculate amplify and amplify_correction, using true_peak
+      def amplify_correct(target, loudness, true_peak_dB, noclip) =
+        # check if we need to reduce the gain for true peaks
+        loudness = make_float(loudness)
+        true_peak_dB = make_float(true_peak_dB)
+        amp = ref(target - loudness)
+        amp_correction = ref(0.0)
+        if noclip then
+          max_amp = -1.0 - true_peak_dB  # difference to EBU recommended -1 dBFS
+          if amp() > max_amp then
+            amp_correction := max_amp - amp()
+            amp := max_amp
+          end
+        end
+        (amp(), amp_correction())
+      end
+
+      # Override liq_amplify, liq_amplify_adjustment & liq_reference_loudness,
+      # using clipping prevention as requested
+      # liq_loudness & liq_true_peak are always in the cue_file result
+      let (amp, amp_correction) =
+        amplify_correct(
+          target,
+          list.assoc("liq_loudness", result()),
+          list.assoc("liq_true_peak", result()),
+          noclip
+        )
+      result := list.assoc.remove("liq_amplify", result())
+      result := list.add(("liq_amplify", string.float(decimal_places=2, amp) ^ " dB"), result())
+      result := list.assoc.remove("liq_amplify_adjustment", result())
+      result := list.add(("liq_amplify_adjustment", string.float(decimal_places=2, amp_correction) ^ " dB"), result())
+      result := list.assoc.remove("liq_reference_loudness", result())
+      result := list.add(("liq_reference_loudness", string.float(decimal_places=2, target) ^ " LUFS"), result())
 
       if settings.autocue.cue_file.unify_loudness_correction() then
         # We wish to avoid loudness jumps in all possible cases,
         # so bring `replaygain_track_gain` and `liq_amplify` in line.
         # NOTE: This also works for different loudness targets, if
         # files have been tagged with a valid replaygain_reference_loudness.
-        # This does NOT include mp3gain’s ominous positive dB SPL values!
         if list.assoc.mem("replaygain_track_gain", result()) then
           if list.assoc.mem("replaygain_reference_loudness", result()) then
             la = list.assoc(default="0.00 dB", "liq_amplify", result())
             rg = list.assoc(default="0.00 dB", "replaygain_track_gain", result())
-            rgf = float_of_string(string.replace(pattern=" (dB|LU)", fun(_) -> "", rg))
+            rgf = make_float(rg)
             rgr = list.assoc(default=string.float(decimal_places=2, target)^" dB", "replaygain_reference_loudness", result())
-            rgrf = ref(float_of_string(string.replace(pattern=" (dB|dBFS|LUFS)", fun(_) -> "", rgr)))
+            rgrf = ref(make_float(rgr))
             # Handle old RG1/mp3gain positive loudness reference
             # "89 dB" (SPL) should actually be -14 LUFS, but as a reference
             # it is usually set equal to the RG2 -18 LUFS reference point
             if rgrf() > 0. then rgrf := rgrf() - 107. end
             # adjust replaygain_track_gain by loudness target difference, set reference
             # we can safely do that since we NEVER write back replaygain_* tags
-            rg = string.float(decimal_places=2, rgf + (target - rgrf())) ^ " dB"
+            # Clipping prevention wins over simple RG adjusting
+            if noclip then
+              # override replaygain_track_gain with already calculated liq_amplify
+              result := list.assoc.remove("replaygain_track_gain", result())
+              result := list.add(("replaygain_track_gain", la), result())
+              rg = string.float(decimal_places=2, rgf + (target - rgrf())) ^ " dB"
+              log(level=3, label=label, 'Clipping prevention: Adjusted calculated replaygain_track_gain from #{rg} to #{la}')
+            else
+              # simply calculate new RG
+              rg = string.float(decimal_places=2, rgf + (target - rgrf())) ^ " dB"
+              result := list.assoc.remove("replaygain_track_gain", result())
+              result := list.add(("replaygain_track_gain", rg), result())
+              # Set liq_amplify to the same value
+              result := list.assoc.remove("liq_amplify", result())
+              result := list.add(("liq_amplify", rg), result())
+              # And reset liq_amplify_adjustment
+              result := list.assoc.remove("liq_amplify_adjustment", result())
+              result := list.add(("liq_amplify_adjustment", "0.00 dB"), result())
+              log(level=3, label=label, 'Replaced liq_amplify=#{la} with #{rg} from adjusted replaygain_track_gain')
+            end
+            # set replaygain_reference_loudness to new target
             rgr = string.float(decimal_places=2, target) ^ " LUFS"
-            result := list.assoc.remove("replaygain_track_gain", result())
-            result := list.add(("replaygain_track_gain", rg), result())
             result := list.assoc.remove("replaygain_reference_loudness", result())
             result := list.add(("replaygain_reference_loudness", rgr), result())
-            # Now set liq_amplify to the same value
-            result := list.assoc.remove("liq_amplify", result())
-            result := list.add(("liq_amplify", rg), result())
-            log(level=3, label=label, 'Replaced liq_amplify=#{la} with #{rg} from adjusted replaygain_track_gain')
           else
             log(level=3, label=label, "Can't override liq_amplify from replaygain_track_gain, replaygain_reference_loudness missing.")
           end
@@ -388,6 +450,17 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           result := list.add(("replaygain_reference_loudness", rgr), result())
           log(level=3, label=label, 'Inserted replaygain_track_gain #{rg} and replaygain_reference_loudness #{rgr}')
         end
+      end
+
+      # Show any clipping prevention adjustments
+      amp_correction_dB = list.assoc(default="0.00 dB", "liq_amplify_adjustment", result())
+      if noclip and amp_correction_dB != "0.00 dB" then
+        log(
+          level=3,
+          label=label,
+          'Clipping prevention: Adjusted liq_amplify by #{amp_correction_dB} \
+           because track’s true peak is #{list.assoc("liq_true_peak", result())}.'
+        )
       end
 
       # Adjust fades and cue-out, if necessary
@@ -533,11 +606,13 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
         [
           ("duration", list.assoc("duration", result())),
           ("liq_amplify", list.assoc("liq_amplify", result())),
+          ("liq_amplify_adjustment", list.assoc("liq_amplify_adjustment", result())),
           ("liq_cue_duration", list.assoc("liq_cue_duration", result())),
           ("liq_longtail", list.assoc("liq_longtail", result())),
           ("liq_loudness", list.assoc("liq_loudness", result())),
           ("liq_reference_loudness", list.assoc("liq_reference_loudness", result())),
           ("liq_blank_skipped", list.assoc("liq_blank_skipped", result())),
+          ("liq_true_peak", list.assoc("liq_true_peak", result())),
           ...optional_meta("replaygain_track_gain", result()),
           ...optional_meta("replaygain_reference_loudness", result())
         ]
