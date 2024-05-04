@@ -12,6 +12,7 @@
 #                                   replaygain_track_gain,
 #                                   replaygain_reference_loudness
 # 2024-05-02 - Moonbase59 - add clipping prevention logic (cue_file -k)
+# 2024-05-04 - Moonbase59 - Add (informational) liq_loudness_range
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -295,6 +296,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           liq_longtail,
           #liq_cross_duration,
           liq_loudness,
+          liq_loudness_range,
           liq_amplify,
           liq_amplify_adjustment,
           liq_reference_loudness,
@@ -312,6 +314,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           liq_longtail: bool,
           #liq_cross_duration: float,
           liq_loudness: string,
+          liq_loudness_range: string,
           liq_amplify: string,
           liq_amplify_adjustment: string,
           liq_reference_loudness: string,
@@ -332,6 +335,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           ("liq_longtail", string(liq_longtail)),
           #("liq_cross_duration", string(liq_cross_duration)),
           ("liq_loudness", liq_loudness),
+          ("liq_loudness_range", liq_loudness_range),
           ("liq_amplify", liq_amplify),
           ("liq_amplify_adjustment", liq_amplify_adjustment),
           ("liq_reference_loudness", liq_reference_loudness),
@@ -610,6 +614,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           ("liq_cue_duration", list.assoc("liq_cue_duration", result())),
           ("liq_longtail", list.assoc("liq_longtail", result())),
           ("liq_loudness", list.assoc("liq_loudness", result())),
+          ("liq_loudness_range", list.assoc("liq_loudness_range", result())),
           ("liq_reference_loudness", list.assoc("liq_reference_loudness", result())),
           ("liq_blank_skipped", list.assoc("liq_blank_skipped", result())),
           ("liq_true_peak", list.assoc("liq_true_peak", result())),

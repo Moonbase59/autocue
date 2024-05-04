@@ -75,10 +75,11 @@ jingles = playlist(prefix='annotate:jingle_mode="true",liq_blankskip="false",'
 # --- Use YOUR single here! ---
 # Trying to exclude a single from autocue processing here, just for testing.
 # Should say "Skipping autocue..." in log
-uri = "/home/matthias/Musik/Other/Jingles/Short/Magenta - How sentimental.flac"
-single = single('annotate:liq_cue_file=true,liq_blankskip=false,liq_dummy="A single!":#{uri}')
+#uri = "/home/matthias/Musik/Other/Jingles/Short/Magenta - How sentimental.flac"
+#single = single('annotate:liq_cue_file=true,liq_blankskip=false,liq_dummy="A single!":#{uri}')
 
-radio = random(weights=[1,1,1], [songs, jingles, single])
+#radio = random(weights=[1,1,1], [songs, jingles, single])
+radio = random(weights=[1,1], [songs, jingles])
 radio = amplify(1.,override="liq_amplify",radio)
 
 
