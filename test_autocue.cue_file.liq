@@ -164,7 +164,14 @@ def live_aware_crossfade(old, new) =
         )
 
         # Other options:
-        #cross.simple(old.source, new.source, fade_in=0.1, fade_out=2.5)
+        # cross.simple(
+        #   old.source,
+        #   new.source,
+        #   fade_in=0.1,
+        #   fade_out=2.5,
+        #   initial_fade_in_metadata=new.metadata,
+        #   initial_fade_out_metadata=old.metadata
+        # )
         #cross.smart(old, new, fade_in=0.1, fade_out=2.5, margin=8.)
     end
 end
