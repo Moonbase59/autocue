@@ -18,6 +18,7 @@
 #                         correcting liq_amplify. Correction shown in
 #                         liq_amplify_adjustment. Adds liq_true_peak in dBFS.
 # 2024-05-04 Moonbase59 - Fix liq_loudness unit: It is LUFS, not dB
+#                       - Add (informational) liq_loudness_range
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
@@ -42,7 +43,7 @@ OVERLAY_LU = -8.0  # LU below average for overlay trigger (start next song)
 # more than LONGTAIL_SECONDS below OVERLAY_LU are considered a "long tail"
 LONGTAIL_SECONDS = 15.0
 LONGTAIL_EXTRA_LU = -15.0  # reduce 15 dB extra on long tail songs to find overlap point
-NICE=False  # use Linux nice?
+NICE=False  # use Linux/MacOS nice?
 
 # minimum set of tags after "read_tags" that must be there before skipping analysis
 tags_mandatory = set([
@@ -67,12 +68,14 @@ tags_to_check = {
     "liq_longtail": is_true,
     "liq_cross_duration": float,
     "liq_loudness": float,
-    "liq_amplify": float,
+    "liq_loudness_range": float,  # like replaygain_track_range
+    "liq_amplify": float,  # like replaygain_track_gain
     "liq_amplify_adjustment": float,
-    "liq_reference_loudness": float,
+    "liq_reference_loudness": float,  # like replaygain_reference_loudness
     "liq_blankskip": is_true,
     "liq_blank_skipped": is_true,
     "replaygain_track_gain": float,
+    "replaygain_track_range": float,
     "replaygain_reference_loudness": float,
     "r128_track_gain": int,
     "liq_true_peak": float,
@@ -153,8 +156,9 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False, noclip=False):
     def remove_suffix(tags):
         suffixed_tags = [
             "liq_amplify", "liq_amplify_adjustment",
-            "liq_loudness", "liq_reference_loudness",
-            "replaygain_track_gain", "replaygain_reference_loudness",
+            "liq_loudness", "liq_loudness_range", "liq_reference_loudness",
+            "replaygain_track_gain", "replaygain_track_range",
+            "replaygain_reference_loudness",
             "liq_true_peak"
         ]
         for tag in suffixed_tags:
@@ -231,6 +235,13 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False, noclip=False):
     if (skip_analysis
         and "liq_blankskip" in tags_found
         and (tags_found["liq_blankskip"] != blankskip)
+    ):
+        skip_analysis = False
+
+    # liq_loudness_range is only informational but we want to show correct values
+    # can’t blindly take replaygain_track_range—it might be in different unit
+    if (skip_analysis
+        and not "liq_loudness_range" in tags_found
     ):
         skip_analysis = False
 
@@ -345,15 +356,19 @@ def analyse(
     # (the "ReplayGain") from it (difference to desired loudness target)
     loudness = measure[end-1][2]
 
-    # get true peak values from last frame
+    # get true peak and LRA values from last frame
     # for multi-channel audio, this takes the highest channel value
-    # result is in dBFS
+    # true peak result is in dBFS, LRA in LU
     last_lines = measure[end-1][3].splitlines()
     true_peak = 0.0  # absolute silence
+    loudness_range = 0.0
     for line in last_lines:
         if line.startswith("lavfi.r128.true_peaks_ch"):
             k, v = line.split("=")
             true_peak = max(true_peak, float(v))
+        if line.startswith("lavfi.r128.LRA="):
+            k, v = line.split("=")
+            loudness_range = float(v)
     if true_peak > 0.0:
         true_peak_dB = 20.0 * math.log10(true_peak)
     else:
@@ -468,6 +483,7 @@ def analyse(
         "liq_longtail": longtail,
         #"liq_cross_duration": cross_duration,
         "liq_loudness": loudness,
+        "liq_loudness_range": loudness_range,
         "liq_amplify": amplify,
         "liq_amplify_adjustment": amplify_correction,
         "liq_reference_loudness": target,
@@ -493,10 +509,11 @@ def write_tags(filename, tags={}):
         if isinstance(v, float) else str(v).lower()
         for k, v in tags.items() if k.startswith("liq_")
     }
-    # add the " dB"
+    # add the units
     tags_new["liq_amplify"] += " dB"
     tags_new["liq_amplify_adjustment"] += " dB"
     tags_new["liq_loudness"] += " LUFS"
+    tags_new["liq_loudness_range"] += " LU"
     tags_new["liq_reference_loudness"] += " LUFS"
     tags_new["liq_true_peak"] += " dBFS"
     #print(temp, json.dumps(tags_new, indent=2))
@@ -536,14 +553,14 @@ parser.add_argument("-t", "--target", help="LUFS reference target",
 parser.add_argument(
     "-s",
     "--silence",
-    help="LU/dB below integrated track loudness for cue-in & cue-out points " \
+    help="LU below integrated track loudness for cue-in & cue-out points " \
     "(silence removal at beginning & end of a track)",
     default=SILENCE,
     type=float)
 parser.add_argument(
     "-o",
     "--overlay",
-    help="LU/dB below integrated track loudness to trigger next track",
+    help="LU below integrated track loudness to trigger next track",
     default=OVERLAY_LU,
     type=float)
 parser.add_argument(
@@ -557,7 +574,7 @@ parser.add_argument(
 parser.add_argument(
     "-x",
     "--extra",
-    help="Extra LU/dB below overlay loudness to trigger next track for songs " \
+    help="Extra LU below overlay loudness to trigger next track for songs " \
     "with long tail",
     default=LONGTAIL_EXTRA_LU,
     type=float)
@@ -579,7 +596,7 @@ parser.add_argument(
 parser.add_argument(
     "-w",
     "--write",
-    help="Write Liquidsoap liq_* tags to file. Use with care, as ffmpeg can't " \
+    help="Write Liquidsoap liq_* tags to file. USE WITH CARE, as ffmpeg can't " \
     "write all tags to all file types! Ensure you have enough free space to " \
     "hold a copy of the original file.",
     default=False,
@@ -593,7 +610,7 @@ parser.add_argument(
 parser.add_argument(
     "-n",
     "--nice",
-    help="Linux only: Use nice?",
+    help="Linux/MacOS only: Use nice? Will run analysis at nice level 18.",
     default=False,
     action='store_true')
 
@@ -633,6 +650,7 @@ liq_result = {
     "liq_longtail": result["liq_longtail"],
     #"liq_cross_duration": result['liq_cross_duration'],
     "liq_loudness": f"{result['liq_loudness']:.2f} LUFS",
+    "liq_loudness_range": f"{result['liq_loudness_range']:.2f} LU",
     "liq_amplify": f"{result['liq_amplify']:.2f} dB",
     "liq_amplify_adjustment": f"{result['liq_amplify_adjustment']:.2f} dB",
     "liq_reference_loudness": f"{result['liq_reference_loudness']:.2f} LUFS",
