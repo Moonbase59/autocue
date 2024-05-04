@@ -357,7 +357,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
       # make a suffixed string a float
       def make_float(s) =
         float_of_string(
-          string.replace(pattern=" (dBFS|LUFS|dB|LU)", fun(_) -> "", s)
+          string.replace(pattern=" (dBFS|dBTP|LUFS|dB|LU)", fun(_) -> "", s)
         )
       end
 
