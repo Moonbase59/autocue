@@ -17,6 +17,7 @@
 # 2024-05-02 Moonbase59 - Add -k/--noclip option, prevents clipping by
 #                         correcting liq_amplify. Correction shown in
 #                         liq_amplify_adjustment. Adds liq_true_peak in dBFS.
+# 2024-05-04 Moonbase59 - Fix liq_loudness unit: It is LUFS, not dB
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
@@ -495,7 +496,7 @@ def write_tags(filename, tags={}):
     # add the " dB"
     tags_new["liq_amplify"] += " dB"
     tags_new["liq_amplify_adjustment"] += " dB"
-    tags_new["liq_loudness"] += " dB"
+    tags_new["liq_loudness"] += " LUFS"
     tags_new["liq_reference_loudness"] += " LUFS"
     tags_new["liq_true_peak"] += " dBFS"
     #print(temp, json.dumps(tags_new, indent=2))
@@ -631,7 +632,7 @@ liq_result = {
     "liq_cross_start_next": result['liq_cross_start_next'],
     "liq_longtail": result["liq_longtail"],
     #"liq_cross_duration": result['liq_cross_duration'],
-    "liq_loudness": f"{result['liq_loudness']:.2f} dB",
+    "liq_loudness": f"{result['liq_loudness']:.2f} LUFS",
     "liq_amplify": f"{result['liq_amplify']:.2f} dB",
     "liq_amplify_adjustment": f"{result['liq_amplify_adjustment']:.2f} dB",
     "liq_reference_loudness": f"{result['liq_reference_loudness']:.2f} LUFS",
