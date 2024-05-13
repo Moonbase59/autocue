@@ -37,15 +37,17 @@ FFMPEG = "ffmpeg"  # location of the ffmpeg binary
 FFPROBE = "ffprobe"  # location of the ffprobe binary
 TARGET_LUFS = -18.0  # Reference Loudness Target
 # -96 dB/LU is "digital silence" for 16-bit audio.
-# A "noise floor" of -60 dB/LU (42 dB/LU below -18 target) is a good value to use.
+# A "noise floor" of -60 dB/LU (42 dB/LU below -18 target) is a good value
+# to use.
 SILENCE = -42.0  # LU below average for cue-in/cue-out trigger ("silence")
 OVERLAY_LU = -8.0  # LU below average for overlay trigger (start next song)
 # more than LONGTAIL_SECONDS below OVERLAY_LU are considered a "long tail"
 LONGTAIL_SECONDS = 15.0
 LONGTAIL_EXTRA_LU = -15.0  # reduce 15 dB extra on long tail songs to find overlap point
-NICE=False  # use Linux/MacOS nice?
+NICE = False  # use Linux/MacOS nice?
 
-# minimum set of tags after "read_tags" that must be there before skipping analysis
+# minimum set of tags after "read_tags" that must be there before skipping
+# analysis
 tags_mandatory = set([
     "duration",
     "liq_cue_in",
@@ -55,8 +57,11 @@ tags_mandatory = set([
 ])
 
 # bool() returns True for every nonempty string, so use a function
+
+
 def is_true(v):
     return v.lower() == 'true'
+
 
 # these are the tags to check when reading/writing tags from/to files
 tags_to_check = {
@@ -91,6 +96,7 @@ tags_to_check = {
     "liq_hook3_out": float,
 }
 
+
 def amplify_correct(target, loudness, true_peak_dB, noclip):
     # check if we need to reduce the gain for true peaks
     amplify_correction = 0.0
@@ -104,8 +110,11 @@ def amplify_correct(target, loudness, true_peak_dB, noclip):
         amplify = target - loudness
     return amplify, amplify_correction
 
+
 def read_tags(filename, target=TARGET_LUFS, blankskip=False, noclip=False):
-    # ffprobe -v quiet -show_entries 'stream=codec_name:stream_tags:format_tags' -print_format json=compact=1 filename
+    # ffprobe -v quiet -show_entries
+    # 'stream=codec_name:stream_tags:format_tags' -print_format json=compact=1
+    # filename
     r = subprocess.run(
         [
             FFPROBE,
@@ -123,7 +132,7 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False, noclip=False):
         text=True).stdout
 
     result = json.loads(r)
-    #print(json.dumps(result, indent=2))
+    # print(json.dumps(result, indent=2))
 
     # get tags in stream #0 (mka, opus, etc.)
     try:
@@ -137,8 +146,12 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False, noclip=False):
     except KeyError:
         format_items = {}
 
-    tags_in_stream = {k.lower(): v for k, v in stream_items if k.lower() in tags_to_check}
-    tags_in_format = {k.lower(): v for k, v in format_items if k.lower() in tags_to_check}
+    tags_in_stream = {
+        k.lower(): v for k,
+        v in stream_items if k.lower() in tags_to_check}
+    tags_in_format = {
+        k.lower(): v for k,
+        v in format_items if k.lower() in tags_to_check}
     # unify, right overwrites left if key in both
     tags_found = tags_in_stream | tags_in_format
 
@@ -147,12 +160,14 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False, noclip=False):
         tags_found["duration"] = result['streams'][0]['duration']
     except KeyError:
         try:
-            # we might have a video duration (.mka) like "00:07:01.117000000", ignore
+            # we might have a video duration (.mka) like "00:07:01.117000000",
+            # ignore
             del tags_found["duration"]
         except KeyError:
             pass
 
-    # remove " dB", " LU", " dBFS", " dBTP" and " LUFS" suffixes from tags_found
+    # remove " dB", " LU", " dBFS", " dBTP" and " LUFS" suffixes from
+    # tags_found
     def remove_suffix(tags):
         suffixed_tags = [
             "liq_amplify", "liq_amplify_adjustment",
@@ -163,7 +178,8 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False, noclip=False):
         ]
         for tag in suffixed_tags:
             if tag in tags:
-                if tags[tag].endswith((" dB", " LU", " dBFS", " dBTP", " LUFS")):
+                if tags[tag].endswith(
+                        (" dB", " LU", " dBFS", " dBTP", " LUFS")):
                     number, _, _ = tags[tag].rpartition(" ")
                     tags[tag] = number
         return tags
@@ -177,7 +193,8 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False, noclip=False):
         tags_found["replaygain_track_gain"] = rg
 
     # add missing liq_amplify, if we have replaygain_track_gain
-    if (not "liq_amplify" in tags_found) and ("replaygain_track_gain" in tags_found):
+    if ("liq_amplify" not in tags_found) and (
+            "replaygain_track_gain" in tags_found):
         tags_found["liq_amplify"] = tags_found["replaygain_track_gain"]
 
     # convert tag string values to the correct types, listed in tags_to_check
@@ -187,29 +204,34 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False, noclip=False):
     # "89 dB" (SPL) should actually be -14 LUFS, but as a reference
     # it is usually set equal to the RG2 -18 LUFS reference point
     if (("replaygain_reference_loudness" in tags_found)
-        and tags_found["replaygain_reference_loudness"] > 0.0):
+            and tags_found["replaygain_reference_loudness"] > 0.0):
         tags_found["replaygain_reference_loudness"] -= 107.0
 
-    # add missing liq_reference_loudness, if we have replaygain_reference_loudness
-    if ((not "liq_reference_loudness" in tags_found)
-        and ("replaygain_reference_loudness" in tags_found)):
+    # add missing liq_reference_loudness, if we have
+    # replaygain_reference_loudness
+    if (("liq_reference_loudness" not in tags_found)
+            and ("replaygain_reference_loudness" in tags_found)):
         tags_found["liq_reference_loudness"] = tags_found["replaygain_reference_loudness"]
 
-    # if both liq_cue_in & liq_cue_out available, we can calculate liq_cue_duration
+    # if both liq_cue_in & liq_cue_out available, we can calculate
+    # liq_cue_duration
     if "liq_cue_in" in tags_found and "liq_cue_out" in tags_found:
-        tags_found["liq_cue_duration"] = tags_found["liq_cue_out"] - tags_found["liq_cue_in"]
+        tags_found["liq_cue_duration"] = tags_found["liq_cue_out"] - \
+            tags_found["liq_cue_in"]
 
     # see if we need a re-analysis
     skip_analysis = tags_mandatory.issubset(tags_found.keys())
 
-    # try to avoid re-analysis if we have enough data but different loudness target
+    # try to avoid re-analysis if we have enough data but different loudness
+    # target
     if (
         skip_analysis
         and "liq_amplify" in tags_found
         and "liq_reference_loudness" in tags_found
     ):
         # adjust liq_amplify by loudness target difference, set reference
-        tags_found["liq_amplify"] += (target - tags_found["liq_reference_loudness"])
+        tags_found["liq_amplify"] += (target -
+                                      tags_found["liq_reference_loudness"])
         tags_found["liq_reference_loudness"] = target
     else:
         # liq_amplify or liq_reference_loudness missing, must re-analyse
@@ -227,55 +249,59 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False, noclip=False):
                 tags_found["liq_loudness"],
                 tags_found["liq_true_peak"],
                 noclip
-            )
+        )
     else:
         skip_analysis = False
 
     # if liq_blankskip different from requested, we need a re-analysis
     if (skip_analysis
-        and "liq_blankskip" in tags_found
-        and (tags_found["liq_blankskip"] != blankskip)
-    ):
+            and "liq_blankskip" in tags_found
+            and (tags_found["liq_blankskip"] != blankskip)
+        ):
         skip_analysis = False
 
     # liq_loudness_range is only informational but we want to show correct values
     # can’t blindly take replaygain_track_range—it might be in different unit
     if (skip_analysis
-        and not "liq_loudness_range" in tags_found
-    ):
+            and "liq_loudness_range" not in tags_found
+        ):
         skip_analysis = False
 
-    #print(skip_analysis, json.dumps(tags_found, indent=2))
+    # print(skip_analysis, json.dumps(tags_found, indent=2))
     return skip_analysis, tags_found
 
-def add_missing(tags_found, target=TARGET_LUFS, blankskip=False, noclip=False):
-    # we need not check those in tags_mandatory and those calculated by read_tags
 
-    if not "liq_longtail" in tags_found:
+def add_missing(tags_found, target=TARGET_LUFS, blankskip=False, noclip=False):
+    # we need not check those in tags_mandatory and those calculated by
+    # read_tags
+
+    if "liq_longtail" not in tags_found:
         tags_found["liq_longtail"] = False
 
-    #if not "liq_cross_duration" in tags_found:
+    # if not "liq_cross_duration" in tags_found:
     #    tags_found["liq_cross_duration"] = tags_found["liq_cue_out"] - tags_found["liq_cross_start_next"]
 
-    if not "liq_amplify" in tags_found:
+    if "liq_amplify" not in tags_found:
         tags_found["liq_amplify"] = tags_found["replaygain_track_gain"]
 
-    if not "liq_amplify_adjustment" in tags_found:
+    if "liq_amplify_adjustment" not in tags_found:
         tags_found["liq_amplify_adjustment"] = "0.00 dB"
 
-    if not "liq_loudness" in tags_found:
-        tags_found["liq_loudness"] = target - tags_found["replaygain_track_gain"]
+    if "liq_loudness" not in tags_found:
+        tags_found["liq_loudness"] = target - \
+            tags_found["replaygain_track_gain"]
 
-    if not "liq_blankskip" in tags_found:
+    if "liq_blankskip" not in tags_found:
         tags_found["liq_blankskip"] = blankskip
 
-    if not "liq_blank_skipped" in tags_found:
+    if "liq_blank_skipped" not in tags_found:
         tags_found["liq_blank_skipped"] = False
 
-    if not "liq_reference_loudness" in tags_found:
+    if "liq_reference_loudness" not in tags_found:
         tags_found["liq_reference_loudness"] = target
 
     return tags_found
+
 
 def analyse(
         filename,
@@ -301,20 +327,20 @@ def analyse(
     # lavfi.r128.true_peaks_ch1=1.632
 
     args = [
-            FFMPEG,
-            "-v",
-            "quiet",
-            "-y",
-            "-i",
-            filename,
-            "-vn",
-            "-af",
-            "ebur128=target=" +
-            str(target) +
-            ":peak=true:metadata=1,ametadata=mode=print:file=-",
-            "-f",
-            "null",
-            "null"]
+        FFMPEG,
+        "-v",
+        "quiet",
+        "-y",
+        "-i",
+        filename,
+        "-vn",
+        "-af",
+        "ebur128=target=" +
+        str(target) +
+        ":peak=true:metadata=1,ametadata=mode=print:file=-",
+        "-f",
+        "null",
+        "null"]
     if nice:
         # adds 18 to nice value (almost "ultimately nice", max. is 19)
         args.insert(0, "nice")
@@ -335,13 +361,14 @@ def analyse(
     # which is a valid float in Python. Usually happens on very silent parts.
     # FIXME: This relies on "I" coming two lines after "M"
     pattern = re.compile(
-        #r"frame:.*pts_time:\s*(?P<t>\d+\.?\d*)\s*lavfi\.r128\.M=(?P<M>nan|[+-]?\d+\.?\d*)\s*.*\s*lavfi\.r128\.I=(?P<I>nan|[+-]?\d+\.?\d*)",
+        # r"frame:.*pts_time:\s*(?P<t>\d+\.?\d*)\s*lavfi\.r128\.M=(?P<M>nan|[+-]?\d+\.?\d*)\s*.*\s*lavfi\.r128\.I=(?P<I>nan|[+-]?\d+\.?\d*)",
         r"frame:.*pts_time:\s*(?P<t>\d+\.?\d*)\s*lavfi\.r128\.M=(?P<M>nan|[+-]?\d+\.?\d*)\s*.*\s*lavfi\.r128\.I=(?P<I>nan|[+-]?\d+\.?\d*)\s*(?P<rest>(\s*(?!frame:).*)*)",
         flags=re.M)
 
     for match in re.finditer(pattern, result):
         m = match.groupdict()
-        measure.append([float(m["t"]), float(m["M"]), float(m["I"]), m["rest"]])
+        measure.append([float(m["t"]), float(
+            m["M"]), float(m["I"]), m["rest"]])
 
     # range to watch (for later blank skip)
     start = 0
@@ -350,16 +377,16 @@ def analyse(
     # get actual duration from last PTS (Presentation Time Stamp)
     # This is the last frame, so the total duration is its PTS + frame length
     # (100ms)
-    duration = measure[end-1][0] + 0.1
+    duration = measure[end - 1][0] + 0.1
 
     # get integrated song loudness from last frame, so we can calculate liq_amplify
     # (the "ReplayGain") from it (difference to desired loudness target)
-    loudness = measure[end-1][2]
+    loudness = measure[end - 1][2]
 
     # get true peak and LRA values from last frame
     # for multi-channel audio, this takes the highest channel value
     # true peak result is in dBFS, LRA in LU
-    last_lines = measure[end-1][3].splitlines()
+    last_lines = measure[end - 1][3].splitlines()
     true_peak = 0.0  # absolute silence
     loudness_range = 0.0
     for line in last_lines:
@@ -373,7 +400,7 @@ def analyse(
         true_peak_dB = 20.0 * math.log10(true_peak)
     else:
         true_peak_dB = float('-inf')
-    #print(true_peak, true_peak_dB)
+    # print(true_peak, true_peak_dB)
 
     # Find cue-in point (loudness above "silence")
     silence_level = loudness + silence
@@ -400,33 +427,36 @@ def analyse(
     # Check forward in this case, and trust EBU R128’s 400ms to be long enough,
     # checking for loudness going below the defined silence level.
     # NOTE: This shouldn’t be used with TTS-generated jingles and spoken text,
-    # because the pauses in speech will trigger the detection and cut off the text!
+    # because the pauses in speech will trigger the detection and cut off the
+    # text!
     if blankskip:
         # print("Checking for blank")
         end_blank = end
         for i in range(start, end):
             if measure[i][1] <= silence_level:
                 cue_out_time_blank = measure[i][0]
-                end_blank = i+1
+                end_blank = i + 1
                 # print(f"Found cue-out blank: {end_blank}, {cue_out_time_blank}")
                 break
 
-    # Normal cue-out: check backwards, from the end, for loudness above "silence"
+    # Normal cue-out: check backwards, from the end, for loudness above
+    # "silence"
     for i in reversed(range(start, end)):
         if measure[i][1] > silence_level:
             cue_out_time = measure[i][0]
-            end = i+1
+            end = i + 1
             # print(f"Found cue-out: {end}, {cue_out_time}")
             break
     # cue out PAST the current frame (100ms) -- no, reverse that
     cue_out_time = max(cue_out_time, duration - cue_out_time)
 
     # Adjust cue-out and "end" point if we're working with blank detection.
-    # Also set a flag (`liq_blank_skipped`) so we can later see if cue-out is early.
+    # Also set a flag (`liq_blank_skipped`) so we can later see if cue-out is
+    # early.
     blank_skipped = False
     if blankskip:
         # cue out PAST the current frame (100ms) -- no, reverse that
-        #cue_out_time_blank = cue_out_time_blank + 0.1
+        # cue_out_time_blank = cue_out_time_blank + 0.1
         # print(f"cue-out blank: {cue_out_time_blank}, cue-out: {cue_out_time}")
         if 0.0 < cue_out_time_blank < cue_out_time:
             cue_out_time = cue_out_time_blank
@@ -464,7 +494,8 @@ def analyse(
     # (a value of 0.0 is invalid in Liquidsoap)
     cross_duration = cue_out_time - start_next_time
 
-    amplify, amplify_correction = amplify_correct(target, loudness, true_peak_dB, noclip)
+    amplify, amplify_correction = amplify_correct(
+        target, loudness, true_peak_dB, noclip)
 
     # We now also return start_next_time
 
@@ -481,7 +512,7 @@ def analyse(
         "liq_cue_out": cue_out_time,
         "liq_cross_start_next": start_next_time,
         "liq_longtail": longtail,
-        #"liq_cross_duration": cross_duration,
+        # "liq_cross_duration": cross_duration,
         "liq_loudness": loudness,
         "liq_loudness_range": loudness_range,
         "liq_amplify": amplify,
@@ -492,6 +523,7 @@ def analyse(
         "liq_true_peak": true_peak_dB
     })
 
+
 def write_tags(filename, tags={}):
     # Add the liq_* tags (and only these)
     # Don’t touch replaygain_track_gain or R128_TRACK_GAIN
@@ -499,16 +531,16 @@ def write_tags(filename, tags={}):
     filename = Path(filename)
 
     # This doesn’t work cross-device!
-    #temp_file_handle, temp = tempfile.mkstemp(prefix="cue_file.", suffix=filename.suffix)
+    # temp_file_handle, temp = tempfile.mkstemp(prefix="cue_file.", suffix=filename.suffix)
     # So we use the same folder, to be able to do an atomic move.
     temp = filename.with_suffix('.tmp' + filename.suffix)
-    #print(temp)
+    # print(temp)
 
     # copy only `liq_*`, float with 2 decimals, bools and strings lowercase
     tags_new = {k: "{:.2f}".format(v)
-        if isinstance(v, float) else str(v).lower()
-        for k, v in tags.items() if k.startswith("liq_")
-    }
+                if isinstance(v, float) else str(v).lower()
+                for k, v in tags.items() if k.startswith("liq_")
+                }
     # add the units
     tags_new["liq_amplify"] += " dB"
     tags_new["liq_amplify_adjustment"] += " dB"
@@ -516,12 +548,12 @@ def write_tags(filename, tags={}):
     tags_new["liq_loudness_range"] += " LU"
     tags_new["liq_reference_loudness"] += " LUFS"
     tags_new["liq_true_peak"] += " dBFS"
-    #print(temp, json.dumps(tags_new, indent=2))
+    # print(temp, json.dumps(tags_new, indent=2))
 
     metadata_args = []
     for k, v in tags_new.items():
         metadata_args.extend(['-metadata', f'{k}={v}'])
-    #print(metadata_args)
+    # print(metadata_args)
 
     args = [
         FFMPEG,
@@ -540,9 +572,10 @@ def write_tags(filename, tags={}):
 
     return
 
+
 # CLI command parser and help text
 parser = argparse.ArgumentParser(
-    description="Return cue-in, cue-out, overlay and replaygain data for an audio " \
+    description="Return cue-in, cue-out, overlay and replaygain data for an audio "
     "file as JSON. To be used with my Liquidsoap \"autocue:\" protocol.",
     epilog="Please report any issues to https://github.com/Moonbase59/autocue/issues",
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -553,7 +586,7 @@ parser.add_argument("-t", "--target", help="LUFS reference target",
 parser.add_argument(
     "-s",
     "--silence",
-    help="LU below integrated track loudness for cue-in & cue-out points " \
+    help="LU below integrated track loudness for cue-in & cue-out points "
     "(silence removal at beginning & end of a track)",
     default=SILENCE,
     type=float)
@@ -566,38 +599,38 @@ parser.add_argument(
 parser.add_argument(
     "-l",
     "--longtail",
-    help="More than so many seconds of calculated overlay duration are considered " \
-    "a long tail, and will force a recalculation using --extra, thus keeping long " \
+    help="More than so many seconds of calculated overlay duration are considered "
+    "a long tail, and will force a recalculation using --extra, thus keeping long "
     "song endings intact",
     default=LONGTAIL_SECONDS,
     type=float)
 parser.add_argument(
     "-x",
     "--extra",
-    help="Extra LU below overlay loudness to trigger next track for songs " \
+    help="Extra LU below overlay loudness to trigger next track for songs "
     "with long tail",
     default=LONGTAIL_EXTRA_LU,
     type=float)
 parser.add_argument(
     "-k",
     "--noclip",
-    help="Clipping prevention: Lowers track gain if needed, to avoid peaks " \
+    help="Clipping prevention: Lowers track gain if needed, to avoid peaks "
     "going above -1 dBFS. Uses true peak values of all audio channels.",
     default=False,
     action='store_true')
 parser.add_argument(
     "-b",
     "--blankskip",
-    help="Skip blank (silence) within song (get rid of \"hidden tracks\"). " \
-    "Sets the cue-out point to where the silence begins. Don't use this with " \
+    help="Skip blank (silence) within song (get rid of \"hidden tracks\"). "
+    "Sets the cue-out point to where the silence begins. Don't use this with "
     "spoken or TTS-generated text, as it will often cut the message short.",
     default=False,
     action='store_true')
 parser.add_argument(
     "-w",
     "--write",
-    help="Write Liquidsoap liq_* tags to file. USE WITH CARE, as ffmpeg can't " \
-    "write all tags to all file types! Ensure you have enough free space to " \
+    help="Write Liquidsoap liq_* tags to file. USE WITH CARE, as ffmpeg can't "
+    "write all tags to all file types! Ensure you have enough free space to "
     "hold a copy of the original file.",
     default=False,
     action='store_true')
@@ -617,7 +650,8 @@ parser.add_argument(
 args = parser.parse_args()
 args.target = float(args.target)
 
-skip_analysis, tags_found = read_tags(args.file, args.target, args.blankskip, args.noclip)
+skip_analysis, tags_found = read_tags(
+    args.file, args.target, args.blankskip, args.noclip)
 
 if args.force or not skip_analysis:
     result = analyse(
@@ -634,7 +668,7 @@ if args.force or not skip_analysis:
 else:
     result = add_missing(tags_found, args.target, args.blankskip, args.noclip)
 
-#print(result)
+# print(result)
 
 if args.write:
     write_tags(args.file, result)
@@ -648,7 +682,7 @@ liq_result = {
     "liq_cue_out": result['liq_cue_out'],
     "liq_cross_start_next": result['liq_cross_start_next'],
     "liq_longtail": result["liq_longtail"],
-    #"liq_cross_duration": result['liq_cross_duration'],
+    # "liq_cross_duration": result['liq_cross_duration'],
     "liq_loudness": f"{result['liq_loudness']:.2f} LUFS",
     "liq_loudness_range": f"{result['liq_loudness_range']:.2f} LU",
     "liq_amplify": f"{result['liq_amplify']:.2f} dB",
