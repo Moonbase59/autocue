@@ -44,7 +44,7 @@ settings.autocue.cue_file.blankskip := true
 # settings.autocue.cue_file.unify_loudness_correction := true
 # settings.autocue.cue_file.write_tags := false
 # settings.autocue.cue_file.force_analysis := false
-settings.autocue.cue_file.nice := true  # Linux only!
+settings.autocue.cue_file.nice := true  # Linux/MacOS only!
 
 # `enable_autocue_metadata()` will autocue ALL files Liquidsoap processes.
 # You can disable it for selected sources using 'annotate:liq_cue_file=false'.

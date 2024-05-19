@@ -31,14 +31,14 @@ let settings.autocue.cue_file.path =
 let settings.autocue.cue_file.fade_in =
   settings.make(
     description=
-      "Default fade-in duration if no specified by the user.",
+      "Default fade-in duration if not specified by the user.",
     0.1
   )
 
 let settings.autocue.cue_file.fade_out =
   settings.make(
     description=
-      "Default fade-out duration if no specified by the user.",
+      "Default fade-out duration if not specified by the user.",
     2.5
   )
 
@@ -59,14 +59,14 @@ let settings.autocue.cue_file.target =
 let settings.autocue.cue_file.silence =
   settings.make(
     description=
-      "Silence level (for cue points) in LU/dB below track loudness.",
+      "Silence level (for cue points) in LU below track loudness.",
     -42.0
   )
 
 let settings.autocue.cue_file.overlay =
   settings.make(
     description=
-      "Start overlay level in LU/dB below track loudness.",
+      "Start overlay level in LU below track loudness.",
     -8.0
   )
 
@@ -81,7 +81,7 @@ let settings.autocue.cue_file.longtail =
 let settings.autocue.cue_file.overlay_longtail =
   settings.make(
     description=
-      "Extra LU/dB level below overlay loudness, to recalculate songs with long \
+      "Extra LU level below overlay loudness, to recalculate songs with long \
        tails.",
     -15.0
   )
@@ -97,7 +97,7 @@ let settings.autocue.cue_file.noclip =
 let settings.autocue.cue_file.blankskip =
   settings.make(
     description=
-      'Skip blank (silence) within song (get rid of "hidden tracks".)',
+      'Skip blank (silence) within song (get rid of "hidden tracks").',
     false
   )
 
@@ -106,7 +106,7 @@ let settings.autocue.cue_file.unify_loudness_correction =
     description=
       'Unify `replaygain_track_gain` and `liq_amplify`. If enabled, this will \
        ensure both have the same value, with `replaygain_track_gain` taking \
-       precedence if see it and we have a `replaygain_reference_loudness`. \
+       precedence if seen, and we have a `replaygain_reference_loudness`. \
        Allows scripts to amplify on either value, without loudness jumps.',
     true
   )
@@ -130,7 +130,7 @@ let settings.autocue.cue_file.force_analysis =
 let settings.autocue.cue_file.nice =
   settings.make(
     description=
-      'Linux only: Use nice for `cue_file` operations?',
+      'Linux/MacOS only: Use nice for `cue_file` operations?',
     false
   )
 
