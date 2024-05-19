@@ -652,3 +652,25 @@ settings.autocue.target_cross_duration := settings.autocue.cue_file.fade_out()
 # --- Copy-paste Azuracast LS Config, second input box END ---
 
 # Don't forget to add your settings after this.
+# Here's a list of all possible settings with their defaults
+
+# settings.autocue.cue_file.path := "cue_file"
+# settings.autocue.cue_file.fade_in := 0.1  # seconds
+# settings.autocue.cue_file.fade_out := 2.5  # seconds
+# settings.autocue.cue_file.timeout := 60.0  # seconds
+# settings.autocue.cue_file.target := -18.0  # LUFS
+# settings.autocue.cue_file.silence := -42.0  # LU below track loudness
+# settings.autocue.cue_file.overlay := -8.0  # LU below track loudness
+# settings.autocue.cue_file.longtail := 15.0  # seconds
+# settings.autocue.cue_file.overlay_longtail := -15.0  # extra LU
+# settings.autocue.cue_file.noclip := false  # clipping prevention like loudgain's `-k`
+# settings.autocue.cue_file.blankskip := false  # skip silence in tracks
+# settings.autocue.cue_file.unify_loudness_correction := true  # unify `replaygain_track_gain` & `liq_amplify`
+# settings.autocue.cue_file.write_tags := false  # write liq_* tags back to file
+# settings.autocue.cue_file.force_analysis := false  # force re-analysis even if tags found
+# settings.autocue.cue_file.nice := false  # Linux/MacOS only: Use NI=18 for analysis
+
+# `enable_autocue_metadata()` will autocue ALL files Liquidsoap processes.
+# You can disable it for selected sources using 'annotate:liq_cue_file=false'.
+# Remember you won't get `liq_amplify` data then -- expect loudness jumps!
+# enable_autocue_metadata()
