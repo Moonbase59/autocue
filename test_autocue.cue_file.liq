@@ -105,7 +105,7 @@ def show_meta(m)
 
   # show `liq_` & other metadata in level 3
   def fl(k, _) =
-    tags = ["duration", "kind", "replaygain_track_gain", "replaygain_reference_loudness"]
+    tags = ["duration", "replaygain_track_gain", "replaygain_reference_loudness"]
     string.contains(prefix="liq_", k) or list.mem(k, tags)
   end
   liq = list.assoc.filter((fl), l)
@@ -128,55 +128,32 @@ def live_aware_crossfade(old, new) =
     if to_live() then
         # If going to the live show, play a simple sequence
         # fade out AutoDJ, do (almost) not fade in streamer
-        sequence([fade.out(duration=2.5,old.source),fade.in(duration=0.1,new.source)])
+        sequence([
+          fade.out(duration=settings.autocue.cue_file.fade_out(), old.source),
+          fade.in(duration=settings.autocue.cue_file.fade_in(), new.source)
+        ])
     else
-        # Otherwise, use the simple transition
-        log(level=3, label=label, "Using custom crossfade")
-        if (old.metadata["jingle_mode"] == "true")
-          and (new.metadata["jingle_mode"] == "true") then
-            log(level=3, label=label, "Jingle → Jingle transition")
-        end
-        if (old.metadata["jingle_mode"] == "true")
-          and (new.metadata["jingle_mode"] == "") then
-            log(level=3, label=label, "Jingle → Song transition")
-        end
-        if (old.metadata["jingle_mode"] == "")
-          and (new.metadata["jingle_mode"] == "true") then
-            log(level=3, label=label, "Song → Jingle transition")
-        end
-        if (old.metadata["jingle_mode"] == "")
-          and (new.metadata["jingle_mode"] == "") then
-            log(level=3, label=label, "Song → Song transition")
-        end
-
-        nd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_cue_duration", new.metadata))
-        xd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_cross_duration", old.metadata))
-        delay = max(0., xd - nd)
-        log(level=3, label=label, "Cross/new/delay: #{xd} / #{nd} / #{delay} s")
-        if (xd > nd) then
-          log(level=2, label=label, "Cross duration #{xd} s longer than next track (#{nd} s)!")
-        end
-
-        # Starting with LS 2.2.5+git@cadd05596, we don’t need the delay anymore
-        add(normalize=false,
-          [fade.in(initial_metadata=new.metadata, duration=.1, new.source),
-           fade.out(initial_metadata=old.metadata, duration=2.5, old.source)]
-        )
-
-        # Other options:
-        # cross.simple(
-        #   old.source,
-        #   new.source,
-        #   fade_in=0.1,
-        #   fade_out=2.5,
-        #   initial_fade_in_metadata=new.metadata,
-        #   initial_fade_out_metadata=old.metadata
-        # )
-        #cross.smart(old, new, fade_in=0.1, fade_out=2.5, margin=8.)
+        # Otherwise, use a beautiful add
+        add(normalize=false, [
+          fade.in(
+            initial_metadata=new.metadata,
+            duration=settings.autocue.cue_file.fade_in(),
+            new.source
+          ),
+          fade.out(
+            initial_metadata=old.metadata,
+            duration=settings.autocue.cue_file.fade_out(),
+            old.source
+          )
+        ])
     end
 end
 
-radio = cross(duration=2.5, live_aware_crossfade, radio)
+radio = cross(
+  duration=settings.autocue.cue_file.fade_out(),
+  live_aware_crossfade,
+  radio
+)
 
 # --- Copy-paste Azuracast LS Config, third input box END ---
 
