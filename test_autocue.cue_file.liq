@@ -124,7 +124,6 @@ radio.on_metadata(show_meta)
 
 # Fading/crossing/segueing
 def live_aware_crossfade(old, new) =
-    label = "live_aware_crossfade"
     if to_live() then
         # If going to the live show, play a simple sequence
         # fade out AutoDJ, do (almost) not fade in streamer
