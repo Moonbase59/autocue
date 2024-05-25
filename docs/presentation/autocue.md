@@ -13,6 +13,16 @@ header-includes:
       </style>
 ---
 
+# Navigation
+
+- <kbd>space</kbd> – next slide
+- arrow keys <kbd>←→↓↑</kbd> – navigate
+- <kbd>Shift</kbd>+<kbd>↑↓</kbd> – jump to top/bottom of a topic
+- <kbd>Esc</kbd> – overview
+- <kbd>Ctrl</kbd>+<kbd>Mouseclick</kbd> – zoom in/out
+- <kbd>Home</kbd>, <kbd>End</kbd> – jump to start/end
+
+
 # Autocue
 
 The presentation will be made available here  
