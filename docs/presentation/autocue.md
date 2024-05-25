@@ -34,8 +34,8 @@ after the event.
 
 - This presentation will be made available as:
   - recording on YouTube (check the [Liquidshop 4 page](http://www.liquidsoap.info/liquidshop/4/))
-  - [web page](https://moonbase59.github.io/autocue/docs/presentation/autocue.html) (reveal.js)
-  - downloadable [PDF file](https://moonbase59.github.io/autocue/docs/presentation/autocue.pdf)
+  - [web page](https://moonbase59.github.io/autocue/presentation/autocue.html) (reveal.js)
+  - downloadable [PDF file](https://moonbase59.github.io/autocue/presentation/autocue.pdf)
 :::
 
 # Thanks!
