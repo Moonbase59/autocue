@@ -23,10 +23,68 @@ header-includes:
 - <kbd>Home</kbd>, <kbd>End</kbd> – jump to start/end
 
 
+# Sneak preview!
+
+Here is a little **sneak preview**,  
+dont’t miss [the real event](http://www.liquidsoap.info/liquidshop/4/)!
+
+_The full presentation will be made available here  
+after the event._
+
+
 # Autocue
 
-The presentation will be made available here  
-after the event.
+> On-the-fly JSON song cue-in, cue-out, overlay, replaygain calculation for Liquidsoap, AzuraCast and other AutoDJ software.
+
+Phew! Now what does _that_ mean?
+
+## Better song transitions for Radio Automation ("AutoDJ").
+
+- Remove silence at start & end of tracks.
+- Find ideal point for starting the next track.
+- Auto loudness correction ("ReplayGain").
+- Based on loudness perception of the _human ear_, not simple dB, amplitude or RMS values.
+- Can work _on-the-fly_, without pre-processed files.
+
+## And more…
+
+- Keep songs with long endings intact.
+- Skip silence within songs ("hidden tracks").
+- Clipping prevention.
+- Use file _tags_ for less CPU & higher speed.
+- Follows EBU (European Broadcasting Union) recommendations.
+
+
+# ...
+
+
+# A real example
+
+Let’s visualize what autocue does.
+
+## 1. Find start point for next song
+
+![ ](images/Spurpanel000.png)  
+Long smooth endings will be kept intact.
+
+## 2. Default fade-out
+
+![ ](images/Spurpanel001.png)  
+Limits overlay length (too long sounds bad).
+
+## 3. Cut off "overhang"
+
+![ ](images/Spurpanel002.png)
+
+## The result
+
+![ ](images/Transition The Vow - Godspeed.png)  
+![ ](audio/Transition The Vow - Godspeed.mp3)  
+Smooth, continuous playout, radio-style.  
+And perfect transitions—everytime.
+
+
+# ...
 
 
 # Links
