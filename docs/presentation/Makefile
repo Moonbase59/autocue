@@ -2,6 +2,8 @@
 
 NAME := autocue
 
+all: $(NAME).pdf $(NAME).html
+
 $(NAME).pdf: $(NAME).html
 	firefox $(NAME).html
 	# open print version, use Ctrl+P and print to PDF
@@ -10,5 +12,6 @@ $(NAME).pdf: $(NAME).html
 $(NAME).html: $(NAME).md
 	pandoc -t revealjs -s $(NAME).md --standalone --slide-level 2 -o $(NAME).html
 
+.PHONY: clean
 clean:
 	rm $(NAME).pdf $(NAME).html
