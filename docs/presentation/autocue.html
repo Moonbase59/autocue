@@ -63,15 +63,6 @@ Presentation</p>
 </ul>
 </section>
 
-<section id="sneak-preview" class="title-slide slide level1">
-<h1>Sneak preview!</h1>
-<p>Here is a little <strong>sneak preview</strong>,<br />
-dont’t miss <a href="http://www.liquidsoap.info/liquidshop/4/">the real
-event</a>!</p>
-<p><em>The full presentation will be made available here<br />
-after the event.</em></p>
-</section>
-
 <section>
 <section id="autocue" class="title-slide slide level1">
 <h1>Autocue</h1>
@@ -103,11 +94,90 @@ dB, amplitude or RMS values.</li>
 <li>Follows EBU (European Broadcasting Union) recommendations.</li>
 </ul>
 </section></section>
-<section id="section" class="title-slide slide level1">
-<h1>…</h1>
+<section>
+<section id="the-story" class="title-slide slide level1">
+<h1>The Story</h1>
 
 </section>
+<section id="user-demand" class="slide level2">
+<h2>User demand</h2>
+<p>On the AzuraCast GitHub, the “Professional Crossfade” thread is the
+single most active discussion.</p>
+<p><img data-src="images/AzuraCast%20Discussion.png" alt=" " /><br />
+There is a huge user demand for radio-like, more professional song
+transitions!</p>
+</section>
+<section id="previous-work" class="slide level2">
+<h2>Previous work</h2>
+<p><strong>John Warburton</strong> (“Warblefly”), an industry
+professional and Tonmeister, already talked about <a
+href="https://www.youtube.com/watch?v=FPPATbOZKgg">“Easing automation
+and improving your sound with Liquidsoap and FFmpeg”</a> in 2021
+(Liquidshop 1).</p>
+<p>He also made available his <a
+href="https://github.com/Warblefly/TrackBoundaries">pre-processing and
+playlist annotation scripts</a>. Thanks for sharing, John!</p>
+</section>
+<section id="cue_file" class="slide level2">
+<h2>cue_file</h2>
+<p>Inspired by John’s work, I started writing <code>cue_file</code> in
+early February 2024, as a proof of concept, to see if “on-the-fly”
+processing could be done.</p>
+<p><code>cue_file</code> is a Python3 script, that in turn uses
+<em>ffmpeg</em> and <em>ffprobe</em> to analyse an audio file for cueing
+and transition data, based on the loudness perception of the human ear.
+It uses the EBU R.128 algorithms and returns JSON data.</p>
+</section>
+<section id="liquidsoap-integration" class="slide level2">
+<h2>Liquidsoap Integration</h2>
+<p>Many talks and tests with <strong>RM-FM</strong>,
+<strong>toots</strong> and <strong>Stefan</strong> (gAlleb) brought up
+two solutions:</p>
+<ul>
+<li>RM-FM and toots worked on an “all-Liquidsoap” approach.</li>
+<li>I favoured and worked on the “external” solution, for more
+flexibility and pre-processing purposes.</li>
+<li>toots came up with a Liquidsoap integration API for both
+variants.</li>
+</ul>
+</section></section>
+<section>
+<section id="two-integrations" class="title-slide slide level1">
+<h1>Two Integrations</h1>
 
+</section>
+<section id="autocue.internal" class="slide level2">
+<h2>autocue.internal</h2>
+<ul>
+<li>No external dependencies (apart from ffmpeg).</li>
+<li>Easy to use.</li>
+<li>Made by <strong>RM-FM</strong> and <strong>toots</strong>.</li>
+</ul>
+</section>
+<section id="autocue.cue_file" class="slide level2">
+<h2>autocue.cue_file</h2>
+<ul>
+<li>Requires <em>ffmpeg</em>, <em>ffprobe</em>, <em>Python3</em> and
+<em><code>cue_file</code></em>.</li>
+<li><code>%include</code> or copy-paste (AzuraCast).</li>
+<li>Relatively easy to use, great defaults.</li>
+<li>Many additional features.</li>
+<li>Perfect for pre-processing.</li>
+<li>Can use file <em>tags</em> for dramatic speed increase.</li>
+<li>Made by <strong>Moonbase59</strong> and <strong>toots</strong>.</li>
+</ul>
+</section>
+<section id="overview" class="slide level2">
+<h2>Overview</h2>
+<ul>
+<li>Many concepts are similar in both implementations.</li>
+<li>Some differ.</li>
+<li>Both use the same integration API.</li>
+<li>It’s <em>your</em> choice.</li>
+</ul>
+<p>In this presentation, we will concentrate on
+<strong>autocue.cue_file</strong>.</p>
+</section></section>
 <section>
 <section id="a-real-example" class="title-slide slide level1">
 <h1>A real example</h1>
@@ -140,8 +210,675 @@ href="audio/Transition%20The%20Vow%20-%20Godspeed.mp3"> </a></audio><br />
 Smooth, continuous playout, radio-style.<br />
 And perfect transitions—everytime.</p>
 </section></section>
-<section id="section-1" class="title-slide slide level1">
-<h1>…</h1>
+<section>
+<section id="how-does-it-work" class="title-slide slide level1">
+<h1>How does it work?</h1>
+<p>Concepts, units, and inner workings explained.<br />
+With visual examples.</p>
+</section>
+<section id="volume-vs-loudness" class="slide level2">
+<h2>Volume vs Loudness</h2>
+<ul>
+<li>Often misunderstood, and complicated to explain correctly (volume,
+level, gain, amplitude, dB, SPL, RMS, VU, LUFS, LKFS, …)</li>
+</ul>
+<p>Let’s make it easy and just say:</p>
+<ul>
+<li><strong>Volume</strong> = <em>quantity</em> or <em>power</em> of a
+sound</li>
+<li><strong>Loudness</strong> = human <em>perception</em> of sound</li>
+<li>Autocue works <strong>loudness-based</strong> (what you
+<em>hear</em>).</li>
+</ul>
+</section>
+<section id="units-we-use" class="slide level2">
+<h2>Units we use</h2>
+<ul>
+<li><strong>Amplitude</strong> (0.0 .. 1.0, silence to loudest,
+linear)</li>
+<li><strong>dB</strong> (ratio between measurement and reference)</li>
+<li><strong>dBFS</strong> (dB relative to full scale)</li>
+<li><strong>LU</strong> (loudness units; 1 LU ≙ 1 dB)</li>
+<li><strong>LUFS</strong> (loudness units relative to full scale)</li>
+<li>dBFS/LUFS scale (logarithmic):
+<ul>
+<li>0.0 = loudest signal without distortion</li>
+<li>-96.0 = digital silence for 16-bit audio data</li>
+</ul></li>
+</ul>
+</section>
+<section id="how-much-is-twice-as-loud" class="slide level2">
+<h2>How much is “twice as loud”?</h2>
+<table>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">+10 dB</td>
+<td style="text-align: left;">2x <em>perceived</em> loudness
+(psycho-acoustics)</td>
+<td style="text-align: left;">mostly <em>sensed</em></td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">+6 dB</td>
+<td style="text-align: left;">2x sound pressure (RMS voltage,
+amplitude)</td>
+<td style="text-align: left;">mostly <em>measured</em></td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">+3 dB</td>
+<td style="text-align: left;">2x intensity (power, energy)</td>
+<td style="text-align: left;">mostly <em>calculated</em></td>
+</tr>
+</tbody>
+</table>
+<p>We have to be <em>specific</em> in acoustics!</p>
+</section>
+<section id="analysing-a-track" class="slide level2">
+<h2>Analysing a track</h2>
+<div class="smaller">
+<p><em>Queen: Bohemian Rhapsody</em> <img
+data-src="images/Spurpanel004.png" /></p>
+<ul>
+<li>Analyse whole track, measuring
+<ul>
+<li>momentary loudness of a 400 ms sliding window, every 100 ms</li>
+<li>integrated loudness over total duration, using a noise gate</li>
+<li>loudness range (dynamic range)</li>
+<li>true peak, all channels, using oversampling</li>
+</ul></li>
+<li>Results in <code>liq_loudness</code>,
+<code>liq_loudness_range</code>, <code>liq_true_peak</code></li>
+</ul>
+</div>
+</section>
+<section id="cue-in-point" class="slide level2">
+<h2>cue-in point</h2>
+<div class="smaller">
+<p><img data-src="images/Spurpanel005.png" /></p>
+<ul>
+<li>Silence level: <strong>-42 LU</strong> referencing integrated track
+loudness. For a song with -18 LUFS loudness, the noise floor would thus
+be at -60 LUFS.</li>
+<li><code>settings.autocue.cue_file.silence</code></li>
+<li>Look <em>forward from the start</em>, find where momentary loudness
+goes above silence level.</li>
+<li>This is our cue-in point (<code>liq_cue_in</code>).</li>
+</ul>
+</div>
+</section>
+<section id="cue-out-point" class="slide level2">
+<h2>cue-out point</h2>
+<div class="smaller">
+<p><img data-src="images/Spurpanel006.png" /></p>
+<ul>
+<li>Look <em>backwards from the end</em>, find where momentary loudness
+goes above silence level.</li>
+<li>This is our cue-out point (<code>liq_cue_out</code>).</li>
+</ul>
+</div>
+</section>
+<section id="cue-out-point-w-blankskip" class="slide level2">
+<h2>cue-out point w/ blankskip</h2>
+<div class="smaller">
+<p><em>Nirvana: Something in the Way / Endless, Nameless</em> <img
+data-src="images/Spurpanel007.png" /></p>
+<ul>
+<li>Look <em>forward from cue-in</em>, find where momentary loudness
+goes below silence level.</li>
+<li>We’re now cueing out <em>early</em> (at the start of the silent part
+in the song), avoiding “dead air” for songs with “hidden tracks”.</li>
+<li>Results in <code>liq_cue_out</code>,
+<code>liq_blank_skipped</code>.</li>
+</ul>
+</div>
+</section>
+<section id="start-overlay-point-next-song" class="slide level2">
+<h2>start overlay point (next song)</h2>
+<div class="smaller">
+<p><img data-src="images/Spurpanel008.png" /></p>
+<ul>
+<li>Overlay level: <strong>-8 LU</strong> referencing integrated track
+loudness.</li>
+<li><code>settings.autocue.cue_file.overlay</code></li>
+<li>Look <em>backwards from cue-out</em>, find where momentary loudness
+goes above overlay level.</li>
+<li>This would be an ideal point to start the next song,<br />
+but it <em>might</em> cut short important long song endings (as shown
+above).</li>
+<li>Result in <code>liq_cross_start_next</code>.</li>
+</ul>
+</div>
+</section>
+<section id="long-tails" class="slide level2">
+<h2>Long tails</h2>
+<div class="smaller">
+<p><img data-src="images/Spurpanel009.png" /></p>
+<ul>
+<li>Check if calculated overlay duration &gt; <strong>15 s</strong> (a
+“long tail”).</li>
+<li><code>settings.autocue.cue_file.longtail</code></li>
+<li>If so, reduce overlay level by an extra <strong>-15 LU</strong> and
+repeat the calculation.</li>
+<li><code>settings.autocue.cue_file.overlay_longtail</code></li>
+<li>We now start the next song much later, keeping the song’s “long
+tail” intact!</li>
+<li><code>liq_longtail</code> shows if a long tail was detected.</li>
+</ul>
+</div>
+</section>
+<section id="fade-out" class="slide level2">
+<h2>fade-out</h2>
+<div class="smaller">
+<p><img data-src="images/Spurpanel010.png" /></p>
+<ul>
+<li>Apply fade-out, so overlay isn’t too long.</li>
+<li><code>settings.autocue.cue_file.fade_out</code></li>
+<li>Too long overlays sound bad, especially when a jingle follows.</li>
+<li><code>liq_fade_out</code></li>
+</ul>
+</div>
+</section>
+<section id="correct-cue-out" class="slide level2">
+<h2>correct cue-out</h2>
+<div class="smaller">
+<p><img data-src="images/Spurpanel011.png" /></p>
+<ul>
+<li>Correct cue-out (overhang “thrown away”)</li>
+</ul>
+</div>
+</section>
+<section id="amplify-replaygain" class="slide level2">
+<h2>amplify &amp; ReplayGain</h2>
+<div class="smaller">
+<p><img data-src="images/Spurpanel012.png" /></p>
+<ul>
+<li>From the integrated loudness of the track, and the desired loudness
+target, we can now calculate the <em>amplification</em> and
+<em>ReplayGain</em> values.</li>
+<li><code>settings.autocue.cue_file.target</code></li>
+<li><code>settings.autocue.cue_file.unify_loudness_correction</code></li>
+<li>Recommended loudness targets:
+<ul>
+<li>Europe: <strong>-23 LUFS</strong> (EBU) or <strong>-18 LUFS</strong>
+(EBU, “temporarily allowed”)</li>
+<li>U.S.: <strong>-24 LUFS</strong> (ATSC), not (yet?) supported in
+<em>ffmpeg</em></li>
+</ul></li>
+<li>Results in <code>liq_amplify</code>,
+<code>liq_reference_loudness</code>, <code>replaygain_track_gain</code>,
+<code>replaygain_reference_loudness</code>.</li>
+</ul>
+</div>
+</section>
+<section id="clipping-prevention" class="slide level2">
+<h2>Clipping prevention</h2>
+<div class="smaller">
+<p><img data-src="images/Spurpanel013.png" /></p>
+<ul>
+<li>Modern highly-compressed (“loudness war”) music and file formats
+using lossy compression can easily <em>clip</em> (distort).</li>
+<li>To prevent this, both <em>loudgain</em> and <em>cue_file</em> can
+reduce the amplification/ReplayGain values, using the measured true peak
+values, so that the EBU-recommended -1 dBFS is not exceeded.</li>
+<li><code>settings.autocue.cue_file.noclip</code></li>
+<li><strong>Note:</strong> This is just a loudness reduction, not a
+brickwall limiter or the like!</li>
+<li>Applied correction amount shown in
+<code>liq_amplify_adjustment</code>.</li>
+</ul>
+</div>
+</section>
+<section id="lets-now-move-to-real-life-usage" class="slide level2">
+<h2>Let’s now move to real-life usage</h2>
+<p>That’s much easier. Promised.</p>
+<p>Because autocue does all the work for you.</p>
+</section></section>
+<section>
+<section id="a-minimal-example" class="title-slide slide level1">
+<h1>A minimal example</h1>
+<p>Using standalone Liquidsoap</p>
+</section>
+<section id="preparation" class="slide level2">
+<h2>Preparation</h2>
+<ul>
+<li><p>Copy <code>cue_file</code> to appropriate location in the path.
+On Linux, this is usually one of these:</p>
+<ul>
+<li><code>~/bin</code></li>
+<li><code>~/.local/bin</code></li>
+<li><code>/usr/local/bin</code> (needs <code>sudo</code>)</li>
+</ul></li>
+<li><p>Ensure you have <em>Python3</em>, <em>ffmpeg</em> and
+<em>ffprobe</em> available. On almost all distros, these are
+pre-installed.</p></li>
+</ul>
+</section>
+<section id="liquidsoap-code" class="slide level2">
+<h2>Liquidsoap code</h2>
+<pre class="liquidsoap"><code># Minimal example for the `autocue.cue_file` protocol.
+# Uses one playlist and outputs to sound card.
+
+%include &quot;autocue.cue_file.liq&quot;
+enable_autocue_metadata()
+
+radio = playlist(&quot;Classic Rock.m3u&quot;)
+
+radio = amplify(1., override=&quot;liq_amplify&quot;, radio)
+radio = crossfade(radio)
+
+radio = mksafe(radio)
+output(radio)</code></pre>
+</section>
+<section id="now-that-was-easy-right" class="slide level2">
+<h2>Now that <em>was </em> easy, right?</h2>
+</section></section>
+<section>
+<section id="usage-with-azuracast" class="title-slide slide level1">
+<h1>Usage with AzuraCast</h1>
+
+</section>
+<section id="its-included" class="slide level2">
+<h2>It’s included!</h2>
+<p>Since 2024-05-21, AzuraCast Rolling Releases have
+<em>autocue.cue_file</em> included, ready to use!</p>
+<p>Switch it on in <em>Edit Station Profile → AutoDJ</em>:</p>
+<figure>
+<img data-src="images/AzuraCast%20Autocue%20Enable.png" alt=" " />
+<figcaption aria-hidden="true"> </figcaption>
+</figure>
+</section>
+<section id="notes" class="slide level2">
+<h2>Notes</h2>
+<ul>
+<li>No complicated copy-pasting and setup anymore.</li>
+<li>Replaces crossfading code for optimum result.</li>
+<li>Fine-tune your personal settings in <em>Broadcasting → Edit
+Liquidsoap Configuration</em>, second input box.</li>
+<li>If you used the manual integration before, you must remove all its
+traces (copy-pasted code, cue_file) before using this.</li>
+<li>Save changes and <em>Restart Broadcasting</em>.</li>
+</ul>
+</section>
+<section id="settings-example" class="slide level2">
+<h2>Settings example</h2>
+<p><img data-src="images/AzuraCast%20Autocue%20Settings.png"
+alt=" " /><br />
+I put <em>all</em> settings in, so I don’t have to look them up.</p>
+</section>
+<section id="initial-startup" class="slide level2">
+<h2>Initial startup</h2>
+<ul>
+<li>Initial startup takes a moment longer.</li>
+<li>Initial startup will use more CPU.</li>
+<li>Liquidsoap has to reach out and prepare (i.e., autocue) the next
+tracks for all your playlists, to be ready for immediate playout in case
+of fallbacks.</li>
+<li><strong>Don’t be alarmed!</strong> CPU load will decrease to normal
+levels after a few minutes.</li>
+</ul>
+</section>
+<section id="enjoy" class="slide level2">
+<h2>Enjoy!</h2>
+</section></section>
+<section id="break" class="title-slide slide level1">
+<h1>— Break —</h1>
+<p>Thanks for following so far!</p>
+<p>More Tech and a Question &amp; Answer section follow in</p>
+<p><strong>Part II</strong></p>
+</section>
+
+<section id="here-be-dragons" class="title-slide slide level1">
+<h1>Here be dragons</h1>
+<p>It’s now time for the <strong>technical stuff!</strong></p>
+<p>So breathe deeply and get a beverage of your choice.</p>
+<p>;-)</p>
+</section>
+
+<section>
+<section id="settings" class="title-slide slide level1">
+<h1>Settings</h1>
+<div class="smaller">
+<p>Here’s a list of all possible settings with their defaults.<br />
+You <em>can</em> fine-tune everything, but the defaults are great for
+nearly all use cases!</p>
+<pre><code># settings.autocue.cue_file.path := &quot;cue_file&quot;
+# settings.autocue.cue_file.fade_in := 0.1  # seconds
+# settings.autocue.cue_file.fade_out := 2.5  # seconds
+# settings.autocue.cue_file.timeout := 60.0  # seconds
+# settings.autocue.cue_file.target := -18.0  # LUFS
+# settings.autocue.cue_file.silence := -42.0  # LU below track loudness
+# settings.autocue.cue_file.overlay := -8.0  # LU below track loudness
+# settings.autocue.cue_file.longtail := 15.0  # seconds
+# settings.autocue.cue_file.overlay_longtail := -15.0  # extra LU
+# settings.autocue.cue_file.noclip := false  # clipping prevention like loudgain&#39;s `-k`
+# settings.autocue.cue_file.blankskip := false  # skip silence in tracks
+# settings.autocue.cue_file.unify_loudness_correction := true  # unify `replaygain_track_gain` &amp; `liq_amplify`
+# settings.autocue.cue_file.write_tags := false  # write liq_* tags back to file
+# settings.autocue.cue_file.force_analysis := false  # force re-analysis even if tags found
+# settings.autocue.cue_file.nice := false  # Linux/MacOS only: Use NI=18 for analysis
+
+# `enable_autocue_metadata()` will autocue ALL files Liquidsoap processes.
+# You can disable it for selected sources using &#39;annotate:liq_cue_file=false&#39;.
+# Remember you won&#39;t get `liq_amplify` data then -- expect loudness jumps!
+enable_autocue_metadata()</code></pre>
+</div>
+</section>
+<section id="the-request-queue" class="slide level2">
+<h2>The Request Queue</h2>
+<ul>
+<li>Autocue, if using <code>enable_autocue_metadata()</code>,
+automatically sets</li>
+</ul>
+<pre><code>settings.request.prefetch := 2</code></pre>
+<ul>
+<li><p>This means we will at all times have <em>the next two
+requests</em> available for immediate playout. It also gives autocue
+enough time to process requests in advance.</p></li>
+<li><p>In AzuraCast, this blocks the first two entries in the “up next”
+queue from being deleteable.</p></li>
+</ul>
+</section></section>
+<section>
+<section id="commandline-usage" class="title-slide slide level1">
+<h1>Commandline usage</h1>
+<p>You can use <code>cue_file</code> on the commandline.<br />
+It returns standard JSON data:</p>
+<div class="smaller">
+<pre><code>$ cue_file &quot;The_Vow_-_Spread_Some_Love.mp3&quot; 
+{&quot;duration&quot;: 181.237551, &quot;liq_cue_duration&quot;: 181.1, &quot;liq_cue_in&quot;: 0.0, &quot;liq_cue_out&quot;: 181.1, &quot;liq_cross_start_next&quot;: 177.3, &quot;liq_longtail&quot;: false, &quot;liq_loudness&quot;: &quot;-6.72 LUFS&quot;, &quot;liq_loudness_range&quot;: &quot;5.86 LU&quot;, &quot;liq_amplify&quot;: &quot;-11.28 dB&quot;, &quot;liq_amplify_adjustment&quot;: &quot;0.00 dB&quot;, &quot;liq_reference_loudness&quot;: &quot;-18.00 LUFS&quot;, &quot;liq_blankskip&quot;: false, &quot;liq_blank_skipped&quot;: false, &quot;liq_true_peak&quot;: &quot;1.42 dBFS&quot;}</code></pre>
+</div>
+<p>This is ideal for debugging or pre-processing scripts.</p>
+</section>
+<section class="slide level2">
+
+<p>For sorted, more human-readable output, use <code>jq -S</code>:</p>
+<div class="smaller">
+<pre><code>$ cue_file &quot;The_Vow_-_Spread_Some_Love.mp3&quot; | jq -S
+{
+  &quot;duration&quot;: 181.237551,
+  &quot;liq_amplify&quot;: &quot;-11.28 dB&quot;,
+  &quot;liq_amplify_adjustment&quot;: &quot;0.00 dB&quot;,
+  &quot;liq_blank_skipped&quot;: false,
+  &quot;liq_blankskip&quot;: false,
+  &quot;liq_cross_start_next&quot;: 177.3,
+  &quot;liq_cue_duration&quot;: 181.1,
+  &quot;liq_cue_in&quot;: 0,
+  &quot;liq_cue_out&quot;: 181.1,
+  &quot;liq_longtail&quot;: false,
+  &quot;liq_loudness&quot;: &quot;-6.72 LUFS&quot;,
+  &quot;liq_loudness_range&quot;: &quot;5.86 LU&quot;,
+  &quot;liq_reference_loudness&quot;: &quot;-18.00 LUFS&quot;,
+  &quot;liq_true_peak&quot;: &quot;1.42 dBFS&quot;
+}</code></pre>
+</div>
+</section>
+<section class="slide level2">
+
+<p>Use <code>cue_file --help</code> for more information.</p>
+<div class="smaller">
+<pre><code>$ cue_file --help
+usage: cue_file [-h] [-t TARGET] [-s SILENCE] [-o OVERLAY]
+                [-l LONGTAIL] [-x EXTRA] [-k] [-b] [-w] [-f]
+                [-n]
+                file
+
+Return cue-in, cue-out, overlay and replaygain data for an
+audio file as JSON. To be used with my Liquidsoap &quot;autocue:&quot;
+protocol.
+
+positional arguments:
+  file                  File to be processed
+
+options:
+  -h, --help            show this help message and exit
+  -t TARGET, --target TARGET
+                        LUFS reference target (default: -18.0)
+  -s SILENCE, --silence SILENCE
+                        LU below integrated track loudness for
+                        cue-in &amp; cue-out points (silence
+                        removal at beginning &amp; end of a track)
+                        (default: -42.0)
+  -o OVERLAY, --overlay OVERLAY
+                        LU below integrated track loudness to
+                        trigger next track (default: -8.0)
+  -l LONGTAIL, --longtail LONGTAIL
+                        More than so many seconds of calculated
+                        overlay duration are considered a long
+                        tail, and will force a recalculation
+                        using --extra, thus keeping long song
+                        endings intact (default: 15.0)
+  -x EXTRA, --extra EXTRA
+                        Extra LU below overlay loudness to
+                        trigger next track for songs with long
+                        tail (default: -15.0)
+  -k, --noclip          Clipping prevention: Lowers track gain
+                        if needed, to avoid peaks going above
+                        -1 dBFS. Uses true peak values of all
+                        audio channels. (default: False)
+  -b, --blankskip       Skip blank (silence) within song (get
+                        rid of &quot;hidden tracks&quot;). Sets the cue-
+                        out point to where the silence begins.
+                        Don&#39;t use this with spoken or TTS-
+                        generated text, as it will often cut
+                        the message short. (default: False)
+  -w, --write           Write Liquidsoap liq_* tags to file.
+                        USE WITH CARE, as ffmpeg can&#39;t write
+                        all tags to all file types! Ensure you
+                        have enough free space to hold a copy
+                        of the original file. (default: False)
+  -f, --force           Force re-calculation, even if tags
+                        exist (default: False)
+  -n, --nice            Linux/MacOS only: Use nice? Will run
+                        analysis at nice level 18. (default:
+                        False)
+
+Please report any issues to
+https://github.com/Moonbase59/autocue/issues</code></pre>
+</div>
+</section></section>
+<section>
+<section id="metadata" class="title-slide slide level1">
+<h1>Metadata</h1>
+<p>Metadata is used in a <em>prioritized</em> manner,<br />
+so parameters can easily be <em>stored</em><br />
+and <em>overridden</em> if needed.</p>
+<p>The priorities are, from low to high:</p>
+<ul>
+<li>Metadata calculated by <code>cue_file</code></li>
+<li>Metadata stored in file <em>tags</em></li>
+<li>Metadata given in <em>annotations</em></li>
+</ul>
+</section>
+<section id="this-means" class="slide level2">
+<h2>This means:</h2>
+<ul>
+<li><strong>Tags</strong> in files can override <code>cue_file</code>
+behaviour, and allow it to just <em>use</em> these values instead of
+doing a costly re-analysis.</li>
+<li>The user can still override these by using
+<strong>annotations</strong>. This mechanism is also used by AzuraCast’s
+<em>Visual Cue Editor</em>, so the user settings always “win” over
+defaults or stored tags.</li>
+</ul>
+</section>
+<section id="using-pre-tagged-files-is-fast" class="slide level2">
+<h2>Using pre-tagged files is <em>fast!</em></h2>
+<p><img data-src="images/Tagged%20file%20speed%20comparison.png"
+height="400" alt=" " /><br />
+Nirvana song: 222 times faster!</p>
+</section>
+<section id="cue_file-is-intelligent" class="slide level2">
+<h2>cue_file is “intelligent”</h2>
+<ul>
+<li>Depending on requested parameters and stored file tags, it tries to
+avoid a costly re-analysis.</li>
+</ul>
+<p>Examples:</p>
+<ul>
+<li>Needed file tags missing → new analysis (slow)</li>
+<li>Tags fit request → use tags, no new analysis (fast)</li>
+<li>Playout at -14 LUFS requested, tags are -18 LUFS → can recalculate,
+no new analysis (fast)</li>
+<li>blankskip disabled, tags include blankskip (and vice versa) →
+re-analysis forced (slow)</li>
+</ul>
+</section>
+<section id="tag-example" class="slide level2">
+<h2>Tag example</h2>
+<p><img data-src="images/Tag%20example.png" alt=" " /><br />
+Tags written by <code>cue_file -w</code>.</p>
+</section>
+<section id="replaygain-tags" class="slide level2">
+<h2>ReplayGain Tags</h2>
+<p><img data-src="images/Replaygain%20Tags.png" alt=" " /><br />
+ReplayGain tags are <em>used</em> by <code>cue_file</code><br />
+but <em>never written back to audio files</em>.<br />
+This preserves your data from unintended changes.</p>
+</section>
+<section id="annotation-example" class="slide level2">
+<h2>Annotation example</h2>
+<pre class="liquidsoap"><code>uri = &quot;/home/matthias/Musik/Other/Jingles/Short&quot;
+jingles = playlist(prefix=&#39;annotate:liq_blankskip=false,&#39;
+  ^ &#39;liq_fade_in=0.10,liq_fade_out=0.10&#39;
+  ^ &#39;:&#39;, uri)</code></pre>
+<p>A jingles playlist: We want to disable blank skipping and set fade-in
+and fade-out times to 0.1 s, respectively.</p>
+</section>
+<section id="azuracast-visual-cue-editor" class="slide level2">
+<h2>AzuraCast Visual Cue Editor</h2>
+<p><img data-src="images/AzuraCast%20Visual%20Cue%20Editor.png"
+height="400" alt=" " /><br />
+Values set here are used as <em>annotations</em>, which have the highest
+priority. Just what we want.</p>
+</section></section>
+<section>
+<section id="metadata-categories" class="title-slide slide level1">
+<h1>Metadata categories</h1>
+<p>Basically, we use three <em>types</em> of metadata:</p>
+<ul>
+<li><em>“Switches”</em> that control autocue functionality, on a
+<em>per-file</em> or <em>per-playlist</em> basis.</li>
+<li><em>Results</em> that are used in further playout processing.</li>
+<li><em>Informational</em> metadata that might come in handy.</li>
+</ul>
+</section>
+<section id="switches" class="slide level2">
+<h2>“Switches”</h2>
+<ul>
+<li><code>liq_blankskip</code> (bool)<br />
+<small>Activates/deactivates blank skipping mode</small></li>
+<li><code>liq_cue_file</code> (bool)<br />
+<small>Enables/disables autocue (i.e., for large video
+files)</small></li>
+<li>AzuraCast <code>jingle_mode</code> (bool)<br />
+<small>Disables blank skipping for AzuraCast “Jingle Mode”
+playlists</small></li>
+<li>SAM Broadcaster <code>songtype</code> (char)<br />
+<small>Disables blank skipping for song types other than “S”
+(Song)</small></li>
+</ul>
+</section>
+<section id="results" class="slide level2">
+<h2>Results</h2>
+<ul>
+<li><code>duration</code> (s)</li>
+<li><code>liq_amplify</code> (dB)</li>
+<li><code>liq_amplify_adjustment</code> (dB)</li>
+<li><code>liq_cross_start_next</code> (s)</li>
+<li><code>liq_cue_in</code> (s)</li>
+<li><code>liq_cue_out</code> (s)</li>
+<li><code>liq_reference_loudness</code> (LUFS)</li>
+<li><code>replaygain_track_gain</code> (dB)</li>
+<li><code>replaygain_reference_loudness</code> (LUFS)</li>
+</ul>
+</section>
+<section id="informational" class="slide level2">
+<h2>Informational</h2>
+<ul>
+<li><code>liq_blank_skipped</code> (bool)</li>
+<li><code>liq_cue_duration</code> (s)</li>
+<li><code>liq_longtail</code> (bool)</li>
+<li><code>liq_loudness</code> (LUFS)</li>
+<li><code>liq_loudness_range</code> (LU)</li>
+<li><code>liq_true_peak</code> (dBFS)</li>
+</ul>
+</section>
+<section id="others" class="slide level2">
+<h2>Others</h2>
+<p>There <em>are</em> a plethora of other metadata that are either used
+internally, or reserved for future expansion.</p>
+<p>Fading data (duration, type, curve), cross duration, Opus Gain, ramp
+and hook points belong to this category.</p>
+</section></section>
+<section>
+<section id="the-logfile" class="title-slide slide level1">
+<h1>The logfile</h1>
+<ul>
+<li>The Liquidsoap <em>log file</em> clearly shows autocue’s
+workings.</li>
+<li>It’s an invaluable tool for diagnosing problems.</li>
+<li>Logging Levels:
+<ul>
+<li>2: Severe (errors/problems detected)</li>
+<li>3: Important (autocue information and results)</li>
+<li>4: Info (for debugging, <em>lots</em> of output)</li>
+</ul></li>
+</ul>
+</section>
+<section id="log-autocue.cue_file" class="slide level2">
+<h2>Log: autocue.cue_file</h2>
+<p><img data-src="images/Log%20autocue.cue_file.png" height="400"
+alt=" " /><br />
+Shows autocue information and results</p>
+</section>
+<section id="log-show_meta" class="slide level2">
+<h2>Log: show_meta</h2>
+<p><img data-src="images/Log%20show_meta.png" height="400"
+alt=" " /><br />
+Shows final values used in playout<br />
+(<code>liq_*</code> &amp; <code>replaygain</code> metadata)</p>
+</section></section>
+<section>
+<section id="download-documentation" class="title-slide slide level1">
+<h1>Download, Documentation</h1>
+<p>GitHub repo:<br />
+<a
+href="https://github.com/Moonbase59/autocue/">https://github.com/Moonbase59/autocue/</a></p>
+<p>Currently (May 2024) please use the files from the
+<code>integrate-with-liquidsoap</code> branch!</p>
+</section>
+<section id="docs-examples-on-github" class="slide level2">
+<h2>Docs &amp; Examples on GitHub</h2>
+<figure>
+<img data-src="images/Examples%20on%20GitHub.png" height="400"
+alt="Hidden track" />
+<figcaption aria-hidden="true">Hidden track</figcaption>
+</figure>
+</section>
+<section id="docs-examples-on-github-1" class="slide level2">
+<h2>Docs &amp; Examples on GitHub</h2>
+<figure>
+<img data-src="images/Examples%20on%20GitHub%202.png" height="400"
+alt="Long tail handling" />
+<figcaption aria-hidden="true">Long tail handling</figcaption>
+</figure>
+</section></section>
+<section id="roadmap" class="title-slide slide level1">
+<h1>Roadmap</h1>
+<ul>
+<li>Scrap <code>autocue2</code>. <code>autocue.cue_file</code> is the
+supported integrated solution for LS 2.2.5 &amp; newer.</li>
+<li>Update documentation.</li>
+<li><del>Fix “double autocue” issue.</del></li>
+<li>Fix “new fade-in &gt; old fade-out” issue with
+<strong>toots</strong>.</li>
+<li>Testing with LS 2.3.x.</li>
+<li><del>AzuraCast integration with <strong>BusterNeece</strong>.</del>
+(WIP)</li>
+</ul>
+</section>
+
+<section id="questions-answers" class="title-slide slide level1">
+<h1>Questions &amp; Answers</h1>
 
 </section>
 
@@ -218,7 +955,7 @@ Matthias C. Hormann<br />
         progress: true,
 
         // Display the page number of the current slide
-        slideNumber: false,
+        slideNumber: true,
 
         // 'all', 'print', or 'speaker'
         showSlideNumber: 'all',

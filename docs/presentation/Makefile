@@ -10,7 +10,9 @@ $(NAME).pdf: $(NAME).html
 	firefox $(NAME).html?print-pdf
 
 $(NAME).html: $(NAME).md
-	pandoc -t revealjs -s $(NAME).md --standalone --slide-level 2 -o $(NAME).html
+	pandoc -t revealjs -s $(NAME).md --standalone --slide-level 2 \
+	-V slideNumber=true \
+	-o $(NAME).html
 
 .PHONY: clean
 clean:
