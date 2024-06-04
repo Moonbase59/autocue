@@ -1,5 +1,68 @@
 # autocue changelog
 
+### 2024-06-04 - v2.0.1
+
+- Fix small bug when reading already stored `liq_true_peak` that contained
+  a ` dBFS` value from v1.2.3.
+
+### 2024-06-04 – v2.0.0
+
+Version 2.0.0 is out! It offers the chance to write ReplayGain data to
+audio files, in addition to the Liquidsoap/Autocue tags.
+
+This is useful for station owners that can’t or don’t want to use audio tracks
+that have been pre-replaygained. You can now add ReplayGain data to songs and
+thus ensure the analysis won’t be done over and over again.
+
+This is an _additional_ option to the existing
+write_tags feature and will only work when `write_tags` is enabled. Based on
+our file analysis, it will save (and overwrite) ReplayGain Track data, such as
+the gain value, the reference loudness, integrated loudness and true peak info.
+
+The logic is inside `cue_file`, so it can as well be used for pre-processing
+your files without the need of other tools. Autocue & ReplayGain—all in one!
+
+The `cue_file` help now shows the file formats it supports, and the tags it
+knows about. `cue_file` will automatically detect if Mutagen is installed and
+offer you a whopping **20 more filetypes** to work with!
+
+#### Breaking Changes:
+
+- `liq_true_peak` (in dBFS) has been renamed to `liq_true_peak_db`.
+- A new `liq_true_peak` has been added that stores the peak value as expected
+  and needed by ReplayGain.
+- Both `cue_file` and `autocue.cue_file.liq` must be updated to v2.0.0 for
+  everything to work correctly.
+- It is advisable to install Mutagen on the system running Liquidsoap, or in
+  the AzuraCast Docker container. Doing this gets you more file and tag types
+  you can work with, and safer/more compatible tagging.
+  Mutagen can usually be installed with `pip3 install mutagen` (preferred), or
+  `sudo apt install python3-mutagen` (often older versions, distros don’t
+  update that often).
+
+
+### 2024-06-04 – v1.2.3
+
+First public version with a numbering scheme. We use SemVer:
+
+- MAJOR.MINOR.PATCH
+- MAJOR increments when API-breaking changes are released.
+- MINOR increments with new functionality compatible with the existing API.
+- PATCH increments when API-compatible bugfixes and minor changes are done.
+
+The version numbers of `autocue.cue_file` and the external `cue_file` binary
+should usually be the same.
+
+Introducing:
+
+- Mutagen (Pyhon tagging library) should be installed and allows writing tags
+  to _many_ file and tagging formats.
+- ffmpeg is now only used for tagging where we know it’s safe.
+- Much better error checking:
+  - Writing tags only to "known good" file types.
+  - Gracefully skip writing to write-protected files/folders/drives.
+  - `cue_file` has got better CLI params checking and much improved help.
+
 ### 2024-04-19
 
 In preparation for later merge with `master` branch:

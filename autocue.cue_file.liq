@@ -13,6 +13,9 @@
 #                                   replaygain_reference_loudness
 # 2024-05-02 - Moonbase59 - add clipping prevention logic (cue_file -k)
 # 2024-05-04 - Moonbase59 - Add (informational) liq_loudness_range
+# 2024-06-04 - Moonbase59 - v2.0.0 Breaking: Add -r/--replaygain overwrite
+#                         - Changed `liq_true_peak` to `liq_true_peak_db`,
+#                           add new `liq_true_peak` (linear, like RG)
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -20,6 +23,14 @@
 
 # Initialize settings for cue_file autocue implementation
 let settings.autocue.cue_file = ()
+
+# Internal only! Not a user setting.
+let settings.autocue.cue_file.version =
+  settings.make(
+    description=
+      "Software version of autocue.cue_file. Should coincide with `cue_file`.",
+    "2.0.1"
+  )
 
 let settings.autocue.cue_file.path =
   settings.make(
@@ -114,9 +125,16 @@ let settings.autocue.cue_file.unify_loudness_correction =
 let settings.autocue.cue_file.write_tags =
   settings.make(
     description=
-      "Write back `liq_*` tags to original audio file. Use with care, as \
-       ffmpeg can't write all tags to all file types! Ensure you have enough \
+      "Write back `liq_*` tags to original audio file. Ensure you have enough \
        free space to hold a copy of the original file.",
+    false
+  )
+
+let settings.autocue.cue_file.write_replaygain =
+  settings.make(
+    description=
+      "Write ReplayGain tags to file (track only, no album). Useful if your \
+       files have no previous RG tags. Only valid if `write_tags` is also true.",
     false
   )
 
@@ -147,6 +165,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
   overlay_longtail = settings.autocue.cue_file.overlay_longtail()
   blankskip = settings.autocue.cue_file.blankskip()
   write_tags = settings.autocue.cue_file.write_tags()
+  write_replaygain = settings.autocue.cue_file.write_replaygain()
   force_analysis = settings.autocue.cue_file.force_analysis()
   nice = settings.autocue.cue_file.nice()
   noclip = settings.autocue.cue_file.noclip()
@@ -235,6 +254,12 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
       "Clipping prevention active: #{noclip}"
     )
 
+    log(
+      level=3,
+      label=label,
+      "Writing tags: #{write_tags}, including ReplayGain: #{write_replaygain}"
+    )
+
     # set up CLI arguments
     args =
       ref(
@@ -255,6 +280,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
     if noclip then args := list.add('-k', args()) end
     if blankskip() then args := list.add('-b', args()) end
     if write_tags then args := list.add('-w', args()) end
+    if write_replaygain then args := list.add('-r', args()) end
     if force_analysis then args := list.add('-f', args()) end
     if nice then args := list.add('-n', args()) end
 
@@ -302,7 +328,8 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           liq_reference_loudness,
           liq_blankskip,
           liq_blank_skipped,
-          liq_true_peak
+          liq_true_peak,
+          liq_true_peak_db
         }
       :
         {
@@ -320,7 +347,8 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           liq_reference_loudness: string,
           liq_blankskip: bool,
           liq_blank_skipped: bool,
-          liq_true_peak: string
+          liq_true_peak: float,
+          liq_true_peak_db: string
         }
       ) = res()
 
@@ -341,7 +369,8 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           ("liq_reference_loudness", liq_reference_loudness),
           ("liq_blankskip", string(liq_blankskip)),
           ("liq_blank_skipped", string(liq_blank_skipped)),
-          ("liq_true_peak", liq_true_peak)
+          ("liq_true_peak", string(liq_true_peak)),
+          ("liq_true_peak_db", liq_true_peak_db)
         ]
       )
 
@@ -384,12 +413,12 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
 
       # Override liq_amplify, liq_amplify_adjustment & liq_reference_loudness,
       # using clipping prevention as requested
-      # liq_loudness & liq_true_peak are always in the cue_file result
+      # liq_loudness & liq_true_peak_db are always in the cue_file result
       let (amp, amp_correction) =
         amplify_correct(
           target,
           list.assoc("liq_loudness", result()),
-          list.assoc("liq_true_peak", result()),
+          list.assoc("liq_true_peak_db", result()),
           noclip
         )
       result := list.assoc.remove("liq_amplify", result())
@@ -463,7 +492,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           level=3,
           label=label,
           'Clipping prevention: Adjusted liq_amplify by #{amp_correction_dB} \
-           because track’s true peak is #{list.assoc("liq_true_peak", result())}.'
+           because track’s true peak is #{list.assoc("liq_true_peak_db", result())}.'
         )
       end
 
@@ -618,7 +647,10 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           ("liq_reference_loudness", list.assoc("liq_reference_loudness", result())),
           ("liq_blank_skipped", list.assoc("liq_blank_skipped", result())),
           ("liq_true_peak", list.assoc("liq_true_peak", result())),
+          ("liq_true_peak_db", list.assoc("liq_true_peak_db", result())),
           ...optional_meta("replaygain_track_gain", result()),
+          ...optional_meta("replaygain_track_peak", result()),
+          ...optional_meta("replaygain_track_range", result()),
           ...optional_meta("replaygain_reference_loudness", result())
         ]
 
@@ -667,6 +699,7 @@ settings.autocue.target_cross_duration := settings.autocue.cue_file.fade_out()
 # settings.autocue.cue_file.blankskip := false  # skip silence in tracks
 # settings.autocue.cue_file.unify_loudness_correction := true  # unify `replaygain_track_gain` & `liq_amplify`
 # settings.autocue.cue_file.write_tags := false  # write liq_* tags back to file
+# settings.autocue.cue_file.write_replaygain := false  # write ReplayGain tags back to file
 # settings.autocue.cue_file.force_analysis := false  # force re-analysis even if tags found
 # settings.autocue.cue_file.nice := false  # Linux/MacOS only: Use NI=18 for analysis
 

@@ -27,12 +27,17 @@
 #                       - v1.2.1 Much more informative help, nicer formatting.
 #                       - v1.2.2 Limit -t/--target input range to -23.0..0.0
 #                       - v1.2.3 Limit all params to sensible ranges
+#                       - v2.0.0 Breaking: Add -r/--replaygain overwrite
+#                       - Changed `liq_true_peak` to `liq_true_peak_db`,
+#                         add new `liq_true_peak` (linear, like RG)
+#                       - v2.0.1 Fix `liq_true_peak` reading when it still
+#                         contains ` dBFS` from v1.2.3.
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
 
 __author__ = 'Matthias C. Hormann'
-__version__ = '1.2.3'
+__version__ = '2.0.1'
 
 import os
 import tempfile
@@ -142,10 +147,12 @@ tags_to_check = {
     "liq_blankskip": is_true,
     "liq_blank_skipped": is_true,
     "replaygain_track_gain": float,
+    "replaygain_track_peak": float,
     "replaygain_track_range": float,
     "replaygain_reference_loudness": float,
     "r128_track_gain": int,
     "liq_true_peak": float,
+    "liq_true_peak_db": float,
     # reserved for future expansion
     "liq_ramp1": float,
     "liq_ramp2": float,
@@ -217,7 +224,8 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False, noclip=False):
         k.lower(): v for k,
         v in format_items if k.lower() in tags_to_check}
     # unify, right overwrites left if key in both
-    tags_found = tags_in_stream | tags_in_format
+    #tags_found = tags_in_stream | tags_in_format
+    tags_found = {**tags_in_stream, **tags_in_format}
 
     # add duration of stream #0
     try:
@@ -238,7 +246,8 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False, noclip=False):
             "liq_loudness", "liq_loudness_range", "liq_reference_loudness",
             "replaygain_track_gain", "replaygain_track_range",
             "replaygain_reference_loudness",
-            "liq_true_peak"
+            "liq_true_peak_db",
+            "liq_true_peak",  # in case old " dBFS" values were stored in v1.2.3
         ]
         for tag in suffixed_tags:
             if tag in tags:
@@ -301,19 +310,20 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False, noclip=False):
         # liq_amplify or liq_reference_loudness missing, must re-analyse
         skip_analysis = False
 
-    # we need liq_true_peak if noclip is requested
+    # we need liq_true_peak_db if noclip is requested
     if (
         skip_analysis
-        and "liq_true_peak" in tags_found
+        and "liq_true_peak_db" in tags_found
+        and "liq_true_peak" in tags_found  # for RG tag writing
         and "liq_loudness" in tags_found
     ):
         tags_found["liq_amplify"], tags_found["liq_amplify_adjustment"] = \
             amplify_correct(
                 target,
                 tags_found["liq_loudness"],
-                tags_found["liq_true_peak"],
+                tags_found["liq_true_peak_db"],
                 noclip
-        )
+            )
     else:
         skip_analysis = False
 
@@ -363,6 +373,16 @@ def add_missing(tags_found, target=TARGET_LUFS, blankskip=False, noclip=False):
 
     if "liq_reference_loudness" not in tags_found:
         tags_found["liq_reference_loudness"] = target
+
+    # for RG tag writing
+    if "replaygain_track_gain" not in tags_found:
+        tags_found["replaygain_track_gain"] = tags_found["liq_amplify"]
+    if "replaygain_track_peak" not in tags_found:
+        tags_found["replaygain_track_peak"] = tags_found["liq_true_peak"]
+    if "replaygain_track_range" not in tags_found:
+        tags_found["replaygain_track_range"] = tags_found["liq_loudness_range"]
+    if "replaygain_reference_loudness" not in tags_found:
+        tags_found["replaygain_reference_loudness"] = tags_found["liq_reference_loudness"]
 
     return tags_found
 
@@ -584,13 +604,19 @@ def analyse(
         "liq_reference_loudness": target,
         "liq_blankskip": blankskip,
         "liq_blank_skipped": blank_skipped,
-        "liq_true_peak": true_peak_dB
+        "liq_true_peak": true_peak,
+        "liq_true_peak_db": true_peak_dB,
+        # for RG writing
+        "replaygain_track_gain": amplify,
+        "replaygain_track_peak": true_peak,
+        "replaygain_track_range": loudness_range,
+        "replaygain_reference_loudness": target
     })
 
 
-def write_tags(filename, tags={}):
+def write_tags(filename, tags={}, replaygain=False):
     # Add the liq_* tags (and only these)
-    # Don’t touch replaygain_track_gain or R128_TRACK_GAIN.
+    # Only touch replaygain_track_gain or R128_TRACK_GAIN if so requested.
     # Only write tags to files if we can safely do so.
     filename = Path(filename)
 
@@ -602,19 +628,55 @@ def write_tags(filename, tags={}):
         temp = filename.with_suffix('.tmp' + filename.suffix)
         # print(temp)
 
+        rg_tags = [
+            "replaygain_track_gain",
+            "replaygain_track_peak",
+            "replaygain_track_range",
+            "replaygain_reference_loudness"
+        ]
         # copy only `liq_*`, float with 2 decimals, bools and strings lowercase
         tags_new = {k: "{:.2f}".format(v)
                     if isinstance(v, float) else str(v).lower()
-                    for k, v in tags.items() if k.startswith("liq_")
+                    for k, v in tags.items() if k.startswith("liq_") or k in rg_tags
                     }
+        # liq_true_peak & replaygain_track_peak have 6 decimals, fix it
+        if "liq_true_peak" in tags_new:
+            tags_new["liq_true_peak"] = "{:.6f}".format(tags["liq_true_peak"])
+        if "replaygain_track_peak" in tags_new:
+            tags_new["replaygain_track_peak"] = "{:.6f}".format(tags["replaygain_track_peak"])
+
+        # pre-calculate Opus R128_TRACK_GAIN (ref: -23 LUFS), just in case
+        target = tags["liq_reference_loudness"]
+        og = str(int((tags["liq_amplify"] - (target - -23.0)) * 256))
+        tags_new["R128_TRACK_GAIN"] = og
+
         # add the units
         tags_new["liq_amplify"] += " dB"
         tags_new["liq_amplify_adjustment"] += " dB"
         tags_new["liq_loudness"] += " LUFS"
         tags_new["liq_loudness_range"] += " LU"
         tags_new["liq_reference_loudness"] += " LUFS"
-        tags_new["liq_true_peak"] += " dBFS"
-        # print(temp, json.dumps(tags_new, indent=2))
+        tags_new["liq_true_peak_db"] += " dBFS"
+        tags_new["replaygain_track_gain"] += " dB"
+        tags_new["replaygain_track_range"] += " dB"
+        tags_new["replaygain_reference_loudness"] += " LUFS"
+
+        if replaygain:
+            # delete unwanted tags
+            if filename.suffix.casefold() == ".opus":
+                # for Opus, delete the `replaygain_*` tags
+                for k in rg_tags:
+                    tags_new.pop(k, None)
+            else:
+                # for all others, delete Opus Track Gain tag
+                del tags_new["R128_TRACK_GAIN"]
+        else:
+            # no ReplayGain override, remove all "gain" type tags
+            for k in rg_tags:
+                tags_new.pop(k, None)
+            del tags_new["R128_TRACK_GAIN"]
+
+        # print(replaygain, temp, json.dumps(tags_new, indent=2))
 
         if MUTAGEN_AVAILABLE and filename.suffix.casefold() in mp4_ext:
             # MP4-like files using Apple iTunes type tags
@@ -843,6 +905,14 @@ parser.add_argument(
     default=False,
     action='store_true')
 parser.add_argument(
+    "-r",
+    "--replaygain",
+    help="Write ReplayGain tags to file (track only, no album). Useful if "
+    "your files have no previous RG tags. Only valid if -w/--write is also "
+    "specified.",
+    default=False,
+    action='store_true')
+parser.add_argument(
     "-f",
     "--force",
     help="Force re-analysis, even if tags exist",
@@ -879,7 +949,7 @@ else:
 # print(result)
 
 if args.write:
-    write_tags(args.file, result)
+    write_tags(args.file, result, args.replaygain)
 
 # prepare JSON result
 # we use "dB" instead of "LU" units, because LS & others don’t understand "LU"
@@ -898,7 +968,8 @@ liq_result = {
     "liq_reference_loudness": f"{result['liq_reference_loudness']:.2f} LUFS",
     "liq_blankskip": result['liq_blankskip'],
     "liq_blank_skipped": result['liq_blank_skipped'],
-    "liq_true_peak": f"{result['liq_true_peak']:.2f} dBFS",
+    "liq_true_peak": result['liq_true_peak'],
+    "liq_true_peak_db": f"{result['liq_true_peak_db']:.2f} dBFS",
 }
 
 # output compact (one line) JSON, for use in Liquidsoap "autocue:" protocol
