@@ -25,12 +25,14 @@
 # 2024-06-04 Moonbase59 - v1.2.0 Ensure all supported file types tagged safely.
 #                       - Show Mutagen status, supported file types in help.
 #                       - v1.2.1 Much more informative help, nicer formatting.
+#                       - v1.2.2 Limit -t/--target input range to -23.0..0.0
+#                       - v1.2.3 Limit all params to sensible ranges
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
 
 __author__ = 'Matthias C. Hormann'
-__version__ = '1.2.1'
+__version__ = '1.2.3'
 
 import os
 import tempfile
@@ -317,16 +319,16 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False, noclip=False):
 
     # if liq_blankskip different from requested, we need a re-analysis
     if (skip_analysis
-                and "liq_blankskip" in tags_found
-                and (tags_found["liq_blankskip"] != blankskip)
-            ):
+        and "liq_blankskip" in tags_found
+        and (tags_found["liq_blankskip"] != blankskip)
+        ):
         skip_analysis = False
 
     # liq_loudness_range is only informational but we want to show correct values
     # can’t blindly take replaygain_track_range—it might be in different unit
     if (skip_analysis
-                and "liq_loudness_range" not in tags_found
-            ):
+        and "liq_loudness_range" not in tags_found
+        ):
         skip_analysis = False
 
     # print(skip_analysis, json.dumps(tags_found, indent=2))
@@ -703,7 +705,7 @@ class Range(argparse.Action):
 
     def __call__(self, parser, namespace, value, option_string=None):
         if not (self.min <= value <= self.max):
-            msg = "invalid choice: %r (choose from [%d-%d])" % (
+            msg = "invalid choice: %r (range %.1f to %.1f)" % (
                 value,
                 self.min,
                 self.max,
@@ -741,9 +743,6 @@ class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter):
         return "\n".join(new)
 
 
-
-
-
 parser = argparse.ArgumentParser(
     description=f"""
 Analyse audio file for cue-in, cue-out, overlay and EBU R128 loudness data, results as JSON. Optionally writes tags to original audio file, avoiding unnecessary re-analysis and getting results MUCH faster. This software is mainly intended for use with my Liquidsoap \"autocue:\" protocol.
@@ -772,35 +771,54 @@ parser.add_argument(
     version='%(prog)s {version}'.format(
         version=__version__))
 parser.add_argument("file", help="File to be processed")
-parser.add_argument("-t", "--target", help="LUFS reference target",
-                    default=TARGET_LUFS, type=float)
+parser.add_argument(
+    "-t",
+    "--target",
+    minimum=-23.0,
+    maximum=0.0,
+    action=Range,
+    default=TARGET_LUFS,
+    help="LUFS reference target; %(min).1f to %(max).1f",
+    type=float)
 parser.add_argument(
     "-s",
     "--silence",
+    minimum=-96.0,
+    maximum=0.0,
+    action=Range,
+    default=SILENCE,
     help="LU below integrated track loudness for cue-in & cue-out points "
     "(silence removal at beginning & end of a track)",
-    default=SILENCE,
     type=float)
 parser.add_argument(
     "-o",
     "--overlay",
-    help="LU below integrated track loudness to trigger next track",
+    minimum=-96.0,
+    maximum=0.0,
+    action=Range,
     default=OVERLAY_LU,
+    help="LU below integrated track loudness to trigger next track",
     type=float)
 parser.add_argument(
     "-l",
     "--longtail",
+    minimum=0.0,
+    maximum=60.0,
+    action=Range,
+    default=LONGTAIL_SECONDS,
     help="More than so many seconds of calculated overlay duration are considered "
     "a long tail, and will force a recalculation using --extra, thus keeping long "
     "song endings intact",
-    default=LONGTAIL_SECONDS,
     type=float)
 parser.add_argument(
     "-x",
     "--extra",
+    minimum=-96.0,
+    maximum=0.0,
+    action=Range,
+    default=LONGTAIL_EXTRA_LU,
     help="Extra LU below overlay loudness to trigger next track for songs "
     "with long tail",
-    default=LONGTAIL_EXTRA_LU,
     type=float)
 parser.add_argument(
     "-k",
