@@ -2,7 +2,8 @@
 # encoding: utf-8
 
 # cue_file
-# 2024-03-23 Moonbase59
+# 2024-02-08 Moonbase59 - first unpublished test versions
+# 2024-03-23 Moonbase59 - first published version
 # 2024-04-11 Moonbase59 - Added liq_cross_start_next
 # 2024-04-12 Moonbase59 - Rename `liq_duration` -> `liq_cue_duration`
 #                       - Change to create correctly typed JSON (thanks @toots!)
@@ -19,9 +20,16 @@
 #                         liq_amplify_adjustment. Adds liq_true_peak in dBFS.
 # 2024-05-04 Moonbase59 - Fix liq_loudness unit: It is LUFS, not dB
 #                       - Add (informational) liq_loudness_range
+# 2024-06-02 Moonbase59 - use Mutagen for writing tags to MP4-type files
+#                       - v1.1.0 add version numbering (semver)
+# 2024-06-04 Moonbase59 - v1.2.0 Ensure all supported file types tagged safely.
+#                       - Show Mutagen status, supported file types in help.
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
+
+__author__ = 'Matthias C. Hormann'
+__version__ = '1.2.0'
 
 import os
 import tempfile
@@ -31,6 +39,18 @@ import json
 import re
 import math
 from pathlib import Path
+
+# see if we have Mutagen and import it if available
+try:
+    import mutagen
+    import mutagen.id3
+    import mutagen.apev2
+    import mutagen.mp4
+    import mutagen.aiff
+    import mutagen.wave
+    MUTAGEN_AVAILABLE = True
+except ImportError:
+    MUTAGEN_AVAILABLE = False
 
 # Default presets
 FFMPEG = "ffmpeg"  # location of the ffmpeg binary
@@ -46,6 +66,45 @@ LONGTAIL_SECONDS = 15.0
 LONGTAIL_EXTRA_LU = -15.0  # reduce 15 dB extra on long tail songs to find overlap point
 NICE = False  # use Linux/MacOS nice?
 
+# These file types can be handled correctly by ffmpeg
+safe_ext = [
+    ".mp3",  # ID3
+    ".flac", ".spx", ".opus",  # Vorbis Comment
+    ".ogg", ".oga", ".ogv",  # Vorbis Comment
+    ".wma", ".wmv", ".asf",  # ASF/WMA tags
+]
+
+# For all file types below we need Mutagen; ffmpeg corrupts these
+
+# MP4-like files using Apple iTunes-type tags
+mp4_ext = [".m4a", ".m4b", ".m4p", ".m4v", ".m4r", ".mp4", ".alac"]
+
+# ID3v2 file types
+id3_ext = [".mp2", ".m2a"]
+
+# AIFF, non-compat ID3 tags
+aiff_ext = [".aiff", ".aif", ".aifc"]
+
+# WAVE, RIFF, LIST INFO chunk, 'ID3 '/'id3 ' chunks; no 'BWF_'
+wav_ext = [".wav"]
+
+# File types using APEv2 tags
+ape_ext = [
+    ".mpc", ".mp+",  # Musepack
+    ".wv",  # WavPack
+    ".ofr", ".ofs",  # OptimFROG
+    ".ape",  # Monkey's Audio
+    ".aac",  # ADTS/ADIF AAC (raw)
+]
+
+if MUTAGEN_AVAILABLE:
+    # Add the file types we can't tag safely.with ffmpeg
+    safe_ext.extend(mp4_ext)
+    safe_ext.extend(id3_ext)
+    safe_ext.extend(aiff_ext)
+    safe_ext.extend(ape_ext)
+    safe_ext.extend(wav_ext)
+
 # minimum set of tags after "read_tags" that must be there before skipping
 # analysis
 tags_mandatory = set([
@@ -56,9 +115,8 @@ tags_mandatory = set([
     "replaygain_track_gain",
 ])
 
+
 # bool() returns True for every nonempty string, so use a function
-
-
 def is_true(v):
     return v.lower() == 'true'
 
@@ -112,6 +170,8 @@ def amplify_correct(target, loudness, true_peak_dB, noclip):
 
 
 def read_tags(filename, target=TARGET_LUFS, blankskip=False, noclip=False):
+    # NOTE: Older ffmpeg/ffprobe don’t read ID3 tags if RIFF chunk found,
+    #   see https://trac.ffmpeg.org/ticket/9848
     # ffprobe -v quiet -show_entries
     # 'stream=codec_name:stream_tags:format_tags' -print_format json=compact=1
     # filename
@@ -257,14 +317,14 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False, noclip=False):
     if (skip_analysis
             and "liq_blankskip" in tags_found
             and (tags_found["liq_blankskip"] != blankskip)
-        ):
+            ):
         skip_analysis = False
 
     # liq_loudness_range is only informational but we want to show correct values
     # can’t blindly take replaygain_track_range—it might be in different unit
     if (skip_analysis
             and "liq_loudness_range" not in tags_found
-        ):
+            ):
         skip_analysis = False
 
     # print(skip_analysis, json.dumps(tags_found, indent=2))
@@ -526,60 +586,132 @@ def analyse(
 
 def write_tags(filename, tags={}):
     # Add the liq_* tags (and only these)
-    # Don’t touch replaygain_track_gain or R128_TRACK_GAIN
-    # NOTE: This won’t work with all file types! (.m4a)
+    # Don’t touch replaygain_track_gain or R128_TRACK_GAIN.
+    # Only write tags to files if we can safely do so.
     filename = Path(filename)
 
-    # This doesn’t work cross-device!
-    # temp_file_handle, temp = tempfile.mkstemp(prefix="cue_file.", suffix=filename.suffix)
-    # So we use the same folder, to be able to do an atomic move.
-    temp = filename.with_suffix('.tmp' + filename.suffix)
-    # print(temp)
+    # Only write if "safe" file type and file is writable.
+    if filename.suffix.casefold() in safe_ext and os.access(filename, os.W_OK):
+        # This doesn’t work cross-device!
+        # temp_file_handle, temp = tempfile.mkstemp(prefix="cue_file.", suffix=filename.suffix)
+        # So we use the same folder, to be able to do an atomic move.
+        temp = filename.with_suffix('.tmp' + filename.suffix)
+        # print(temp)
 
-    # copy only `liq_*`, float with 2 decimals, bools and strings lowercase
-    tags_new = {k: "{:.2f}".format(v)
-                if isinstance(v, float) else str(v).lower()
-                for k, v in tags.items() if k.startswith("liq_")
-                }
-    # add the units
-    tags_new["liq_amplify"] += " dB"
-    tags_new["liq_amplify_adjustment"] += " dB"
-    tags_new["liq_loudness"] += " LUFS"
-    tags_new["liq_loudness_range"] += " LU"
-    tags_new["liq_reference_loudness"] += " LUFS"
-    tags_new["liq_true_peak"] += " dBFS"
-    # print(temp, json.dumps(tags_new, indent=2))
+        # copy only `liq_*`, float with 2 decimals, bools and strings lowercase
+        tags_new = {k: "{:.2f}".format(v)
+                    if isinstance(v, float) else str(v).lower()
+                    for k, v in tags.items() if k.startswith("liq_")
+                    }
+        # add the units
+        tags_new["liq_amplify"] += " dB"
+        tags_new["liq_amplify_adjustment"] += " dB"
+        tags_new["liq_loudness"] += " LUFS"
+        tags_new["liq_loudness_range"] += " LU"
+        tags_new["liq_reference_loudness"] += " LUFS"
+        tags_new["liq_true_peak"] += " dBFS"
+        # print(temp, json.dumps(tags_new, indent=2))
 
-    metadata_args = []
-    for k, v in tags_new.items():
-        metadata_args.extend(['-metadata', f'{k}={v}'])
-    # print(metadata_args)
+        if MUTAGEN_AVAILABLE and filename.suffix.casefold() in mp4_ext:
+            # MP4-like files using Apple iTunes type tags
+            f = mutagen.mp4.MP4(filename)
+            if f.tags is None:
+                f.add_tags()
+            for k, v in tags_new.items():
+                f[f'----:com.apple.iTunes:{k}'] = bytes(v, 'utf-8')
+            f.save()
 
-    args = [
-        FFMPEG,
-        '-v', 'quiet',
-        '-y',
-        '-i', str(filename.absolute()),
-        '-map_metadata', '0',
-        *metadata_args,
-        '-c', 'copy',
-        str(temp)
-    ]
-    proc = subprocess.run(args, stdout=subprocess.PIPE, check=True)
+        elif MUTAGEN_AVAILABLE and filename.suffix.casefold() in id3_ext:
+            # Additional file types that use ID3v2 tags; abstract
+            try:
+                t = mutagen.id3.ID3(filename)
+            except mutagen.id3.ID3NoHeaderError:
+                # No ID3 tags? Create an empty block.
+                t = mutagen.id3.ID3()
+            for k, v in tags_new.items():
+                # encoding: LATIN1 (ISO-8859-1)
+                t.add(mutagen.id3.TXXX(encoding=0, desc=k, text=[v]))
+            t.save(filename, v2_version=4, v23_sep='; ')
 
-    # mv temp original; atomic
-    os.replace(str(temp), str(filename.absolute()))
+        elif MUTAGEN_AVAILABLE and filename.suffix.casefold() in ape_ext:
+            # File types using APEv2 tags; abstract
+            try:
+                t = mutagen.apev2.APEv2(filename)
+            except mutagen.apev2.APENoHeaderError:
+                # No APE tags? Create an empty block.
+                t = mutagen.apev2.APEv2()
+            for k, v in tags_new.items():
+                t[k] = v
+            t.save(filename)
+
+        elif MUTAGEN_AVAILABLE and filename.suffix.casefold() in aiff_ext:
+            # AIFF with ID3 tags needs special handling
+            f = mutagen.aiff.AIFF(filename)
+            if f.tags is None:
+                f.add_tags()
+            for k, v in tags_new.items():
+                # encoding: LATIN1 (ISO-8859-1)
+                f.tags.add(mutagen.id3.TXXX(encoding=0, desc=k, text=[v]))
+            f.save(filename, v2_version=4, v23_sep='; ')
+
+        elif MUTAGEN_AVAILABLE and filename.suffix.casefold() in wav_ext:
+            # WAV special 'id3 '/'ID3 ' RIFF chunk containing ID3v2 tags
+            # non-standard, but we can’t use 'BWF_' broadcasting yet
+            f = mutagen.wave.WAVE(filename)
+            if f.tags is None:
+                f.add_tags()
+            for k, v in tags_new.items():
+                # encoding: LATIN1 (ISO-8859-1)
+                f.tags.add(mutagen.id3.TXXX(encoding=0, desc=k, text=[v]))
+            f.save(filename, v2_version=4, v23_sep='; ')
+
+        else:
+            # Use ffmpeg for the "safe" file types it doesn’t corrupt.
+            metadata_args = []
+            for k, v in tags_new.items():
+                metadata_args.extend(['-metadata', f'{k}={v}'])
+            # print(metadata_args)
+
+            args = [
+                FFMPEG,
+                '-v', 'quiet',
+                '-y',
+                '-i', str(filename.absolute()),
+                '-map_metadata', '0',
+                # '-movflags', 'use_metadata_tags',
+                *metadata_args,
+                '-c', 'copy',
+                str(temp)
+            ]
+            proc = subprocess.run(args, stdout=subprocess.PIPE, check=True)
+
+            # mv temp original; atomic
+            os.replace(str(temp), str(filename.absolute()))
 
     return
 
 
 # CLI command parser and help text
-parser = argparse.ArgumentParser(
-    description="Return cue-in, cue-out, overlay and replaygain data for an audio "
-    "file as JSON. To be used with my Liquidsoap \"autocue:\" protocol.",
-    epilog="Please report any issues to https://github.com/Moonbase59/autocue/issues",
-    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+class RawTextArgumentDefaultsHelpFormatter(
+        argparse.ArgumentDefaultsHelpFormatter,
+        argparse.RawDescriptionHelpFormatter):
+    pass
 
+
+parser = argparse.ArgumentParser(
+    description=f"Return cue-in, cue-out, overlay and replaygain data for an audio "
+    f"file as JSON. To be used with my Liquidsoap \"autocue:\" protocol.\n"
+    f"\n"
+    f"%(prog)s {__version__} supports writing tags to the following file types:\n"
+    f"{', '.join(sorted(safe_ext))}",
+    epilog="Please report any issues to https://github.com/Moonbase59/autocue/issues",
+    formatter_class=RawTextArgumentDefaultsHelpFormatter)
+parser.add_argument(
+    "-V",
+    "--version",
+    action='version',
+    version='%(prog)s {version}'.format(
+        version=__version__))
 parser.add_argument("file", help="File to be processed")
 parser.add_argument("-t", "--target", help="LUFS reference target",
                     default=TARGET_LUFS, type=float)
@@ -629,9 +761,9 @@ parser.add_argument(
 parser.add_argument(
     "-w",
     "--write",
-    help="Write Liquidsoap liq_* tags to file. USE WITH CARE, as ffmpeg can't "
-    "write all tags to all file types! Ensure you have enough free space to "
-    "hold a copy of the original file.",
+    help=f"Write Liquidsoap liq_* tags to file. Many more file types available "
+    f"when Mutagen is installed ({MUTAGEN_AVAILABLE}). Ensure you have enough "
+    f"free space to hold a copy of the original file.",
     default=False,
     action='store_true')
 parser.add_argument(
