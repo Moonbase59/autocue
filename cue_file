@@ -24,12 +24,13 @@
 #                       - v1.1.0 add version numbering (semver)
 # 2024-06-04 Moonbase59 - v1.2.0 Ensure all supported file types tagged safely.
 #                       - Show Mutagen status, supported file types in help.
+#                       - v1.2.1 Much more informative help, nicer formatting.
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
 
 __author__ = 'Matthias C. Hormann'
-__version__ = '1.2.0'
+__version__ = '1.2.1'
 
 import os
 import tempfile
@@ -39,6 +40,7 @@ import json
 import re
 import math
 from pathlib import Path
+import textwrap
 
 # see if we have Mutagen and import it if available
 try:
@@ -315,15 +317,15 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False, noclip=False):
 
     # if liq_blankskip different from requested, we need a re-analysis
     if (skip_analysis
-            and "liq_blankskip" in tags_found
-            and (tags_found["liq_blankskip"] != blankskip)
+                and "liq_blankskip" in tags_found
+                and (tags_found["liq_blankskip"] != blankskip)
             ):
         skip_analysis = False
 
     # liq_loudness_range is only informational but we want to show correct values
     # can’t blindly take replaygain_track_range—it might be in different unit
     if (skip_analysis
-            and "liq_loudness_range" not in tags_found
+                and "liq_loudness_range" not in tags_found
             ):
         skip_analysis = False
 
@@ -692,20 +694,77 @@ def write_tags(filename, tags={}):
 
 
 # CLI command parser and help text
-class RawTextArgumentDefaultsHelpFormatter(
-        argparse.ArgumentDefaultsHelpFormatter,
-        argparse.RawDescriptionHelpFormatter):
-    pass
+class Range(argparse.Action):
+    def __init__(self, minimum=None, maximum=None, *args, **kwargs):
+        self.min = minimum
+        self.max = maximum
+        # kwargs["metavar"] = "[%d-%d]" % (self.min, self.max)
+        super().__init__(*args, **kwargs)
+
+    def __call__(self, parser, namespace, value, option_string=None):
+        if not (self.min <= value <= self.max):
+            msg = "invalid choice: %r (choose from [%d-%d])" % (
+                value,
+                self.min,
+                self.max,
+            )
+            raise argparse.ArgumentError(self, msg)
+        setattr(namespace, self.dest, value)
+
+
+class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter):
+    """Format output of help text nicely.
+
+    This works like ``ArgumentDefaultsHelpFormatter`` plus
+    ``RawDescriptionHelpFormatter`` in one: It wraps arguments, prolog
+    and epilog nicely at terminal width and also keeps newlines in
+    prolog and epilog intact.
+    """
+
+    def _fill_text(self, text, width, indent):
+        lines = text.strip().splitlines(keepends=True)
+        new = []
+        # if 'replace_whitespace=False' is used, textwrap makes a mess
+        # we need to call it line by line
+        for line in lines:
+            new.append(
+                "\n".join(
+                    textwrap.wrap(
+                        line,
+                        width,
+                        initial_indent=indent,
+                        subsequent_indent=indent,
+                        replace_whitespace=False,
+                    )
+                )
+            )
+        return "\n".join(new)
+
+
+
 
 
 parser = argparse.ArgumentParser(
-    description=f"Return cue-in, cue-out, overlay and replaygain data for an audio "
-    f"file as JSON. To be used with my Liquidsoap \"autocue:\" protocol.\n"
-    f"\n"
-    f"%(prog)s {__version__} supports writing tags to the following file types:\n"
-    f"{', '.join(sorted(safe_ext))}",
-    epilog="Please report any issues to https://github.com/Moonbase59/autocue/issues",
-    formatter_class=RawTextArgumentDefaultsHelpFormatter)
+    description=f"""
+Analyse audio file for cue-in, cue-out, overlay and EBU R128 loudness data, results as JSON. Optionally writes tags to original audio file, avoiding unnecessary re-analysis and getting results MUCH faster. This software is mainly intended for use with my Liquidsoap \"autocue:\" protocol.
+
+%(prog)s {__version__} supports writing tags to these file types:
+{', '.join(sorted(safe_ext))}.
+More file types are available when Mutagen is installed ({MUTAGEN_AVAILABLE}).
+""",
+    epilog=f"""
+%(prog)s {__version__} knows about these tags:
+{', '.join(sorted(tags_to_check.keys()))}.
+
+The absolute minimum set to (possibly) avoid a re-analysis is:
+{', '.join(sorted(tags_mandatory))}.
+
+A full audio file analysis can take some time. %(prog)s tries to avoid a (re-)analysis if all required data can be read from existing tags in the file.
+
+Please report any issues to https://github.com/Moonbase59/autocue/issues
+""",
+    formatter_class=CustomFormatter)
+
 parser.add_argument(
     "-V",
     "--version",
@@ -761,15 +820,14 @@ parser.add_argument(
 parser.add_argument(
     "-w",
     "--write",
-    help=f"Write Liquidsoap liq_* tags to file. Many more file types available "
-    f"when Mutagen is installed ({MUTAGEN_AVAILABLE}). Ensure you have enough "
-    f"free space to hold a copy of the original file.",
+    help="Write Liquidsoap liq_* tags to file. Ensure you have enough "
+    "free space to hold a copy of the original file.",
     default=False,
     action='store_true')
 parser.add_argument(
     "-f",
     "--force",
-    help="Force re-calculation, even if tags exist",
+    help="Force re-analysis, even if tags exist",
     default=False,
     action='store_true')
 parser.add_argument(
