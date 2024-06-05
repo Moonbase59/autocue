@@ -16,6 +16,7 @@
 # 2024-06-04 - Moonbase59 - v2.0.0 Breaking: Add -r/--replaygain overwrite
 #                         - Changed `liq_true_peak` to `liq_true_peak_db`,
 #                           add new `liq_true_peak` (linear, like RG)
+# 2024-06-05 - Moonbase59 - v2.0.2 Initial display of version, at log level 2.
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -29,7 +30,7 @@ let settings.autocue.cue_file.version =
   settings.make(
     description=
       "Software version of autocue.cue_file. Should coincide with `cue_file`.",
-    "2.0.1"
+    "2.0.2"
   )
 
 let settings.autocue.cue_file.path =
@@ -680,6 +681,16 @@ settings.autocue.metadata.priority := 10
 settings.autocue.preferred := "cue_file"
 # avoid dead air from reconcile, reset default 3.0s to our fade_out duration
 settings.autocue.target_cross_duration := settings.autocue.cue_file.fade_out()
+
+# Let user know what version (s)he is running
+log(level=2, label="autocue.cue_file",
+  'You are using autocue.cue_file version \
+   #{settings.autocue.cue_file.version()}.'
+)
+log(level=2, label="autocue.cue_file",
+  'Assure that the external "#{settings.autocue.cue_file.path()}" \
+   has the same version!'
+)
 
 # --- Copy-paste Azuracast LS Config, second input box END ---
 

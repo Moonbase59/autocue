@@ -30,7 +30,7 @@ to_live = ref(false)
 
 # --- Copy-paste your settings into AzuraCast, second input box AFTER above file ---
 
-settings.autocue.cue_file.path := "./cue_file"
+settings.autocue.cue_file.path := "cue_file"
 # settings.autocue.cue_file.fade_in := 0.1
 # settings.autocue.cue_file.fade_out := 2.5
 # settings.autocue.cue_file.timeout := 60.0
@@ -42,9 +42,9 @@ settings.autocue.cue_file.path := "./cue_file"
 settings.autocue.cue_file.noclip := true  # clipping prevention
 settings.autocue.cue_file.blankskip := true
 # settings.autocue.cue_file.unify_loudness_correction := true
-settings.autocue.cue_file.write_tags := true
-settings.autocue.cue_file.write_replaygain := true
-settings.autocue.cue_file.force_analysis := true
+# settings.autocue.cue_file.write_tags := true  # testing
+# settings.autocue.cue_file.write_replaygain := true  # testing
+# settings.autocue.cue_file.force_analysis := true  # testing
 settings.autocue.cue_file.nice := true  # Linux/MacOS only!
 
 # `enable_autocue_metadata()` will autocue ALL files Liquidsoap processes.
@@ -82,6 +82,9 @@ jingles = playlist(prefix='annotate:jingle_mode="true",liq_blankskip="false",'
 #radio = random(weights=[1,1,1], [songs, jingles, single])
 radio = random(weights=[1,1], [songs, jingles])
 radio = amplify(1.,override="liq_amplify",radio)
+
+# "Fake" LUFS playout adjust. Calculate at -18, play at -14 ;-)
+# radio = amplify(lin_of_dB(4.0), override=null(), radio)
 
 
 # --- Copy-paste Azuracast LS Config, third input box BEGIN ---

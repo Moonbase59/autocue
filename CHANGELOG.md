@@ -1,5 +1,17 @@
 # autocue changelog
 
+### 2024-06-05 - v2.0.2
+
+- Show autocue.cue_file version number in Liquidsoap log on startup,
+  to ease bug hunting. Your `cue_file` should use the same version.
+
+The log entry looks like this:
+
+```
+2024/06/05 16:16:03 [autocue.cue_file:2] You are using autocue.cue_file version 2.0.2.
+2024/06/05 16:16:03 [autocue.cue_file:2] Assure that the external "cue_file" has the same version!
+```
+
 ### 2024-06-04 - v2.0.1
 
 - Fix small bug when reading already stored `liq_true_peak` that contained

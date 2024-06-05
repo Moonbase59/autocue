@@ -32,12 +32,13 @@
 #                         add new `liq_true_peak` (linear, like RG)
 #                       - v2.0.1 Fix `liq_true_peak` reading when it still
 #                         contains ` dBFS` from v1.2.3.
+# 2024-06-05 Moonbase59 - No change, just version number.
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
 
 __author__ = 'Matthias C. Hormann'
-__version__ = '2.0.1'
+__version__ = '2.0.2'
 
 import os
 import tempfile
