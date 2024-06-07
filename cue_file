@@ -33,6 +33,7 @@
 #                       - v2.0.1 Fix `liq_true_peak` reading when it still
 #                         contains ` dBFS` from v1.2.3.
 # 2024-06-05 Moonbase59 - No change, just version number.
+# 2024-06-07 RM-FM      - Added Sustaind Endings feature.
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
@@ -75,6 +76,13 @@ OVERLAY_LU = -8.0  # LU below average for overlay trigger (start next song)
 LONGTAIL_SECONDS = 15.0
 LONGTAIL_EXTRA_LU = -15.0  # reduce 15 dB extra on long tail songs to find overlap point
 NICE = False  # use Linux/MacOS nice?
+
+# 2024-06-07 RM-FM
+# Sustained ending defaults (testing purposes)
+sustained_endings = True # enable sustained endings check
+sustained_endings_slope = 20.0 # slope threshold in %
+sustained_endings_dropoff = 15.0 # drop-off threshold in %
+sustained_endings_threshold_limit = 2.0 # max reduction compared to initial target as (multiplying factor)
 
 # These file types can be handled correctly by ffmpeg
 safe_ext = [
@@ -558,6 +566,61 @@ def analyse(
             start_next_time = measure[i][0]
             break
     start_next_time = max(start_next_time, cue_out_time - start_next_time)
+
+    # 2024-06-07 RM-FM
+    # Added sustained ending algorithm
+    sustained_ending_detected = False
+    if sustained_endings:
+        # Sustained ending is enabled
+        ending_1_db = 0
+        ending_2_db = 0
+        cross_start_idx = start_next_idx + 5
+        cross_end_idx = end - 5
+        cross_frame_length = cross_end_idx - cross_start_idx
+
+        # Minimum cross/overlap duration: 1s
+        if cross_frame_length >= 10:
+            cross_mid_idx = cross_end_idx - (cross_frame_length // 2)
+
+            # Calculate avg. dB for 1st half of ending
+            for i in range(cross_start_idx, cross_mid_idx):
+                if ending_1_db < 0:
+                    ending_1_db = (ending_1_db + measure[i][1]) / 2
+                else:
+                    ending_1_db = measure[i][1]   
+
+            # Calculate avg. dB for 2nd half of ending    
+            for i in range(cross_mid_idx, cross_end_idx):
+                if ending_2_db < 0:
+                    ending_2_db = (ending_2_db + measure[i][1]) / 2
+                else:
+                    ending_2_db = measure[i][1]
+
+            # Calculate drop-off and slope
+            dropoff = 0
+            slope = 0
+            is_slope = False
+            is_dropoff = False
+            if ending_1_db < 0:
+                dropoff = start_next_level / ending_1_db
+                if ending_2_db < 0:
+                    slope = ending_1_db / ending_2_db
+                #Set slope and drop-off detection status
+                is_slope = slope > 1 - (sustained_endings_slope / 100)
+                is_dropoff = ending_1_db > start_next_level * (sustained_endings_dropoff / 100 + 1)
+
+            if is_slope or is_dropoff:
+                sustained_ending_detected = True
+                if is_dropoff:
+                    start_next_level = max(start_next_level * sustained_endings_threshold_limit, ending_1_db - 0.5)
+                if is_slope:
+                    start_next_level = max(start_next_level * sustained_endings_threshold_limit, ending_2_db - 0.5)
+                # Recalulate start_next_time with sustained ending threshold
+                for i in reversed(range(start_next_idx, end)):
+                    if measure[i][1] > start_next_level:
+                        start_next_time = measure[i][0]
+                        break
+                start_next_time = max(start_next_time, cue_out_time - start_next_time)
 
     # We want to keep songs with a long fade-out intact, so if the calculated
     # overlap is longer than the "longtail_seconds" time, we check again, by reducing
