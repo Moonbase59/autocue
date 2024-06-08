@@ -1,6 +1,11 @@
 # autocue changelog
 
-### 2024-06-05 - v2.0.2
+### 2024-06-08 – v2.0.3
+
+- Fix ffmpeg erroneously treating `.ogg` files with cover image as video.
+  The `.ogg` filetype is now handled by Mutagen.
+
+### 2024-06-05 – v2.0.2
 
 - Show autocue.cue_file version number in Liquidsoap log on startup,
   to ease bug hunting. Your `cue_file` should use the same version.
