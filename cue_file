@@ -33,12 +33,13 @@
 #                       - v2.0.1 Fix `liq_true_peak` reading when it still
 #                         contains ` dBFS` from v1.2.3.
 # 2024-06-05 Moonbase59 - No change, just version number.
+# 2024-06-08 Moonbase59 - v2.0.3 Fix ffmpeg treating `.ogg` with cover as video
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
 
 __author__ = 'Matthias C. Hormann'
-__version__ = '2.0.2'
+__version__ = '2.0.3'
 
 import os
 import tempfile
@@ -58,6 +59,7 @@ try:
     import mutagen.mp4
     import mutagen.aiff
     import mutagen.wave
+    import mutagen.oggvorbis
     MUTAGEN_AVAILABLE = True
 except ImportError:
     MUTAGEN_AVAILABLE = False
@@ -80,7 +82,7 @@ NICE = False  # use Linux/MacOS nice?
 safe_ext = [
     ".mp3",  # ID3
     ".flac", ".spx", ".opus",  # Vorbis Comment
-    ".ogg", ".oga", ".ogv",  # Vorbis Comment
+    ".oga", ".ogv",  # Vorbis Comment
     ".wma", ".wmv", ".asf",  # ASF/WMA tags
 ]
 
@@ -88,6 +90,9 @@ safe_ext = [
 
 # MP4-like files using Apple iTunes-type tags
 mp4_ext = [".m4a", ".m4b", ".m4p", ".m4v", ".m4r", ".mp4", ".alac"]
+
+# Ogg Vorbis files using VorbisComment tags
+ogg_ext = [".ogg"]
 
 # ID3v2 file types
 id3_ext = [".mp2", ".m2a"]
@@ -110,6 +115,7 @@ ape_ext = [
 if MUTAGEN_AVAILABLE:
     # Add the file types we can't tag safely.with ffmpeg
     safe_ext.extend(mp4_ext)
+    safe_ext.extend(ogg_ext)
     safe_ext.extend(id3_ext)
     safe_ext.extend(aiff_ext)
     safe_ext.extend(ape_ext)
@@ -710,6 +716,15 @@ def write_tags(filename, tags={}, replaygain=False):
             for k, v in tags_new.items():
                 t[k] = v
             t.save(filename)
+
+        elif MUTAGEN_AVAILABLE and filename.suffix.casefold() in ogg_ext:
+            # Ogg file types using VorbisComment tags
+            f = mutagen.oggvorbis.OggVorbis(filename)
+            if f.tags is None:
+                f.add_tags()
+            for k, v in tags_new.items():
+                f[k] = v
+            f.save(filename)
 
         elif MUTAGEN_AVAILABLE and filename.suffix.casefold() in aiff_ext:
             # AIFF with ID3 tags needs special handling
