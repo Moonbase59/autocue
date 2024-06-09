@@ -34,12 +34,16 @@
 #                         contains ` dBFS` from v1.2.3.
 # 2024-06-05 Moonbase59 - No change, just version number.
 # 2024-06-08 Moonbase59 - v2.0.3 Fix ffmpeg treating `.ogg` with cover as video
+# 2024-06-09 Moonbase59 - v2.1.0 Read/override tags from JSON file (can be stdin)
+#                       - Make variable checking more robust (bool & unit suffixes)
+#                       - Add `liq_fade_in` & `liq_fade_out` tags for reading/writing,
+#                         in case a preprocessor needs to set fade durations.
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
 
 __author__ = 'Matthias C. Hormann'
-__version__ = '2.0.3'
+__version__ = '2.1.0'
 
 import os
 import tempfile
@@ -134,42 +138,49 @@ tags_mandatory = set([
 
 # bool() returns True for every nonempty string, so use a function
 def is_true(v):
-    return v.lower() == 'true'
+    if isinstance(v, str):
+        return v.lower() == 'true'
+    elif isinstance(v, bool):
+        return v
+    else:
+        raise ValueError('must be bool or str')
 
 
 # these are the tags to check when reading/writing tags from/to files
 tags_to_check = {
     "duration": float,
+    "liq_amplify_adjustment": float,
+    "liq_amplify": float,  # like replaygain_track_gain
+    "liq_blankskip": is_true,
+    "liq_blank_skipped": is_true,
+    "liq_cross_duration": float,
+    "liq_cross_start_next": float,
     "liq_cue_duration": float,
     "liq_cue_in": float,
     "liq_cue_out": float,
-    "liq_cross_start_next": float,
+    "liq_fade_in": float,
+    "liq_fade_out": float,
     "liq_longtail": is_true,
-    "liq_cross_duration": float,
     "liq_loudness": float,
     "liq_loudness_range": float,  # like replaygain_track_range
-    "liq_amplify": float,  # like replaygain_track_gain
-    "liq_amplify_adjustment": float,
     "liq_reference_loudness": float,  # like replaygain_reference_loudness
-    "liq_blankskip": is_true,
-    "liq_blank_skipped": is_true,
+    "liq_true_peak_db": float,
+    "liq_true_peak": float,
+    "r128_track_gain": int,
+    "replaygain_reference_loudness": float,
     "replaygain_track_gain": float,
     "replaygain_track_peak": float,
     "replaygain_track_range": float,
-    "replaygain_reference_loudness": float,
-    "r128_track_gain": int,
-    "liq_true_peak": float,
-    "liq_true_peak_db": float,
     # reserved for future expansion
-    "liq_ramp1": float,
-    "liq_ramp2": float,
-    "liq_ramp3": float,
     "liq_hook1_in": float,
     "liq_hook1_out": float,
     "liq_hook2_in": float,
     "liq_hook2_out": float,
     "liq_hook3_in": float,
     "liq_hook3_out": float,
+    "liq_ramp1": float,
+    "liq_ramp2": float,
+    "liq_ramp3": float,
 }
 
 
@@ -187,7 +198,12 @@ def amplify_correct(target, loudness, true_peak_dB, noclip):
     return amplify, amplify_correction
 
 
-def read_tags(filename, target=TARGET_LUFS, blankskip=False, noclip=False):
+def read_tags(
+        filename,
+        tags_json={},
+        target=TARGET_LUFS,
+        blankskip=False,
+        noclip=False):
     # NOTE: Older ffmpeg/ffprobe don’t read ID3 tags if RIFF chunk found,
     #   see https://trac.ffmpeg.org/ticket/9848
     # ffprobe -v quiet -show_entries
@@ -224,15 +240,22 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False, noclip=False):
     except KeyError:
         format_items = {}
 
+    # get tags in JSON override file
+    json_items = tags_json.items()
+
     tags_in_stream = {
         k.lower(): v for k,
         v in stream_items if k.lower() in tags_to_check}
     tags_in_format = {
         k.lower(): v for k,
         v in format_items if k.lower() in tags_to_check}
+    tags_in_json = {
+        k.lower(): v for k,
+        v in json_items if k.lower() in tags_to_check}
     # unify, right overwrites left if key in both
-    #tags_found = tags_in_stream | tags_in_format
-    tags_found = {**tags_in_stream, **tags_in_format}
+    # tags_found = tags_in_stream | tags_in_format | tags_in_json
+    tags_found = {**tags_in_stream, **tags_in_format, **tags_in_json}
+    # print(json.dumps(tags_found, indent=2, sort_keys=True))
 
     # add duration of stream #0
     try:
@@ -257,7 +280,7 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False, noclip=False):
             "liq_true_peak",  # in case old " dBFS" values were stored in v1.2.3
         ]
         for tag in suffixed_tags:
-            if tag in tags:
+            if tag in tags and isinstance(tags[tag], str):
                 if tags[tag].endswith(
                         (" dB", " LU", " dBFS", " dBTP", " LUFS")):
                     number, _, _ = tags[tag].rpartition(" ")
@@ -330,25 +353,25 @@ def read_tags(filename, target=TARGET_LUFS, blankskip=False, noclip=False):
                 tags_found["liq_loudness"],
                 tags_found["liq_true_peak_db"],
                 noclip
-            )
+        )
     else:
         skip_analysis = False
 
     # if liq_blankskip different from requested, we need a re-analysis
     if (skip_analysis
-        and "liq_blankskip" in tags_found
-        and (tags_found["liq_blankskip"] != blankskip)
-        ):
+                and "liq_blankskip" in tags_found
+                and (tags_found["liq_blankskip"] != blankskip)
+            ):
         skip_analysis = False
 
     # liq_loudness_range is only informational but we want to show correct values
     # can’t blindly take replaygain_track_range—it might be in different unit
     if (skip_analysis
-        and "liq_loudness_range" not in tags_found
-        ):
+                and "liq_loudness_range" not in tags_found
+            ):
         skip_analysis = False
 
-    # print(skip_analysis, json.dumps(tags_found, indent=2))
+    # print(skip_analysis, json.dumps(tags_found, indent=2, sort_keys=True))
     return skip_analysis, tags_found
 
 
@@ -650,7 +673,8 @@ def write_tags(filename, tags={}, replaygain=False):
         if "liq_true_peak" in tags_new:
             tags_new["liq_true_peak"] = "{:.6f}".format(tags["liq_true_peak"])
         if "replaygain_track_peak" in tags_new:
-            tags_new["replaygain_track_peak"] = "{:.6f}".format(tags["replaygain_track_peak"])
+            tags_new["replaygain_track_peak"] = "{:.6f}".format(
+                tags["replaygain_track_peak"])
 
         # pre-calculate Opus R128_TRACK_GAIN (ref: -23 LUFS), just in case
         target = tags["liq_reference_loudness"]
@@ -940,12 +964,30 @@ parser.add_argument(
     help="Linux/MacOS only: Use nice? Will run analysis at nice level 18.",
     default=False,
     action='store_true')
+parser.add_argument(
+    "-j",
+    "--json",
+    help="Read/override tags from a JSON file. Use - to read from stdin. "
+    "Intended for pre-processing software which can, for instance, fill in "
+    "values from their database here.",
+    type=argparse.FileType('r'),
+)
 
 args = parser.parse_args()
-args.target = float(args.target)
+# args.target = float(args.target)
+
+# read JSON from stdin or file, containing "overriding" or missing tags
+# intended for pre-processing software
+tags_json = {}
+if args.json:
+    try:
+        tags_json = json.load(args.json)
+    except json.decoder.JSONDecodeError:
+        pass
+    args.json.close()
 
 skip_analysis, tags_found = read_tags(
-    args.file, args.target, args.blankskip, args.noclip)
+    args.file, tags_json, args.target, args.blankskip, args.noclip)
 
 if args.force or not skip_analysis:
     result = analyse(
