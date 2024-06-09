@@ -38,6 +38,7 @@
 #                       - Make variable checking more robust (bool & unit suffixes)
 #                       - Add `liq_fade_in` & `liq_fade_out` tags for reading/writing,
 #                         in case a preprocessor needs to set fade durations.
+# 2024-06-09 RM-FM      - Added Sustained Endings feature.
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
@@ -81,6 +82,12 @@ OVERLAY_LU = -8.0  # LU below average for overlay trigger (start next song)
 LONGTAIL_SECONDS = 15.0
 LONGTAIL_EXTRA_LU = -15.0  # reduce 15 dB extra on long tail songs to find overlap point
 NICE = False  # use Linux/MacOS nice?
+
+# Sustained ending defaults
+sustained_endings = True # enable sustained endings check
+sustained_endings_slope = 25 # slope threshold in %
+sustained_endings_dropoff = 15 # drop-off threshold in %
+sustained_endings_threshold_limit = 1.8 # max reduction compared to initial target as multiplying factor
 
 # These file types can be handled correctly by ffmpeg
 safe_ext = [
@@ -161,6 +168,7 @@ tags_to_check = {
     "liq_fade_in": float,
     "liq_fade_out": float,
     "liq_longtail": is_true,
+    "liq_sustained_ending": is_true,
     "liq_loudness": float,
     "liq_loudness_range": float,  # like replaygain_track_range
     "liq_reference_loudness": float,  # like replaygain_reference_loudness
@@ -381,6 +389,9 @@ def add_missing(tags_found, target=TARGET_LUFS, blankskip=False, noclip=False):
 
     if "liq_longtail" not in tags_found:
         tags_found["liq_longtail"] = False
+        
+    if "liq_sustained_ending" not in tags_found:
+        tags_found["liq_sustained_ending"] = False
 
     # if not "liq_cross_duration" in tags_found:
     #    tags_found["liq_cross_duration"] = tags_found["liq_cue_out"] - tags_found["liq_cross_start_next"]
@@ -585,8 +596,72 @@ def analyse(
     for i in reversed(range(start, end)):
         if measure[i][1] > start_next_level:
             start_next_time = measure[i][0]
+            start_next_idx = i
             break
     start_next_time = max(start_next_time, cue_out_time - start_next_time)
+
+    # Added sustained ending algorithm
+    sustained_ending_detected = False
+    ending_1_db = 0 
+    ending_2_db = 0    
+    dropoff = 0
+    slope = 0
+    if sustained_endings:
+        # Sustained ending is enabled
+        tolerance_frames = int((end - start_next_idx) * 0.25)
+        cross_start_idx = start_next_idx + tolerance_frames
+        cross_end_idx = end - tolerance_frames
+        cross_frame_length = cross_end_idx - cross_start_idx
+    
+        # Minimum cross/overlap duration: 1s
+        if cross_frame_length >= 10:
+            cross_mid_idx = cross_end_idx - (cross_frame_length // 2)
+    
+            # Calculate avg. dB for 1st half of ending
+            for i in range(cross_start_idx, cross_mid_idx):
+                if ending_1_db < 0:
+                    ending_1_db = (ending_1_db + measure[i][1]) / 2
+                else:
+                    ending_1_db = measure[i][1]
+    
+            # Calculate avg. dB for 2nd half of ending    
+            for i in range(cross_mid_idx, cross_end_idx):
+                if ending_2_db < 0:
+                    ending_2_db = (ending_2_db + measure[i][1]) / 2
+                else:
+                    ending_2_db = measure[i][1]
+    
+            # Calculate drop-off and slope
+            is_slope = False
+            is_dropoff = False
+            if ending_1_db < 0:
+                dropoff = start_next_level / ending_1_db
+                if ending_2_db < 0:
+                    slope = ending_1_db / ending_2_db
+                #Set slope and drop-off detection status
+                is_slope = slope > 1 - (sustained_endings_slope / 100)
+                is_dropoff = ending_1_db > start_next_level * (sustained_endings_dropoff / 100 + 1)
+    
+            if is_slope or is_dropoff:
+                sustained_ending_detected = True
+                if is_slope:
+                    start_next_level = max(
+                        start_next_level * sustained_endings_threshold_limit,
+                        ending_2_db
+                    )
+                    #ending_2_db - 1
+                else:
+                    start_next_level = max(
+                        start_next_level * sustained_endings_threshold_limit,
+                        ending_1_db
+                    )
+                    #ending_1_db - 1
+                # Recalulate start_next_time with sustained ending threshold
+                for i in reversed(range(start_next_idx, end)):
+                    if measure[i][1] > start_next_level:
+                        start_next_time = measure[i][0]
+                        break
+                start_next_time = max(start_next_time, cue_out_time - start_next_time)
 
     # We want to keep songs with a long fade-out intact, so if the calculated
     # overlap is longer than the "longtail_seconds" time, we check again, by reducing
@@ -626,6 +701,7 @@ def analyse(
         "liq_cue_out": cue_out_time,
         "liq_cross_start_next": start_next_time,
         "liq_longtail": longtail,
+        "liq_sustained_ending": sustained_ending_detected,
         # "liq_cross_duration": cross_duration,
         "liq_loudness": loudness,
         "liq_loudness_range": loudness_range,
@@ -1018,6 +1094,7 @@ liq_result = {
     "liq_cue_out": result['liq_cue_out'],
     "liq_cross_start_next": result['liq_cross_start_next'],
     "liq_longtail": result["liq_longtail"],
+    "liq_sustained_ending": result["liq_sustained_ending"],
     # "liq_cross_duration": result['liq_cross_duration'],
     "liq_loudness": f"{result['liq_loudness']:.2f} LUFS",
     "liq_loudness_range": f"{result['liq_loudness_range']:.2f} LU",
