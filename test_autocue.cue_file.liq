@@ -60,7 +60,9 @@ enable_autocue_metadata()
 #uri = "/home/matthias/Musik/Playlists/Radio/Classic Rock.m3u"
 uri = "/home/matthias/media/videostream/yyy"
 #songs = playlist(prefix="autocue2:", uri)
-songs = playlist(prefix='annotate:liq_dummy="DUMMY":', uri)
+#songs = playlist(prefix='annotate:liq_dummy="DUMMY":', uri)
+# Test: Play 15s snippets by overriding some settings!
+songs = playlist(prefix='annotate:liq_dummy="DUMMY",liq_cue_in=30.0,liq_cue_out=45.0,liq_cross_start_next=44.0,liq_fade_in=1.0,liq_fade_out=2.5:', uri)
 
 # --- Use YOUR playlist here! ---
 uri = "/home/matthias/Musik/Other/Jingles/Short"

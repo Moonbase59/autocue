@@ -18,6 +18,7 @@
 #                           add new `liq_true_peak` (linear, like RG)
 # 2024-06-05 - Moonbase59 - v2.0.2 Initial display of version, at log level 2.
 # 2024-06-08 - Moonbase59 - v2.0.3 Sync version number with cue_file
+# 2024-06-09 - Moonbase59 - v2.1.0 Sync version number with cue_file
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -31,7 +32,7 @@ let settings.autocue.cue_file.version =
   settings.make(
     description=
       "Software version of autocue.cue_file. Should coincide with `cue_file`.",
-    "2.0.3"
+    "2.1.0"
   )
 
 let settings.autocue.cue_file.path =

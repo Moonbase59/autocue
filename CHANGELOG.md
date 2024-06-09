@@ -1,5 +1,24 @@
 # autocue changelog
 
+### 2024-06-09 – v2.1.0
+
+- Prepare for third-party pre-processing software:
+  - A JSON file (or stdin) can now be used to set or override any of the
+    known tags (see help). Values from JSON override values read from the
+    audio file’s tags.
+  - This can be used, for example, to set values from a database (like
+    AzuraCast’s cue and fade data from their Visual Cue Editor).
+  - `cue_file` might _still_ decide a re-analysis being necessary, so it’s
+    wise to re-consolidate the data after `cue_file` has returned its results.
+- More robust variable reading from tags or JSON:
+  - Booleans can be bool or string
+  - Typechecking on tags with unit suffixes, especially `liq_true_peak`,
+    which was a "dbFS"-suffixed string in v1.2.3 and now is a linear float.
+- Added `liq_fade_in` & `liq_fade_out` to known tags. We don’t use these,
+  but pre-processors might want to set them.
+- More advance example in `test_autocue.cue_file.liq` that shows how
+  annotations can be used to play 15-second snippets of songs.
+
 ### 2024-06-08 – v2.0.3
 
 - Fix ffmpeg erroneously treating `.ogg` files with cover image as video.
