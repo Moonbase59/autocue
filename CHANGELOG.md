@@ -13,7 +13,7 @@
 - More robust variable reading from tags or JSON:
   - Booleans can be bool or string
   - Typechecking on tags with unit suffixes, especially `liq_true_peak`,
-    which was a "dbFS"-suffixed string in v1.2.3 and now is a linear float.
+    which was a "dBFS"-suffixed string in v1.2.3 and now is a linear float.
 - Added `liq_fade_in` & `liq_fade_out` to known tags. We don’t use these,
   but pre-processors might want to set them.
 - More advance example in `test_autocue.cue_file.liq` that shows how
