@@ -19,6 +19,9 @@
 # 2024-06-05 - Moonbase59 - v2.0.2 Initial display of version, at log level 2.
 # 2024-06-08 - Moonbase59 - v2.0.3 Sync version number with cue_file
 # 2024-06-09 - Moonbase59 - v2.1.0 Sync version number with cue_file
+# 2024-06-11 - Moonbase59 - v2.2.0 JSON override tags for cue_file in temp file:
+#                           Allows passing annotate/database overrides to
+#                           cue_file, to reduce re-analysis runs even more.
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -32,7 +35,7 @@ let settings.autocue.cue_file.version =
   settings.make(
     description=
       "Software version of autocue.cue_file. Should coincide with `cue_file`.",
-    "2.1.0"
+    "2.2.0"
   )
 
 let settings.autocue.cue_file.path =
@@ -156,6 +159,18 @@ let settings.autocue.cue_file.nice =
   )
 
 stdlib_metadata = metadata
+
+# metadata.json.stringify only exports a limited set, use our own
+def meta_json_stringify(
+  ~compact=false,
+  ~json5=false,
+  m
+) =
+  m = metadata.cover.remove(m)
+  data = json()
+  list.iter(fun (v) -> data.add(fst(v), snd(v)), m)
+  json.stringify(json5=json5, compact=compact, data)
+end
 
 # Compute cue_file data
 # @flag extra
@@ -287,6 +302,17 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
     if force_analysis then args := list.add('-f', args()) end
     if nice then args := list.add('-n', args()) end
 
+    # write metadata to temp file for cue_file to pick up
+    tempfile = file.temp("cue_file", ".json")
+    json_meta = meta_json_stringify(compact=true, meta)
+    log(level=4, label=label, "#{tempfile}: #{json_meta}")
+    file.write(
+      data=json_meta,
+      append=true,
+      tempfile
+    )
+    args := ['-j', tempfile, ...args()]
+
     res = ref("")
     try
       res :=
@@ -305,6 +331,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
       )
       res := ""
     end
+    file.remove(tempfile)
 
     if
       res() != ""
