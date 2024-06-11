@@ -46,6 +46,7 @@ settings.autocue.cue_file.blankskip := true
 # settings.autocue.cue_file.write_replaygain := true  # testing
 # settings.autocue.cue_file.force_analysis := true  # testing
 settings.autocue.cue_file.nice := true  # Linux/MacOS only!
+# settings.autocue.cue_file.use_json_metadata := true  # pass metadata to `cue_file` as JSON
 
 # `enable_autocue_metadata()` will autocue ALL files Liquidsoap processes.
 # You can disable it for selected sources using 'annotate:liq_cue_file=false'.

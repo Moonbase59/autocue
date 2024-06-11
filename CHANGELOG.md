@@ -1,5 +1,17 @@
 # autocue changelog
 
+### 2024-06-11 – v2.2.1
+
+- Make JSON override switchable (`settings.autocue.cue_file.use_json_metadata`).
+  Defaults to `true`.
+- Minor code cleanup (thanks @vitoyucepi).
+
+### 2024-06-11 – v2.2.0 (internal, unreleased)
+
+- JSON override tags for cue_file in temp file:
+  Allows passing annotate/database overrides to cue_file,
+  to reduce re-analysis runs even more.
+
 ### 2024-06-09 – v2.1.0
 
 - Prepare for third-party pre-processing software:

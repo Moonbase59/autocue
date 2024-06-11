@@ -22,6 +22,7 @@
 # 2024-06-11 - Moonbase59 - v2.2.0 JSON override tags for cue_file in temp file:
 #                           Allows passing annotate/database overrides to
 #                           cue_file, to reduce re-analysis runs even more.
+# 2024-06-11 - Moonbase59 - v2.2.1 Make JSON override switchable
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -35,7 +36,7 @@ let settings.autocue.cue_file.version =
   settings.make(
     description=
       "Software version of autocue.cue_file. Should coincide with `cue_file`.",
-    "2.2.0"
+    "2.2.1"
   )
 
 let settings.autocue.cue_file.path =
@@ -158,6 +159,15 @@ let settings.autocue.cue_file.nice =
     false
   )
 
+let settings.autocue.cue_file.use_json_metadata =
+  settings.make(
+    description=
+      'Send metadata to `cue_file` as JSON, allowing to override/add to \
+       autocue-relevant metadata stored in file tags. This can help to avoid \
+       unnecessary re-analysis runs.',
+    true
+  )
+
 stdlib_metadata = metadata
 
 # metadata.json.stringify only exports a limited set, use our own
@@ -187,6 +197,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
   force_analysis = settings.autocue.cue_file.force_analysis()
   nice = settings.autocue.cue_file.nice()
   noclip = settings.autocue.cue_file.noclip()
+  use_json_metadata = settings.autocue.cue_file.use_json_metadata()
 
   label = "autocue.cue_file"
 
@@ -302,20 +313,23 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
     if force_analysis then args := list.add('-f', args()) end
     if nice then args := list.add('-n', args()) end
 
-    # write metadata to temp file for cue_file to pick up
-    tempfile = file.temp("cue_file", ".json")
-    json_meta = meta_json_stringify(compact=true, meta)
-    log(level=4, label=label, "#{tempfile}: #{json_meta}")
-    file.write(
-      data=json_meta,
-      append=true,
-      tempfile
-    )
-    args := ['-j', tempfile, ...args()]
+    tempfile = ref("")
+    if use_json_metadata then
+      # write metadata to temp file for cue_file to pick up
+      tempfile := file.temp("cue_file", ".json")
+      json_meta = meta_json_stringify(compact=true, meta)
+      log(level=4, label=label, "Writing metadata to #{tempfile()}: #{json_meta}")
+      log(level=3, label=label, "Writing metadata to #{tempfile()}")
+      file.write(
+        data=json_meta,
+        append=true,
+        tempfile()
+      )
+      args := ['-j', tempfile(), ...args()]
+    end
 
-    res = ref("")
-    try
-      res :=
+    res =
+      try
         list.hd(
           default="",
           process.read.lines(
@@ -323,23 +337,28 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
             process.quote.command(settings.autocue.cue_file.path(), args=args())
           )
         )
-    catch err do
-      log(
-        level=2,
-        label=label,
-        'cue_file error: #{err}'
-      )
-      res := ""
+      catch err do
+        log(
+          level=2,
+          label=label,
+          'cue_file error: #{err}'
+        )
+        ""
+      end
+
+    if use_json_metadata then
+      # remove tempfile again
+      log(level=4, label=label, "Removing #{tempfile()}")
+      file.remove(tempfile())
     end
-    file.remove(tempfile)
 
     if
-      res() != ""
+      res != ""
     then
       log(
         level=3,
         label=label,
-        'cue_file result for "#{filename}": #{res()}'
+        'cue_file result for "#{filename}": #{res}'
       )
 
       let json.parse (
@@ -380,7 +399,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           liq_true_peak: float,
           liq_true_peak_db: string
         }
-      ) = res()
+      ) = res
 
       # must stringify, because metadata & annotations are strings
       result = ref(
@@ -742,6 +761,7 @@ log(level=2, label="autocue.cue_file",
 # settings.autocue.cue_file.write_replaygain := false  # write ReplayGain tags back to file
 # settings.autocue.cue_file.force_analysis := false  # force re-analysis even if tags found
 # settings.autocue.cue_file.nice := false  # Linux/MacOS only: Use NI=18 for analysis
+# settings.autocue.cue_file.use_json_metadata := true  # pass metadata to `cue_file` as JSON
 
 # `enable_autocue_metadata()` will autocue ALL files Liquidsoap processes.
 # You can disable it for selected sources using 'annotate:liq_cue_file=false'.
