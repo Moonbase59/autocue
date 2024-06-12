@@ -38,12 +38,12 @@
 #                       - Make variable checking more robust (bool & unit suffixes)
 #                       - Add `liq_fade_in` & `liq_fade_out` tags for reading/writing,
 #                         in case a preprocessor needs to set fade durations.
-# 2024-06-10 RM-FM      - Added Sustained Endings feature.
 # 2024-06-11 Moonbase59 - v2.2.0 Sync version numver with autocue.cue_file
 # 2024-06-11 Moonbase59 - v2.2.1 Sync version number with autocue.cue_file
 # 2024-06-11 Moonbase59 - v3.0.0 Add variable blankskip (0.0=off)
 #                       - BREAKING: `liq_blankskip` now flot, not bool anymore!
 #                         Pre-v3.0.0 tags will be read graciously.
+# 2024-06-12 RM-FM      - Added Sustained Endings feature.
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
