@@ -40,12 +40,15 @@
 #                         in case a preprocessor needs to set fade durations.
 # 2024-06-11 Moonbase59 - v2.2.0 Sync version numver with autocue.cue_file
 # 2024-06-11 Moonbase59 - v2.2.1 Sync version number with autocue.cue_file
+# 2024-06-11 Moonbase59 - v3.0.0 Add variable blankskip (0.0=off)
+#                       - BREAKING: `liq_blankskip` now flot, not bool anymore!
+#                         Pre-v3.0.0 tags will be read graciously.
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
 
 __author__ = 'Matthias C. Hormann'
-__version__ = '2.2.1'
+__version__ = '3.0.0'
 
 import os
 import tempfile
@@ -82,6 +85,7 @@ OVERLAY_LU = -8.0  # LU below average for overlay trigger (start next song)
 # more than LONGTAIL_SECONDS below OVERLAY_LU are considered a "long tail"
 LONGTAIL_SECONDS = 15.0
 LONGTAIL_EXTRA_LU = -15.0  # reduce 15 dB extra on long tail songs to find overlap point
+BLANKSKIP = 2.5  # min. seconds silence to detect blank
 NICE = False  # use Linux/MacOS nice?
 
 # These file types can be handled correctly by ffmpeg
@@ -147,13 +151,28 @@ def is_true(v):
     else:
         raise ValueError('must be bool or str')
 
+# Need to handle pre-version 3.0.0 `liq_blankskip`: was bool, is now float`
+def float_blankskip(v):
+    if isinstance(v, bool):
+        return float(v) * args.blankskip  # True=1, False=0
+    elif isinstance(v, str):
+        try:
+            return float(v)
+        except ValueError:
+            if v.lower() == 'true':
+                return args.blankskip
+            else:
+                return 0.0
+    else:
+        return v
+
 
 # these are the tags to check when reading/writing tags from/to files
 tags_to_check = {
     "duration": float,
     "liq_amplify_adjustment": float,
     "liq_amplify": float,  # like replaygain_track_gain
-    "liq_blankskip": is_true,
+    "liq_blankskip": float_blankskip,  # backwards-compatibility, was bool
     "liq_blank_skipped": is_true,
     "liq_cross_duration": float,
     "liq_cross_start_next": float,
@@ -204,7 +223,7 @@ def read_tags(
         filename,
         tags_json={},
         target=TARGET_LUFS,
-        blankskip=False,
+        blankskip=0.0,
         noclip=False):
     # NOTE: Older ffmpeg/ffprobe don’t read ID3 tags if RIFF chunk found,
     #   see https://trac.ffmpeg.org/ticket/9848
@@ -361,23 +380,23 @@ def read_tags(
 
     # if liq_blankskip different from requested, we need a re-analysis
     if (skip_analysis
-                and "liq_blankskip" in tags_found
-                and (tags_found["liq_blankskip"] != blankskip)
-            ):
+            and "liq_blankskip" in tags_found
+            and (tags_found["liq_blankskip"] != blankskip)
+        ):
         skip_analysis = False
 
     # liq_loudness_range is only informational but we want to show correct values
     # can’t blindly take replaygain_track_range—it might be in different unit
     if (skip_analysis
-                and "liq_loudness_range" not in tags_found
-            ):
+            and "liq_loudness_range" not in tags_found
+        ):
         skip_analysis = False
 
     # print(skip_analysis, json.dumps(tags_found, indent=2, sort_keys=True))
     return skip_analysis, tags_found
 
 
-def add_missing(tags_found, target=TARGET_LUFS, blankskip=False, noclip=False):
+def add_missing(tags_found, target=TARGET_LUFS, blankskip=0.0, noclip=False):
     # we need not check those in tags_mandatory and those calculated by
     # read_tags
 
@@ -426,7 +445,7 @@ def analyse(
         silence=SILENCE,
         longtail_seconds=LONGTAIL_SECONDS,
         extra=LONGTAIL_EXTRA_LU,
-        blankskip=False,
+        blankskip=0.0,
         nice=NICE,
         noclip=False):
     # ffmpeg -v quiet -y -i audiofile.ext -vn -af ebur128=target=-18:metadata=1,ametadata=mode=print:file=- -f null null
@@ -475,6 +494,7 @@ def analyse(
     # from ebur128 filter. Measured every 100ms.
     # With some file types, like MP3, M can become "nan" (not-a-number),
     # which is a valid float in Python. Usually happens on very silent parts.
+    # We convert these to float("-inf") for comparability in silence detection.
     # FIXME: This relies on "I" coming two lines after "M"
     pattern = re.compile(
         # r"frame:.*pts_time:\s*(?P<t>\d+\.?\d*)\s*lavfi\.r128\.M=(?P<M>nan|[+-]?\d+\.?\d*)\s*.*\s*lavfi\.r128\.I=(?P<I>nan|[+-]?\d+\.?\d*)",
@@ -483,8 +503,11 @@ def analyse(
 
     for match in re.finditer(pattern, result):
         m = match.groupdict()
-        measure.append([float(m["t"]), float(
-            m["M"]), float(m["I"]), m["rest"]])
+        measure.append([
+            float(m["t"]),
+            float(m["M"]) if not math.isnan(float(m["M"])) else float("-inf"),
+            float(m["I"]),
+            m["rest"]])
 
     # range to watch (for later blank skip)
     start = 0
@@ -540,20 +563,35 @@ def analyse(
     cue_out_time_blank = 0.0
 
     # Cue-out when silence starts within a song, like "hidden tracks".
-    # Check forward in this case, and trust EBU R128’s 400ms to be long enough,
-    # checking for loudness going below the defined silence level.
-    # NOTE: This shouldn’t be used with TTS-generated jingles and spoken text,
-    # because the pauses in speech will trigger the detection and cut off the
-    # text!
+    # Check forward in this case, looking for a silence of specified length.
     if blankskip:
         # print("Checking for blank")
         end_blank = end
-        for i in range(start, end):
+        i = start
+        while i in range(start, end):
             if measure[i][1] <= silence_level:
-                cue_out_time_blank = measure[i][0]
+                cue_out_time_blank_start = measure[i][0]
+                cue_out_time_blank_stop = measure[i][0] + blankskip
                 end_blank = i + 1
-                # print(f"Found cue-out blank: {end_blank}, {cue_out_time_blank}")
-                break
+                while i < end and measure[i][1] <= silence_level and measure[i][0] <= cue_out_time_blank_stop:
+                    i += 1
+                if i >= end:
+                    # ran into end of track, reset end_blank
+                    # print(f"Blank at {cue_out_time_blank_start} too short: {measure[end-1][0] - cue_out_time_blank_start}")
+                    end_blank = end
+                    break
+                if measure[i][0] >= cue_out_time_blank_stop:
+                    # found silence long enough, set cue-out to its begin
+                    cue_out_time_blank = cue_out_time_blank_start
+                    # print(f"Found blank: {cue_out_time_blank_start}–{measure[i][0]} ({measure[i][0] - cue_out_time_blank_start} s)")
+                    break
+                else:
+                    # found silence too short, continue search
+                    # print(f"Blank at {cue_out_time_blank_start} too short: {measure[i][0] - cue_out_time_blank_start}")
+                    i += 1
+                    continue
+            else:
+                i += 1
 
     # Normal cue-out: check backwards, from the end, for loudness above
     # "silence"
@@ -934,11 +972,19 @@ parser.add_argument(
 parser.add_argument(
     "-b",
     "--blankskip",
-    help="Skip blank (silence) within song (get rid of \"hidden tracks\"). "
-    "Sets the cue-out point to where the silence begins. Don't use this with "
-    "spoken or TTS-generated text, as it will often cut the message short.",
-    default=False,
-    action='store_true')
+    minimum=0.0,
+    maximum=60.0,
+    action=Range,
+    nargs='?',
+    default=0.0,  # zero = no blankskip
+    const=BLANKSKIP,  # default if only `-b` used (backwards compatibility)
+    help=f"Skip blank (silence) within track if longer than [BLANKSKIP] seconds "
+    f"(get rid of \"hidden tracks\"). "
+    f"Sets the cue-out point to where the silence begins. Don't use this with "
+    f"spoken or TTS-generated text, as it will often cut the message short. "
+    f"Zero (0.0) to switch off. "
+    f"Omitting [BLANKSKIP] defaults to {BLANKSKIP} s.",
+    type=float)
 parser.add_argument(
     "-w",
     "--write",
@@ -976,7 +1022,6 @@ parser.add_argument(
 )
 
 args = parser.parse_args()
-# args.target = float(args.target)
 
 # read JSON from stdin or file, containing "overriding" or missing tags
 # intended for pre-processing software

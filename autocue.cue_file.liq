@@ -23,6 +23,9 @@
 #                           Allows passing annotate/database overrides to
 #                           cue_file, to reduce re-analysis runs even more.
 # 2024-06-11 - Moonbase59 - v2.2.1 Make JSON override switchable
+# 2024-06-11 - Moonbase59 - v3.0.0 Add variable blankskip (0.0=off)
+#                         - BREAKING: `liq_blankskip` now flot, not bool anymore!
+#                           Pre-v3.0.0 tags will be read graciously.
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -36,7 +39,7 @@ let settings.autocue.cue_file.version =
   settings.make(
     description=
       "Software version of autocue.cue_file. Should coincide with `cue_file`.",
-    "2.2.1"
+    "3.0.0"
   )
 
 let settings.autocue.cue_file.path =
@@ -115,8 +118,12 @@ let settings.autocue.cue_file.noclip =
 let settings.autocue.cue_file.blankskip =
   settings.make(
     description=
-      'Skip blank (silence) within song (get rid of "hidden tracks").',
-    false
+      "Skip blank (silence) within track if longer than `blankskip` seconds \
+       (get rid of \"hidden tracks\"). \
+       Sets the cue-out point to where the silence begins. Don't use this \
+       with spoken or TTS-generated text, as it will often cut the message \
+       short. Zero (0.0) to switch off.",
+    0.0
   )
 
 let settings.autocue.cue_file.unify_loudness_correction =
@@ -257,24 +264,34 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
     # For standalone Liquidsoap, the ultimate override is `liq_blankskip`.
     # This can even be used to switch blank skipping ON if is globally off.
     blankskip = ref(blankskip)
-    blankskip := list.assoc.mem("jingle_mode", meta) ? false : blankskip()
+    blankskip := list.assoc.mem("jingle_mode", meta) ? 0.0 : blankskip()
 
     # SAM Broadcaster compat: Switch blankskip off for all songtypes != "S"
     if list.assoc.mem("songtype", meta) then
       if meta["songtype"] != "S" then
-        blankskip := false
+        blankskip := 0.0
       end
     end
 
     # Handle annotated `liq_blankskip`, the ultimate switch
+    # Pre-v3.0.0 compatibility: Check for true/false (now float)
     if list.assoc.mem("liq_blankskip", meta) then
-      blankskip := bool_of_string(default=false, meta["liq_blankskip"])
+      b = meta["liq_blankskip"]
+      if b == "true" then
+        blankskip := blankskip()
+      elsif b == "false" then
+        blankskip := 0.0
+      else
+        blankskip := float_of_string(default=0.0, b)
+      end
+      m := list.assoc.remove("liq_blankskip", m())
+      m := list.add(("liq_blankskip", string.float(decimal_places=2, blankskip())), m())
     end
 
     log(
       level=3,
       label=label,
-      "Blank (silence) skipping active: #{blankskip()}"
+      "Blank (silence) skipping active: #{blankskip() > 0.0}, set to #{blankskip()} s"
     )
 
     log(
@@ -307,7 +324,10 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
         ]
       )
     if noclip then args := list.add('-k', args()) end
-    if blankskip() then args := list.add('-b', args()) end
+    if blankskip() > 0.0 then
+      #args := list.add('-b', args())
+      args := ['-b', string.float(blankskip(), decimal_places=2), ...args()]
+    end
     if write_tags then args := list.add('-w', args()) end
     if write_replaygain then args := list.add('-r', args()) end
     if force_analysis then args := list.add('-f', args()) end
@@ -317,8 +337,8 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
     if use_json_metadata then
       # write metadata to temp file for cue_file to pick up
       tempfile := file.temp("cue_file", ".json")
-      json_meta = meta_json_stringify(compact=true, meta)
-      log(level=4, label=label, "Writing metadata to #{tempfile()}: #{json_meta}")
+      json_meta = meta_json_stringify(compact=true, m())
+      log(level=3, label=label, "Writing metadata to #{tempfile()}: #{json_meta}")
       log(level=3, label=label, "Writing metadata to #{tempfile()}")
       file.write(
         data=json_meta,
@@ -394,7 +414,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           liq_amplify: string,
           liq_amplify_adjustment: string,
           liq_reference_loudness: string,
-          liq_blankskip: bool,
+          liq_blankskip: float,
           liq_blank_skipped: bool,
           liq_true_peak: float,
           liq_true_peak_db: string
@@ -432,7 +452,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           else
             [...res, entry]
           end,
-          meta,
+          m(),
           result()
       )
 
@@ -694,6 +714,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           ("liq_loudness", list.assoc("liq_loudness", result())),
           ("liq_loudness_range", list.assoc("liq_loudness_range", result())),
           ("liq_reference_loudness", list.assoc("liq_reference_loudness", result())),
+          ("liq_blankskip", list.assoc("liq_blankskip", result())),
           ("liq_blank_skipped", list.assoc("liq_blank_skipped", result())),
           ("liq_true_peak", list.assoc("liq_true_peak", result())),
           ("liq_true_peak_db", list.assoc("liq_true_peak_db", result())),
@@ -755,7 +776,7 @@ log(level=2, label="autocue.cue_file",
 # settings.autocue.cue_file.longtail := 15.0  # seconds
 # settings.autocue.cue_file.overlay_longtail := -15.0  # extra LU
 # settings.autocue.cue_file.noclip := false  # clipping prevention like loudgain's `-k`
-# settings.autocue.cue_file.blankskip := false  # skip silence in tracks
+# settings.autocue.cue_file.blankskip := 0.0  # skip silence in tracks
 # settings.autocue.cue_file.unify_loudness_correction := true  # unify `replaygain_track_gain` & `liq_amplify`
 # settings.autocue.cue_file.write_tags := false  # write liq_* tags back to file
 # settings.autocue.cue_file.write_replaygain := false  # write ReplayGain tags back to file

@@ -1,5 +1,73 @@
 # autocue changelog
 
+### 2024-06-12 – v3.0.0
+
+#### New feature
+
+- **Adjustable minimum silence length** for blank skipping,
+  i.e., cueing out early when silence is found in the track,
+  for instance from a long pause and "hidden tracks".
+- A much requested feature many have been waiting for (including myself)!
+- This new function adds _almost no extra CPU load_.
+- Longer silent parts and "hidden tracks" will be _detected accurately_,
+  without many false triggers, and the track cued out early, with a
+  perfect transition.
+- Long tail handling, overlay point detection (next song start) and
+  fading stay active as before—they just work from the new cue-out point.
+- The new cue-out point will be set _at the beginning_ of the specified
+  and detected silent part. We don’t want to produce "dead air", after all.
+- `cue_file` still supports the `-b`/`--blankskip` option, which will
+  use a default of `2.5` seconds minimum silence duration.
+- **Note:** If using _only_ `-b`/`--blankskip` _without a value_, you
+  should use it as the _last parameter_ and then add a `--` before the
+  filename, to signify "end of parameters". This is standard syntax and
+  you probably know it already from other programs.  
+  **Example:**
+  ```
+  $ cue_file -kfwrb -- "Nirvana - Something in the Way _ Endless, Nameless.mp3"
+  ```
+- You can add the desired duration after `-b`/`--blankskip` in seconds,
+  it is a new optional parameter.  
+  **Example:**
+  ```
+  $ cue_file -k -f -w -r -b 5.0 "Nirvana - Something in the Way _ Endless, Nameless.mp3"
+  ```
+- In Liquidsoap/AzuraCast, you can use this _setting_ which defaults
+  to zero (`0.00`) and means "disabled":
+  ```
+  settings.autocue.cue_file.blankskip := 0.0
+  ```
+
+#### Recommendation
+
+- I recommend _not_ to use this feature on jingles, dry sweepers or liners,
+  advertisements and podcast episodes. Especially spoken text can contain
+  some pauses which might trigger an early cue-out.
+- Nobody wants a podcast episode to end in the middle, or even risk losing
+  revenue from ads!
+- You can easily prevent this and **turn off blank skipping**
+  - by tagging a file with the `liq_blankskip` tag set to `0.00`,
+  - by _not_ using `cue_file`’s `-b`/`--blankskip` option when writing tags,
+  - by prefixing `annotate:liq_blankskip=0.00` on playlists.
+  - An annotation has precedence over a file tag.
+- In some special cases we **automatically turn off blank skipping:**
+  - SAM Broadcaster: _Song category_ is _not_ "Song" (S). For all other
+    categories like News (N), Jingles (J), Ads (A), etc. We look for
+    the `songtype` tag here. This is useful if you use a common music
+    library, or have files that have been tagged using SAM categories.
+  - AzuraCast: _Hide Metadata from Listeners ("Jingle Mode")_ is selected
+    for a playlist. This sets a `jingle_mode=true` annotation we honor.
+
+#### Breaking Changes
+
+- `liq_blankskip` is now a _float_, not a _boolean_ anymore!
+- **Re-tagging recommended!** Sorry for that, but I hope the new functionality
+  will outweigh the effort.
+- Both `cue_file` and `autocue.cue_file.liq` will handle the "old" tags
+  gracefully, using `0.00` for former `false` and your setting or
+  the default of `2.50` s for former `true`.
+- `0.00` (zero) now means "blankskip disabled".
+
 ### 2024-06-11 – v2.2.1
 
 - Make JSON override switchable (`settings.autocue.cue_file.use_json_metadata`).

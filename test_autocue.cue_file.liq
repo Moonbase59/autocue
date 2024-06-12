@@ -33,14 +33,14 @@ to_live = ref(false)
 settings.autocue.cue_file.path := "cue_file"
 # settings.autocue.cue_file.fade_in := 0.1
 # settings.autocue.cue_file.fade_out := 2.5
-# settings.autocue.cue_file.timeout := 60.0
+settings.autocue.cue_file.timeout := 120.0
 # settings.autocue.cue_file.target := -14.0  # not recommended
 # settings.autocue.cue_file.silence := -42.0
 # settings.autocue.cue_file.overlay := -8.0
 # settings.autocue.cue_file.longtail := 15.0
 # settings.autocue.cue_file.overlay_longtail := -15.0
 settings.autocue.cue_file.noclip := true  # clipping prevention
-settings.autocue.cue_file.blankskip := true
+settings.autocue.cue_file.blankskip := 2.5
 # settings.autocue.cue_file.unify_loudness_correction := true
 # settings.autocue.cue_file.write_tags := true  # testing
 # settings.autocue.cue_file.write_replaygain := true  # testing
@@ -72,7 +72,7 @@ uri = "/home/matthias/Musik/Other/Jingles/Short"
 #jingles = playlist(prefix='autocue:annotate:jingle_mode="true",liq_blankskip="false",'
 #  ^ 'liq_fade_in="0.10",liq_fade_out="0.10"'
 #  ^ ':', uri)
-jingles = playlist(prefix='annotate:jingle_mode="true",liq_blankskip="false",'
+jingles = playlist(prefix='annotate:jingle_mode="true",liq_blankskip=0.00,'
   ^ 'liq_fade_in="0.10",liq_fade_out="0.10"'
   ^ ':', uri)
 
