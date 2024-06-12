@@ -338,7 +338,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
       # write metadata to temp file for cue_file to pick up
       tempfile := file.temp("cue_file", ".json")
       json_meta = meta_json_stringify(compact=true, m())
-      log(level=3, label=label, "Writing metadata to #{tempfile()}: #{json_meta}")
+      log(level=4, label=label, "Writing metadata to #{tempfile()}: #{json_meta}")
       log(level=3, label=label, "Writing metadata to #{tempfile()}")
       file.write(
         data=json_meta,
