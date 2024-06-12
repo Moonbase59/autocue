@@ -646,7 +646,7 @@ def analyse(
     ending_1_db = 0 
     ending_2_db = 0    
     slope = 0
-    if sustained_endings:
+	if sustained_endings and start_next_idx > 0:
         # Sustained ending is enabled
         tolerance_frames = int((end - start_next_idx) * 0.25)
         cross_start_idx = start_next_idx + tolerance_frames
