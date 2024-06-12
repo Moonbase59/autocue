@@ -633,6 +633,7 @@ def analyse(
     cue_duration = cue_out_time - cue_in_time
     start_next_level = loudness + overlay
     start_next_time = 0.0
+    start_next_idx = 0
     for i in reversed(range(start, end)):
         if measure[i][1] > start_next_level:
             start_next_time = measure[i][0]
