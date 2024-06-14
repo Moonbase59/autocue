@@ -1,5 +1,66 @@
 # autocue changelog
 
+### 2024-06-14 - v4.0.0
+
+#### New features
+
+- **Even better transitions**, using _both_ "longtail" logic and the new "sustained endings" feature by @RM-FM, which we could even improve on, in a collaborative work. We are really happy with the results!
+
+- Combined with the existing _blankskip_ handling (whose default is now 5.0 seconds instead of 2.5 s, to avoid false triggers), we are able to handle the **greatest variety of possible song endings with great transitions**. Be it a _cold end_, a _long fade_, a _trick ending_, an _unexpected noise, chord, riff or vocal at the end_ — we catch them all. Pure listening enjoyment!
+
+- If you’re interested, here’s part of our testing set. Try it out for yourself!  
+  **Songs with difficult endings:**
+  - Beatles, The - Strawberry Fields Forever
+  - Ben Folds Five - Underground
+  - Black, Mary - Columbus
+  - Darkness on Demand - Quicksand
+  - Def Leppard - Let It Go
+  - Electric Light Orchestra - Don't Bring Me Down
+  - ella_henderson_rudimental_-_alibi_feat._rudimental
+  - Global Deejays - Get Up (feat. Technotronic)
+  - J.B.O. - Ein Fest
+  - Nirvana - Something in the Way _ Endless, Nameless
+  - Pink Floyd - Goodbye Cruel World
+  - Queen - Bohemian Rhapsody
+  - radiomonster.fm_-_dropin_01
+  - R.E.M. - Losing My Religion
+  - robbie_williams_-_angels
+  - Stürmer, Christina - Ich lebe
+  - test-5-15-5-15-5s
+  - testfiles.txt
+  - TLC - Waterfalls
+  - Toto - Africa
+  - Vega, Suzanne - Tom's Diner (vocals only version)
+  - Walker, Tom - Leave a Light On
+  - Who, The - Won't Get Fooled Again
+  - Wonder, Stevie - Another Star
+
+- New "sanity check" that (also) checks if your external `cue_file` and the Liquidsoap code have matching versions (a suggestion by John Chewter (@JohnnyC1951)), and shuts down otherwise. _After_ your settings, simply use this code:
+  ```
+  # Your settings go here...
+
+  # Check Autocue setup, print result, shutdown if problems
+  # The check results will also be in the log.
+  # Returns a bool: true=ok, false=error. We ignore that here.
+  # Set `print=true` for standalone scripts, `false` for AzuraCast.
+  ignore(check_autocue_setup(shutdown=true, print=true))
+  ```
+
+#### Recommendation
+
+- Always use the `check_autocue_setup` function _after_ your settings, in both standalone scripts and AzuraCast. It will not only check versions, but also set the crossfading duration to a correct value, based on your fade-out setting.
+
+#### Breaking changes
+
+- New informational boolean value `liq_sustained_ending` in `cue_file` result, file tags, and Liquidsoap metadata. It shows whether the "sustained endings" feature has been used to determine the "start next song" overlay point.
+
+- Analysed timings shown on console, in case you manually tag a file or just want to check the results. This output don’t affect normal operation, it is done to `stderr`:
+  ```
+  Start next times: 257.50/261.30/0.00 s (normal/sustained/longtail), using: 261.30 s.
+  Cue out time: 263.20 s
+  ```
+
+
 ### 2024-06-12 – v3.0.0
 
 #### New feature

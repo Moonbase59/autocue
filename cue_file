@@ -43,14 +43,22 @@
 # 2024-06-11 Moonbase59 - v3.0.0 Add variable blankskip (0.0=off)
 #                       - BREAKING: `liq_blankskip` now flot, not bool anymore!
 #                         Pre-v3.0.0 tags will be read graciously.
+# 2024-06-12 Moonbase59 - v3.0.1 Increase default min. silence to 5.0 s
+# 2024-06-13 Moonbase59 - Add `liq_sustained_ending`.
+# 2024-06-13 Moonbase59 & RM-FM - v4.0.0 Add sustained ending analysis,
+#                         a collaborative work.
+#                         Breaking: JSON & metadata (`liq_sustained_ending`)
+# 2024-06-14 Moonbase59 - Add mutagen vserion to `-V`/`--version`.
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
+# Some collaborative work with RM-FM (@RM-FM): Sustained ending analysis.
 
 __author__ = 'Matthias C. Hormann'
-__version__ = '3.0.0'
+__version__ = '4.0.0'
 
 import os
+import sys
 import tempfile
 import subprocess
 import argparse
@@ -59,6 +67,14 @@ import re
 import math
 from pathlib import Path
 import textwrap
+
+# like print(), but prints to stderr
+
+
+def eprint(*args, **kwargs):
+    """Print to stderr, nicely."""
+    print(*args, file=sys.stderr, **kwargs)
+
 
 # see if we have Mutagen and import it if available
 try:
@@ -70,8 +86,10 @@ try:
     import mutagen.wave
     import mutagen.oggvorbis
     MUTAGEN_AVAILABLE = True
+    MUTAGEN_VERSION = mutagen.version_string
 except ImportError:
     MUTAGEN_AVAILABLE = False
+    MUTAGEN_VERSION = "(not installed)"
 
 # Default presets
 FFMPEG = "ffmpeg"  # location of the ffmpeg binary
@@ -85,7 +103,8 @@ OVERLAY_LU = -8.0  # LU below average for overlay trigger (start next song)
 # more than LONGTAIL_SECONDS below OVERLAY_LU are considered a "long tail"
 LONGTAIL_SECONDS = 15.0
 LONGTAIL_EXTRA_LU = -15.0  # reduce 15 dB extra on long tail songs to find overlap point
-BLANKSKIP = 2.5  # min. seconds silence to detect blank
+SUSTAINED_LOUDNESS_DROP = 60.0  # max. percent drop to be considered sustained
+BLANKSKIP = 5.0  # min. seconds silence to detect blank
 NICE = False  # use Linux/MacOS nice?
 
 # These file types can be handled correctly by ffmpeg
@@ -152,6 +171,8 @@ def is_true(v):
         raise ValueError('must be bool or str')
 
 # Need to handle pre-version 3.0.0 `liq_blankskip`: was bool, is now float`
+
+
 def float_blankskip(v):
     if isinstance(v, bool):
         return float(v) * args.blankskip  # True=1, False=0
@@ -185,6 +206,7 @@ tags_to_check = {
     "liq_loudness": float,
     "liq_loudness_range": float,  # like replaygain_track_range
     "liq_reference_loudness": float,  # like replaygain_reference_loudness
+    "liq_sustained_ending": is_true,
     "liq_true_peak_db": float,
     "liq_true_peak": float,
     "r128_track_gain": int,
@@ -247,7 +269,7 @@ def read_tags(
         text=True).stdout
 
     result = json.loads(r)
-    # print(json.dumps(result, indent=2))
+    # eprint(json.dumps(result, indent=2))
 
     # get tags in stream #0 (mka, opus, etc.)
     try:
@@ -276,7 +298,7 @@ def read_tags(
     # unify, right overwrites left if key in both
     # tags_found = tags_in_stream | tags_in_format | tags_in_json
     tags_found = {**tags_in_stream, **tags_in_format, **tags_in_json}
-    # print(json.dumps(tags_found, indent=2, sort_keys=True))
+    # eprint(json.dumps(tags_found, indent=2, sort_keys=True))
 
     # add duration of stream #0
     try:
@@ -302,10 +324,11 @@ def read_tags(
         ]
         for tag in suffixed_tags:
             if tag in tags and isinstance(tags[tag], str):
-                if tags[tag].endswith(
-                        (" dB", " LU", " dBFS", " dBTP", " LUFS")):
-                    number, _, _ = tags[tag].rpartition(" ")
-                    tags[tag] = number
+                # No need to check for unit name, only using defined tags
+                m = re.search(r'([+-]?\d*.?\d+)', tags[tag])
+                if m is not None:
+                    tags[tag] = m.group()
+
         return tags
 
     # remove suffixes from several tags
@@ -392,7 +415,7 @@ def read_tags(
         ):
         skip_analysis = False
 
-    # print(skip_analysis, json.dumps(tags_found, indent=2, sort_keys=True))
+    # eprint(skip_analysis, json.dumps(tags_found, indent=2, sort_keys=True))
     return skip_analysis, tags_found
 
 
@@ -402,6 +425,9 @@ def add_missing(tags_found, target=TARGET_LUFS, blankskip=0.0, noclip=False):
 
     if "liq_longtail" not in tags_found:
         tags_found["liq_longtail"] = False
+
+    if "liq_sustained_ending" not in tags_found:
+        tags_found["liq_sustained_ending"] = False
 
     # if not "liq_cross_duration" in tags_found:
     #    tags_found["liq_cross_duration"] = tags_found["liq_cue_out"] - tags_found["liq_cross_start_next"]
@@ -445,6 +471,7 @@ def analyse(
         silence=SILENCE,
         longtail_seconds=LONGTAIL_SECONDS,
         extra=LONGTAIL_EXTRA_LU,
+        drop=SUSTAINED_LOUDNESS_DROP,
         blankskip=0.0,
         nice=NICE,
         noclip=False):
@@ -539,7 +566,7 @@ def analyse(
         true_peak_dB = 20.0 * math.log10(true_peak)
     else:
         true_peak_dB = float('-inf')
-    # print(true_peak, true_peak_dB)
+    # eprint(true_peak, true_peak_dB)
 
     # Find cue-in point (loudness above "silence")
     silence_level = loudness + silence
@@ -565,7 +592,7 @@ def analyse(
     # Cue-out when silence starts within a song, like "hidden tracks".
     # Check forward in this case, looking for a silence of specified length.
     if blankskip:
-        # print("Checking for blank")
+        # eprint("Checking for blank")
         end_blank = end
         i = start
         while i in range(start, end):
@@ -577,17 +604,17 @@ def analyse(
                     i += 1
                 if i >= end:
                     # ran into end of track, reset end_blank
-                    # print(f"Blank at {cue_out_time_blank_start} too short: {measure[end-1][0] - cue_out_time_blank_start}")
+                    # eprint(f"Blank at {cue_out_time_blank_start} too short: {measure[end-1][0] - cue_out_time_blank_start}")
                     end_blank = end
                     break
                 if measure[i][0] >= cue_out_time_blank_stop:
                     # found silence long enough, set cue-out to its begin
                     cue_out_time_blank = cue_out_time_blank_start
-                    # print(f"Found blank: {cue_out_time_blank_start}–{measure[i][0]} ({measure[i][0] - cue_out_time_blank_start} s)")
+                    # eprint(f"Found blank: {cue_out_time_blank_start}–{measure[i][0]} ({measure[i][0] - cue_out_time_blank_start} s)")
                     break
                 else:
                     # found silence too short, continue search
-                    # print(f"Blank at {cue_out_time_blank_start} too short: {measure[i][0] - cue_out_time_blank_start}")
+                    # eprint(f"Blank at {cue_out_time_blank_start} too short: {measure[i][0] - cue_out_time_blank_start}")
                     i += 1
                     continue
             else:
@@ -599,7 +626,7 @@ def analyse(
         if measure[i][1] > silence_level:
             cue_out_time = measure[i][0]
             end = i + 1
-            # print(f"Found cue-out: {end}, {cue_out_time}")
+            # eprint(f"Found cue-out: {end}, {cue_out_time}")
             break
     # cue out PAST the current frame (100ms) -- no, reverse that
     cue_out_time = max(cue_out_time, duration - cue_out_time)
@@ -611,7 +638,7 @@ def analyse(
     if blankskip:
         # cue out PAST the current frame (100ms) -- no, reverse that
         # cue_out_time_blank = cue_out_time_blank + 0.1
-        # print(f"cue-out blank: {cue_out_time_blank}, cue-out: {cue_out_time}")
+        # eprint(f"cue-out blank: {cue_out_time_blank}, cue-out: {cue_out_time}")
         if 0.0 < cue_out_time_blank < cue_out_time:
             cue_out_time = cue_out_time_blank
             blank_skipped = True
@@ -622,26 +649,101 @@ def analyse(
     cue_duration = cue_out_time - cue_in_time
     start_next_level = loudness + overlay
     start_next_time = 0.0
+    start_next_idx = end
     for i in reversed(range(start, end)):
         if measure[i][1] > start_next_level:
             start_next_time = measure[i][0]
+            start_next_idx = i
             break
     start_next_time = max(start_next_time, cue_out_time - start_next_time)
+    # eprint(f"Start next: {start_next_time:.2f}")
+
+    # Calculate slope over arbitrary number of measure elements
+    # Split into left & right part, use avg momentary loudness of each
+    def slope(elements):
+        l = len(elements)
+        l2 = l // 2
+        p1 = elements[:l2] if l >= 2 else elements[:]
+        # leave out midpoint if we have an odd number of elements
+        # this is mainly for sliding window techniques
+        # and guarantees both halves are the same size
+        p2 = elements[l2 + l % 2:] if l >= 2 else elements[:]
+        t = elements[l2][0]  # time of midpoint
+        # eprint(l, l2, len(p1), len(p2))
+        y1 = sum(i[1] for i in p1)  # sum momentary loudness
+        y2 = sum(i[1] for i in p2)  # sum momentary loudness
+        if l2 > 0:
+            y1 /= len(p1)  # average
+            y2 /= len(p2)  # average
+        m = (y2 - y1) / (l / 10)  # l are units of 100ms = 1/10 second
+        m = 0.0 if math.isnan(m) else m  # slope zero if result NaN
+        d = math.degrees(math.atan(m))  # phi in degrees
+        time = elements[l2][0]  # midpoint time in seconds
+        lufs = elements[l2][1]  # midpoint momentary loudness in LUFS
+        try:
+            lufs_ratio_pct = (1 - (y1 / y2)) * 100.0  # LUFS ratio in %
+        except ZeroDivisionError:
+            lufs_ratio_pct = (1 - float("inf")) * 100.0
+        # eprint(
+        #     f"Left: {y1:.2f} LUFS avg ({len(p1)/10:.2f} s), "
+        #     f"Right: {y2:.2f} LUFS avg ({len(p2)/10:.2f} s), "
+        #     f"Drop: {lufs_ratio_pct:.2f}%"
+        # )
+        return time, lufs, m, d, lufs_ratio_pct, y2
+
+    # Check for "sustained ending", comparing loudness ratios at end of song
+    sustained = False
+    start_next_time_sustained = 0.0
+    # eprint(f"Index: {start_next_idx}–{end}, Silence: {silence_level:.2f} LUFS, Start Next Level: {start_next_level:.2f} LUFS")
+    # start_next_time = sliding_window(measure[start_next_idx:end], 21)
+    time, lufs, m, degrees, lufs_ratio_pct, max_lufs = slope(
+        measure[start_next_idx:end])
+    # eprint(f"Slope m={m:.2f}, {degrees:.2f}°, LUFS Ratio Left:Right {lufs_ratio_pct:.2f}%")
+    if lufs_ratio_pct < drop:
+        sustained = True
+        start_next_level = loudness + overlay + extra
+        # eprint(f"Sustained; Recalc with {start_next_level} LUFS")
+        start_next_time_sustained = 0.0
+        for i in reversed(range(start, end)):
+            if measure[i][1] > start_next_level:
+                start_next_time_sustained = measure[i][0]
+                break
+        start_next_time_sustained = max(
+            start_next_time_sustained,
+            cue_out_time - start_next_time_sustained)
 
     # We want to keep songs with a long fade-out intact, so if the calculated
     # overlap is longer than the "longtail_seconds" time, we check again, by reducing
     # the loudness to look for by an additional "extra" amount of LU
     longtail = False
-
+    start_next_time_longtail = 0.0
     if (cue_out_time - start_next_time) > longtail_seconds:
         longtail = True
         start_next_level = loudness + overlay + extra
-        start_next_time = 0.0
+        start_next_time_longtail = 0.0
         for i in reversed(range(start, end)):
             if measure[i][1] > start_next_level:
-                start_next_time = measure[i][0]
+                start_next_time_longtail = measure[i][0]
                 break
-        start_next_time = max(start_next_time, cue_out_time - start_next_time)
+        start_next_time_longtail = max(
+            start_next_time_longtail,
+            cue_out_time - start_next_time_longtail)
+
+    # Consolidate results from sustained and longtail
+    start_next_time_new = max(
+        start_next_time,
+        start_next_time_sustained,
+        start_next_time_longtail
+    )
+    eprint(
+        f"Start next times: {start_next_time:.2f}/"
+        f"{start_next_time_sustained:.2f}/"
+        f"{start_next_time_longtail:.2f} s "
+        f"(normal/sustained/longtail), "
+        f"using: {start_next_time_new:.2f} s."
+    )
+    start_next_time = start_next_time_new
+    eprint(f"Cue out time: {cue_out_time:.2f} s")
 
     # Now that we know where to start the next song, calculate Liquidsoap's
     # cross duration from it, allowing for an extra 0.1s of overlap -- no, reverse
@@ -666,6 +768,7 @@ def analyse(
         "liq_cue_out": cue_out_time,
         "liq_cross_start_next": start_next_time,
         "liq_longtail": longtail,
+        "liq_sustained_ending": sustained,
         # "liq_cross_duration": cross_duration,
         "liq_loudness": loudness,
         "liq_loudness_range": loudness_range,
@@ -696,7 +799,7 @@ def write_tags(filename, tags={}, replaygain=False):
         # temp_file_handle, temp = tempfile.mkstemp(prefix="cue_file.", suffix=filename.suffix)
         # So we use the same folder, to be able to do an atomic move.
         temp = filename.with_suffix('.tmp' + filename.suffix)
-        # print(temp)
+        # eprint(temp)
 
         rg_tags = [
             "replaygain_track_gain",
@@ -747,7 +850,7 @@ def write_tags(filename, tags={}, replaygain=False):
                 tags_new.pop(k, None)
             del tags_new["R128_TRACK_GAIN"]
 
-        # print(replaygain, temp, json.dumps(tags_new, indent=2))
+        # eprint(replaygain, temp, json.dumps(tags_new, indent=2))
 
         if MUTAGEN_AVAILABLE and filename.suffix.casefold() in mp4_ext:
             # MP4-like files using Apple iTunes type tags
@@ -816,7 +919,7 @@ def write_tags(filename, tags={}, replaygain=False):
             metadata_args = []
             for k, v in tags_new.items():
                 metadata_args.extend(['-metadata', f'{k}={v}'])
-            # print(metadata_args)
+            # eprint(metadata_args)
 
             args = [
                 FFMPEG,
@@ -894,6 +997,8 @@ Analyse audio file for cue-in, cue-out, overlay and EBU R128 loudness data, resu
 More file types are available when Mutagen is installed ({MUTAGEN_AVAILABLE}).
 """,
     epilog=f"""
+Note %(prog)s will use the LARGER value from the sustained ending and longtail calculations to set the next track overlay point. This ensures special song endings are always kept intact in transitions.
+
 %(prog)s {__version__} knows about these tags:
 {', '.join(sorted(tags_to_check.keys()))}.
 
@@ -910,8 +1015,9 @@ parser.add_argument(
     "-V",
     "--version",
     action='version',
-    version='%(prog)s {version}'.format(
-        version=__version__))
+    version=f"%(prog)s {__version__}\nmutagen {MUTAGEN_VERSION}")
+    # version='%(prog)s {version}'.format(
+    #     version=__version__))
 parser.add_argument("file", help="File to be processed")
 parser.add_argument(
     "-t",
@@ -961,6 +1067,17 @@ parser.add_argument(
     default=LONGTAIL_EXTRA_LU,
     help="Extra LU below overlay loudness to trigger next track for songs "
     "with long tail",
+    type=float)
+parser.add_argument(
+    "-d",
+    "--drop",
+    minimum=0,
+    maximum=100.0,
+    action=Range,
+    default=SUSTAINED_LOUDNESS_DROP,
+    help="Max. percent loudness drop at the end to be still considered "
+    "having a sustained ending. Such tracks will be recalculated using "
+    "--extra, keeping the song ending intact. Zero (0.0) to switch off.",
     type=float)
 parser.add_argument(
     "-k",
@@ -1044,6 +1161,7 @@ if args.force or not skip_analysis:
         silence=args.silence,
         longtail_seconds=args.longtail,
         extra=args.extra,
+        drop=args.drop,
         blankskip=args.blankskip,
         nice=args.nice,
         noclip=args.noclip
@@ -1051,7 +1169,7 @@ if args.force or not skip_analysis:
 else:
     result = add_missing(tags_found, args.target, args.blankskip, args.noclip)
 
-# print(result)
+# eprint(result)
 
 if args.write:
     write_tags(args.file, result, args.replaygain)
@@ -1065,6 +1183,7 @@ liq_result = {
     "liq_cue_out": result['liq_cue_out'],
     "liq_cross_start_next": result['liq_cross_start_next'],
     "liq_longtail": result["liq_longtail"],
+    "liq_sustained_ending": result['liq_sustained_ending'],
     # "liq_cross_duration": result['liq_cross_duration'],
     "liq_loudness": f"{result['liq_loudness']:.2f} LUFS",
     "liq_loudness_range": f"{result['liq_loudness_range']:.2f} LU",

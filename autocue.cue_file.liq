@@ -26,6 +26,13 @@
 # 2024-06-11 - Moonbase59 - v3.0.0 Add variable blankskip (0.0=off)
 #                         - BREAKING: `liq_blankskip` now flot, not bool anymore!
 #                           Pre-v3.0.0 tags will be read graciously.
+# 2024-06-12 - Moonbase59 - v3.0.1 Increase default min. silence to 5.0 s
+# 2024-06-13 - Moonbase59 - v4.0.0 Add `liq_sustained_ending`,
+#                           something_to_float() for old `liq_blankskip` tags.
+#                         - Add `-d` to cue_file call
+# 2024-06-14 - Moonbase59 - Add external `cue_file` version check and a
+#                           `check_autocue_setup` function to be used after
+#                           the user-defined settings.
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -39,7 +46,15 @@ let settings.autocue.cue_file.version =
   settings.make(
     description=
       "Software version of autocue.cue_file. Should coincide with `cue_file`.",
-    "3.0.0"
+    "4.0.0"
+  )
+
+# Internal only! Not a user setting.
+let settings.autocue.cue_file.version_external =
+  settings.make(
+    description=
+      "Software version of external `cue_file`.",
+    "(unknown)"
   )
 
 let settings.autocue.cue_file.path =
@@ -105,6 +120,14 @@ let settings.autocue.cue_file.overlay_longtail =
       "Extra LU level below overlay loudness, to recalculate songs with long \
        tails.",
     -15.0
+  )
+
+let settings.autocue.cue_file.sustained_loudness_drop =
+  settings.make(
+    description=
+      "Consider track to have a sustained ending if its loudness at the end \
+      does NOT drop more than so many percent.",
+    60.0
   )
 
 let settings.autocue.cue_file.noclip =
@@ -189,6 +212,153 @@ def meta_json_stringify(
   json.stringify(json5=json5, compact=compact, data)
 end
 
+# Need to handle pre-version 3.0.0 `liq_blankskip`: was bool, is now float`
+# @vitoyucepi, in: https://github.com/savonet/liquidsoap/discussions/3965#discussioncomment-9744430
+def something_to_float(~true_value=1., value) =
+  value_string = string.case(string(value))
+  possible_float =
+    try
+      float_of_string(value_string)
+    catch _ do
+      null()
+    end
+  possible_bool =
+    try
+      bool_of_string(value_string) ? true_value : 0.
+    catch _ do
+      null()
+    end
+  (possible_float ?? possible_bool) ?? 0.
+end
+
+# Deconstruct a SemVer version, return a record
+def semver(s) =
+  s = null.get(default="", s)
+  # SemVer RegEx, see https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
+  #r = r/(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/gm
+  r = r/(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<build>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/gm
+  v = r.exec(s)
+  #print(v)
+  {
+    version = v[0],
+    major = v.groups["major"],
+    minor = v.groups["minor"],
+    patch = v.groups["patch"],
+    prerelease = v.groups["prerelease"],
+    build = v.groups["build"]
+  }
+end
+
+# Compare two SemVers
+# The return value is negative if ver1 < ver2,
+# zero if ver1 == ver2 and strictly positive if ver1 > ver2
+def semver_compare(s1, s2) =
+  s1 = null.get(default="", s1)
+  s2 = null.get(default="", s2)
+  v1 = semver(s1)
+  v2 = semver(s2)
+
+  if v1.major == v2.major and v1.minor == v2.minor and v1.patch == v2.patch then
+    0
+  elsif v1.major > v2.major then
+    1
+  elsif v1.major >= v2.major and v1.minor > v2.minor then
+    1
+  elsif v1.major >= v2.major and v1.minor >= v2.minor and v1.patch > v2.patch then
+    1
+  else
+    -1
+  end
+end
+
+# Get version of a CLI command
+def file_semver(command) =
+  res =
+    list.hd(
+      default="",
+      process.read.lines(
+        #timeout=2.,
+        command ^ " --version"
+      )
+    )
+  semver(res)
+end
+
+# Check Autocue setup, shutdown if desired, print to terminal if desired
+stdlib_shutdown = shutdown
+stdlib_print = print
+
+def check_autocue_setup(~shutdown=false, ~print=false) =
+  settings.autocue.cue_file.version_external := file_semver(settings.autocue.cue_file.path()).version
+
+  if semver_compare(
+    settings.autocue.cue_file.version(),
+    settings.autocue.cue_file.version_external()
+  ) == 0
+  then
+    # set this so annotations (priority 5) can still override autocue values
+    settings.autocue.metadata.priority := 10
+    settings.autocue.preferred := "cue_file"
+    # use our values in any case
+    settings.autocue.amplify_behavior := "keep"
+    # avoid dead air from reconcile, reset default 3.0s to our fade_out duration
+    settings.autocue.target_cross_duration := settings.autocue.cue_file.fade_out()
+    # Let user know what version (s)he is running
+    log(level=2, label="autocue.cue_file",
+      'You are using autocue.cue_file version \
+       #{settings.autocue.cue_file.version()}.'
+    )
+    log(level=2, label="autocue.cue_file",
+      'The external "#{settings.autocue.cue_file.path()}" \
+       is version #{settings.autocue.cue_file.version_external()}'
+    )
+    log(level=2, label="autocue.cue_file",
+      'Setting `settings.autocue.target_cross_duration` to \
+       #{settings.autocue.cue_file.fade_out()} s, from \
+       `settings.autocue.cue_file.fade_out`.'
+    )
+    if print then
+      stdlib_print(
+        'You are using autocue.cue_file version \
+         #{settings.autocue.cue_file.version()}.'
+      )
+      stdlib_print(
+        'The external "#{settings.autocue.cue_file.path()}" \
+         is version #{settings.autocue.cue_file.version_external()}'
+      )
+      stdlib_print(
+        'Setting `settings.autocue.target_cross_duration` to \
+         #{settings.autocue.cue_file.fade_out()} s, from \
+         `settings.autocue.cue_file.fade_out`.'
+      )
+    end
+    true
+  else
+    log(level=1, label="autocue.cue_file",
+      'ERROR: autocue.cue_file v#{settings.autocue.cue_file.version()} \
+       doesn’t match external "#{settings.autocue.cue_file.path()}" \
+       v#{settings.autocue.cue_file.version_external()}!\n\
+       Autocue NOT ACTIVATED!'
+    )
+    # repeat on console, so standalone can see it
+    if print then
+      stdlib_print(
+        'ERROR: autocue.cue_file v#{settings.autocue.cue_file.version()} \
+         doesn’t match external "#{settings.autocue.cue_file.path()}" \
+         v#{settings.autocue.cue_file.version_external()}!\n\
+         Autocue NOT ACTIVATED!'
+      )
+    end
+    if shutdown then
+      log(level=1, label="autocue.cue_file", "Shutting down...")
+      if print then stdlib_print("Shutting down...") end
+      stdlib_shutdown(code=2)
+    end
+    false
+  end
+end
+
+
 # Compute cue_file data
 # @flag extra
 def cue_file(~request_metadata, ~file_metadata, filename) =
@@ -198,6 +368,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
   overlay = settings.autocue.cue_file.overlay()
   longtail = settings.autocue.cue_file.longtail()
   overlay_longtail = settings.autocue.cue_file.overlay_longtail()
+  drop = settings.autocue.cue_file.sustained_loudness_drop()
   blankskip = settings.autocue.cue_file.blankskip()
   write_tags = settings.autocue.cue_file.write_tags()
   write_replaygain = settings.autocue.cue_file.write_replaygain()
@@ -273,19 +444,36 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
       end
     end
 
+    # # Handle annotated `liq_blankskip`, the ultimate switch
+    # # Pre-v3.0.0 compatibility: Check for true/false (now float)
+    # if list.assoc.mem("liq_blankskip", meta) then
+    #   b = meta["liq_blankskip"]
+    #   if b == "true" then
+    #     blankskip := blankskip()
+    #   elsif b == "false" then
+    #     blankskip := 0.0
+    #   else
+    #     blankskip := float_of_string(default=0.0, b)
+    #   end
+    #   m := list.assoc.remove("liq_blankskip", m())
+    #   m := list.add(("liq_blankskip", string.float(decimal_places=2, blankskip())), m())
+    # end
+
     # Handle annotated `liq_blankskip`, the ultimate switch
     # Pre-v3.0.0 compatibility: Check for true/false (now float)
     if list.assoc.mem("liq_blankskip", meta) then
-      b = meta["liq_blankskip"]
-      if b == "true" then
-        blankskip := blankskip()
-      elsif b == "false" then
-        blankskip := 0.0
-      else
-        blankskip := float_of_string(default=0.0, b)
-      end
+      blankskip := null.get(
+        default=0.0,
+        something_to_float(
+          true_value=settings.autocue.cue_file.blankskip(),
+          meta["liq_blankskip"]
+        )
+      )
       m := list.assoc.remove("liq_blankskip", m())
-      m := list.add(("liq_blankskip", string.float(decimal_places=2, blankskip())), m())
+      m := list.add(
+        ("liq_blankskip", string.float(decimal_places=2, blankskip())),
+        m()
+      )
     end
 
     log(
@@ -320,12 +508,13 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           string.float(longtail, decimal_places=2),
           '-x',
           string.float(overlay_longtail, decimal_places=2),
+          '-d',
+          string.float(drop, decimal_places=2),
           filename
         ]
       )
     if noclip then args := list.add('-k', args()) end
     if blankskip() > 0.0 then
-      #args := list.add('-b', args())
       args := ['-b', string.float(blankskip(), decimal_places=2), ...args()]
     end
     if write_tags then args := list.add('-w', args()) end
@@ -389,6 +578,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           liq_cue_out,
           liq_cross_start_next,
           liq_longtail,
+          liq_sustained_ending,
           #liq_cross_duration,
           liq_loudness,
           liq_loudness_range,
@@ -408,6 +598,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           liq_cue_out: float,
           liq_cross_start_next: float,
           liq_longtail: bool,
+          liq_sustained_ending: bool,
           #liq_cross_duration: float,
           liq_loudness: string,
           liq_loudness_range: string,
@@ -430,6 +621,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           ("liq_cue_out", string(liq_cue_out)),
           ("liq_cross_start_next", string(liq_cross_start_next)),
           ("liq_longtail", string(liq_longtail)),
+          ("liq_sustained_ending", string(liq_sustained_ending)),
           #("liq_cross_duration", string(liq_cross_duration)),
           ("liq_loudness", liq_loudness),
           ("liq_loudness_range", liq_loudness_range),
@@ -711,6 +903,7 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
           ("liq_amplify_adjustment", list.assoc("liq_amplify_adjustment", result())),
           ("liq_cue_duration", list.assoc("liq_cue_duration", result())),
           ("liq_longtail", list.assoc("liq_longtail", result())),
+          ("liq_sustained_ending", list.assoc("liq_sustained_ending", result())),
           ("liq_loudness", list.assoc("liq_loudness", result())),
           ("liq_loudness_range", list.assoc("liq_loudness_range", result())),
           ("liq_reference_loudness", list.assoc("liq_reference_loudness", result())),
@@ -744,26 +937,18 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
   end
 end
 
-autocue.register(name="cue_file", cue_file)
 # set this so annotations (priority 5) can still override autocue values
 settings.autocue.metadata.priority := 10
 settings.autocue.preferred := "cue_file"
+# use our values in any case
+settings.autocue.amplify_behavior := "keep"
 # avoid dead air from reconcile, reset default 3.0s to our fade_out duration
 settings.autocue.target_cross_duration := settings.autocue.cue_file.fade_out()
-
-# Let user know what version (s)he is running
-log(level=2, label="autocue.cue_file",
-  'You are using autocue.cue_file version \
-   #{settings.autocue.cue_file.version()}.'
-)
-log(level=2, label="autocue.cue_file",
-  'Assure that the external "#{settings.autocue.cue_file.path()}" \
-   has the same version!'
-)
+autocue.register(name="cue_file", cue_file)
 
 # --- Copy-paste Azuracast LS Config, second input box END ---
 
-# Don't forget to add your settings after this.
+# Don't forget to add your settings after this and do the check!
 # Here's a list of all possible settings with their defaults
 
 # settings.autocue.cue_file.path := "cue_file"
@@ -775,6 +960,7 @@ log(level=2, label="autocue.cue_file",
 # settings.autocue.cue_file.overlay := -8.0  # LU below track loudness
 # settings.autocue.cue_file.longtail := 15.0  # seconds
 # settings.autocue.cue_file.overlay_longtail := -15.0  # extra LU
+# settings.autocue.cue_file.sustained_loudness_drop := 60.0  # max. percent drop to be considered sustained
 # settings.autocue.cue_file.noclip := false  # clipping prevention like loudgain's `-k`
 # settings.autocue.cue_file.blankskip := 0.0  # skip silence in tracks
 # settings.autocue.cue_file.unify_loudness_correction := true  # unify `replaygain_track_gain` & `liq_amplify`
@@ -783,6 +969,12 @@ log(level=2, label="autocue.cue_file",
 # settings.autocue.cue_file.force_analysis := false  # force re-analysis even if tags found
 # settings.autocue.cue_file.nice := false  # Linux/MacOS only: Use NI=18 for analysis
 # settings.autocue.cue_file.use_json_metadata := true  # pass metadata to `cue_file` as JSON
+
+# Check Autocue setup, print result, shutdown if problems
+# The check results will also be in the log.
+# Returns a bool: true=ok, false=error. We ignore that here.
+# set `print=true` for standalone scripts, `false` for AzuraCast
+# ignore(check_autocue_setup(shutdown=true, print=false))
 
 # `enable_autocue_metadata()` will autocue ALL files Liquidsoap processes.
 # You can disable it for selected sources using 'annotate:liq_cue_file=false'.

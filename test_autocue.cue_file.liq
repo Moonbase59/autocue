@@ -30,7 +30,7 @@ to_live = ref(false)
 
 # --- Copy-paste your settings into AzuraCast, second input box AFTER above file ---
 
-settings.autocue.cue_file.path := "cue_file"
+# settings.autocue.cue_file.path := "cue_file"
 # settings.autocue.cue_file.fade_in := 0.1
 # settings.autocue.cue_file.fade_out := 2.5
 settings.autocue.cue_file.timeout := 120.0
@@ -39,20 +39,25 @@ settings.autocue.cue_file.timeout := 120.0
 # settings.autocue.cue_file.overlay := -8.0
 # settings.autocue.cue_file.longtail := 15.0
 # settings.autocue.cue_file.overlay_longtail := -15.0
+# settings.autocue.cue_file.sustained_loudness_drop := 60.0
 settings.autocue.cue_file.noclip := true  # clipping prevention
-settings.autocue.cue_file.blankskip := 2.5
+settings.autocue.cue_file.blankskip := 5.0
 # settings.autocue.cue_file.unify_loudness_correction := true
-# settings.autocue.cue_file.write_tags := true  # testing
-# settings.autocue.cue_file.write_replaygain := true  # testing
-# settings.autocue.cue_file.force_analysis := true  # testing
+# settings.autocue.cue_file.write_tags := false  # testing
+# settings.autocue.cue_file.write_replaygain := false  # testing
+# settings.autocue.cue_file.force_analysis := false  # testing
 settings.autocue.cue_file.nice := true  # Linux/MacOS only!
 # settings.autocue.cue_file.use_json_metadata := true  # pass metadata to `cue_file` as JSON
+
+# Check Autocue setup, print result, shutdown if problems
+# The check results will also be in the log.
+# Returns a bool: true=ok, false=error. We ignore that here.
+# set `print=true` for standalone scripts, `false` for AzuraCast
+ignore(check_autocue_setup(shutdown=true, print=true))
 
 # `enable_autocue_metadata()` will autocue ALL files Liquidsoap processes.
 # You can disable it for selected sources using 'annotate:liq_cue_file=false'.
 # Remember you won't get `liq_amplify` data then -- expect loudness jumps!
-settings.autocue.preferred := "cue_file"
-settings.autocue.amplify_behavior := "keep"
 enable_autocue_metadata()
 
 # --- Copy-paste END ---
@@ -61,9 +66,9 @@ enable_autocue_metadata()
 #uri = "/home/matthias/Musik/Playlists/Radio/Classic Rock.m3u"
 uri = "/home/matthias/media/videostream/yyy"
 #songs = playlist(prefix="autocue2:", uri)
-#songs = playlist(prefix='annotate:liq_dummy="DUMMY":', uri)
+songs = playlist(prefix='annotate:liq_dummy="DUMMY":', uri)
 # Test: Play 15s snippets by overriding some settings!
-songs = playlist(prefix='annotate:liq_dummy="DUMMY",liq_cue_in=30.0,liq_cue_out=45.0,liq_cross_start_next=44.0,liq_fade_in=1.0,liq_fade_out=2.5:', uri)
+#songs = playlist(prefix='annotate:liq_dummy="DUMMY",liq_cue_in=30.0,liq_cue_out=45.0,liq_cross_start_next=44.0,liq_fade_in=1.0,liq_fade_out=2.5:', uri)
 
 # --- Use YOUR playlist here! ---
 uri = "/home/matthias/Musik/Other/Jingles/Short"
@@ -87,6 +92,7 @@ radio = random(weights=[1,1], [songs, jingles])
 radio = amplify(1.,override="liq_amplify",radio)
 
 # "Fake" LUFS playout adjust. Calculate at -18, play at -14 ;-)
+# Good to use if you write tags (at -18 LUFS standard).
 # radio = amplify(lin_of_dB(4.0), override=null(), radio)
 
 
