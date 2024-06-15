@@ -49,13 +49,15 @@
 #                         a collaborative work.
 #                         Breaking: JSON & metadata (`liq_sustained_ending`)
 # 2024-06-14 Moonbase59 - Add mutagen vserion to `-V`/`--version`.
+# 2024-06-15 Moonbase59 - Catch IndexError in sustained calculation if we are
+#                         already at the end of the track.
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
 # Some collaborative work with RM-FM (@RM-FM): Sustained ending analysis.
 
 __author__ = 'Matthias C. Hormann'
-__version__ = '4.0.0'
+__version__ = '4.0.1'
 
 import os
 import sys
@@ -662,14 +664,16 @@ def analyse(
     # Split into left & right part, use avg momentary loudness of each
     def slope(elements):
         l = len(elements)
+        if l < 1:
+            raise ValueError("need at least one measure point to calculate")
         l2 = l // 2
         p1 = elements[:l2] if l >= 2 else elements[:]
         # leave out midpoint if we have an odd number of elements
         # this is mainly for sliding window techniques
         # and guarantees both halves are the same size
         p2 = elements[l2 + l % 2:] if l >= 2 else elements[:]
+        eprint(l, l2, len(p1), len(p2))
         t = elements[l2][0]  # time of midpoint
-        # eprint(l, l2, len(p1), len(p2))
         y1 = sum(i[1] for i in p1)  # sum momentary loudness
         y2 = sum(i[1] for i in p2)  # sum momentary loudness
         if l2 > 0:
@@ -695,22 +699,24 @@ def analyse(
     sustained = False
     start_next_time_sustained = 0.0
     # eprint(f"Index: {start_next_idx}–{end}, Silence: {silence_level:.2f} LUFS, Start Next Level: {start_next_level:.2f} LUFS")
-    # start_next_time = sliding_window(measure[start_next_idx:end], 21)
-    time, lufs, m, degrees, lufs_ratio_pct, max_lufs = slope(
-        measure[start_next_idx:end])
-    # eprint(f"Slope m={m:.2f}, {degrees:.2f}°, LUFS Ratio Left:Right {lufs_ratio_pct:.2f}%")
-    if lufs_ratio_pct < drop:
-        sustained = True
-        start_next_level = loudness + overlay + extra
-        # eprint(f"Sustained; Recalc with {start_next_level} LUFS")
-        start_next_time_sustained = 0.0
-        for i in reversed(range(start, end)):
-            if measure[i][1] > start_next_level:
-                start_next_time_sustained = measure[i][0]
-                break
-        start_next_time_sustained = max(
-            start_next_time_sustained,
-            cue_out_time - start_next_time_sustained)
+    # Calculation can only be done if we have at least one measure point.
+    # We don’t if we’re already at the end.
+    if range(start_next_idx, end):
+        time, lufs, m, degrees, lufs_ratio_pct, max_lufs = slope(
+            measure[start_next_idx:end])
+        # eprint(f"Slope m={m:.2f}, {degrees:.2f}°, LUFS Ratio Left:Right {lufs_ratio_pct:.2f}%")
+        if lufs_ratio_pct < drop:
+            sustained = True
+            start_next_level = loudness + overlay + extra
+            # eprint(f"Sustained; Recalc with {start_next_level} LUFS")
+            start_next_time_sustained = 0.0
+            for i in reversed(range(start, end)):
+                if measure[i][1] > start_next_level:
+                    start_next_time_sustained = measure[i][0]
+                    break
+            start_next_time_sustained = max(
+                start_next_time_sustained,
+                cue_out_time - start_next_time_sustained)
 
     # We want to keep songs with a long fade-out intact, so if the calculated
     # overlap is longer than the "longtail_seconds" time, we check again, by reducing
