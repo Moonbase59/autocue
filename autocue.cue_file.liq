@@ -33,6 +33,7 @@
 # 2024-06-14 - Moonbase59 - Add external `cue_file` version check and a
 #                           `check_autocue_setup` function to be used after
 #                           the user-defined settings.
+# 2024-06-15 - Moonbase59 - v4.0.1 - Sync with cue_file version
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -46,7 +47,7 @@ let settings.autocue.cue_file.version =
   settings.make(
     description=
       "Software version of autocue.cue_file. Should coincide with `cue_file`.",
-    "4.0.0"
+    "4.0.1"
   )
 
 # Internal only! Not a user setting.

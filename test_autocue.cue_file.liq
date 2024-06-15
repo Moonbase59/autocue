@@ -52,7 +52,7 @@ settings.autocue.cue_file.nice := true  # Linux/MacOS only!
 # Check Autocue setup, print result, shutdown if problems
 # The check results will also be in the log.
 # Returns a bool: true=ok, false=error. We ignore that here.
-# set `print=true` for standalone scripts, `false` for AzuraCast
+# Set `print=true` for standalone scripts, `false` for AzuraCast.
 ignore(check_autocue_setup(shutdown=true, print=true))
 
 # `enable_autocue_metadata()` will autocue ALL files Liquidsoap processes.

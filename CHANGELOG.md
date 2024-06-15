@@ -1,5 +1,12 @@
 # autocue changelog
 
+### 2024-06-15 - v4.0.1
+
+- **Bug fix:** Catch index error in sustained ending calculation if we’re already at the end of the track. This could happen in very rare cases, if no earlier overlay start than the end of the track could be found.
+- Added song that exposes this situation to the test set:
+  - Camel - The Great Marsh
+
+
 ### 2024-06-14 - v4.0.0
 
 #### New features
