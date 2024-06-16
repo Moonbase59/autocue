@@ -49,15 +49,20 @@
 #                         a collaborative work.
 #                         Breaking: JSON & metadata (`liq_sustained_ending`)
 # 2024-06-14 Moonbase59 - Add mutagen vserion to `-V`/`--version`.
-# 2024-06-15 Moonbase59 - Catch IndexError in sustained calculation if we are
+# 2024-06-15 Moonbase59 - v4.0.1 Catch IndexError in sustained calculation if we are
 #                         already at the end of the track.
+#                       - Remove eprint in slope
+# 2024-06-16 Moonbase59 - v4.0.2 Cleanup ending calculation code
+#                       - Use max. LUGS of longtail & right end for sustained
+#                       - Default SUSTAINED_LOUDNESS_DROP to 40.0% instead of 60.0%,
+#                         for slightly tighter/denser playout (community wish)
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
 # Some collaborative work with RM-FM (@RM-FM): Sustained ending analysis.
 
 __author__ = 'Matthias C. Hormann'
-__version__ = '4.0.1'
+__version__ = '4.0.2'
 
 import os
 import sys
@@ -105,7 +110,7 @@ OVERLAY_LU = -8.0  # LU below average for overlay trigger (start next song)
 # more than LONGTAIL_SECONDS below OVERLAY_LU are considered a "long tail"
 LONGTAIL_SECONDS = 15.0
 LONGTAIL_EXTRA_LU = -15.0  # reduce 15 dB extra on long tail songs to find overlap point
-SUSTAINED_LOUDNESS_DROP = 60.0  # max. percent drop to be considered sustained
+SUSTAINED_LOUDNESS_DROP = 40.0  # max. percent drop to be considered sustained
 BLANKSKIP = 5.0  # min. seconds silence to detect blank
 NICE = False  # use Linux/MacOS nice?
 
@@ -327,7 +332,7 @@ def read_tags(
         for tag in suffixed_tags:
             if tag in tags and isinstance(tags[tag], str):
                 # No need to check for unit name, only using defined tags
-                m = re.search(r'([+-]?\d*.?\d+)', tags[tag])
+                m = re.search(r'([+-]?\d*\.?\d+)', tags[tag])
                 if m is not None:
                     tags[tag] = m.group()
 
@@ -660,9 +665,9 @@ def analyse(
     start_next_time = max(start_next_time, cue_out_time - start_next_time)
     # eprint(f"Start next: {start_next_time:.2f}")
 
-    # Calculate slope over arbitrary number of measure elements
-    # Split into left & right part, use avg momentary loudness of each
-    def slope(elements):
+    # Calculate loudness drop over arbitrary number of measure elements
+    # Split into left & right part, use avg momentary loudness & time of each
+    def calc_ending(elements):
         l = len(elements)
         if l < 1:
             raise ValueError("need at least one measure point to calculate")
@@ -672,42 +677,58 @@ def analyse(
         # this is mainly for sliding window techniques
         # and guarantees both halves are the same size
         p2 = elements[l2 + l % 2:] if l >= 2 else elements[:]
-        eprint(l, l2, len(p1), len(p2))
+        # eprint(l, l2, len(p1), len(p2))
         t = elements[l2][0]  # time of midpoint
+        x1 = sum(i[0] for i in p1)  # sum time
+        x2 = sum(i[0] for i in p2)  # sum time
         y1 = sum(i[1] for i in p1)  # sum momentary loudness
         y2 = sum(i[1] for i in p2)  # sum momentary loudness
+        # calculate averages
         if l2 > 0:
-            y1 /= len(p1)  # average
-            y2 /= len(p2)  # average
-        m = (y2 - y1) / (l / 10)  # l are units of 100ms = 1/10 second
-        m = 0.0 if math.isnan(m) else m  # slope zero if result NaN
-        d = math.degrees(math.atan(m))  # phi in degrees
-        time = elements[l2][0]  # midpoint time in seconds
-        lufs = elements[l2][1]  # midpoint momentary loudness in LUFS
+            x1 /= len(p1)
+            x2 /= len(p2)
+            y1 /= len(p1)
+            y2 /= len(p2)
+        dx = x2 - x1
+        dy = y2 - y1
+        # removed slope (m = dy/dx), not really needed
+        # use math.atan2 instead of math.atan, determines quadrant, handles
+        # errors
+        # slope angle clockwise in degrees
+        angle = math.degrees(math.atan2(dy, dx))
+        mid_time = elements[l2][0]  # midpoint time in seconds
+        mid_lufs = elements[l2][1]  # midpoint momentary loudness in LUFS
         try:
-            lufs_ratio_pct = (1 - (y1 / y2)) * 100.0  # LUFS ratio in %
+            lufs_ratio_pct = (1 - (y1 / y2)) * 100.0  # ending LUFS ratio in %
         except ZeroDivisionError:
             lufs_ratio_pct = (1 - float("inf")) * 100.0
         # eprint(
-        #     f"Left: {y1:.2f} LUFS avg ({len(p1)/10:.2f} s), "
-        #     f"Right: {y2:.2f} LUFS avg ({len(p2)/10:.2f} s), "
+        #     f"Left: {x1:.2f} s, {y1:.2f} LUFS avg ({len(p1)/10:.2f} s), "
+        #     f"Right: {x2:.2f} s, {y2:.2f} LUFS avg ({len(p2)/10:.2f} s), "
+        #     f"angle={angle:.2f}°, "
         #     f"Drop: {lufs_ratio_pct:.2f}%"
         # )
-        return time, lufs, m, d, lufs_ratio_pct, y2
+        return mid_time, mid_lufs, angle, lufs_ratio_pct, y2
 
     # Check for "sustained ending", comparing loudness ratios at end of song
     sustained = False
     start_next_time_sustained = 0.0
     # eprint(f"Index: {start_next_idx}–{end}, Silence: {silence_level:.2f} LUFS, Start Next Level: {start_next_level:.2f} LUFS")
+
     # Calculation can only be done if we have at least one measure point.
-    # We don’t if we’re already at the end.
+    # We don’t if we’re already at the end. (Badly cut file?)
     if range(start_next_idx, end):
-        time, lufs, m, degrees, lufs_ratio_pct, max_lufs = slope(
+        _, _, _, lufs_ratio_pct, end_lufs = calc_ending(
             measure[start_next_idx:end])
-        # eprint(f"Slope m={m:.2f}, {degrees:.2f}°, LUFS Ratio Left:Right {lufs_ratio_pct:.2f}%")
+        eprint(f"Overlay: {loudness+overlay:.2f} LUFS, Longtail: {loudness + overlay + extra:.2f} LUFS, Measured end avg: {end_lufs:.2f} LUFS, Drop: {lufs_ratio_pct:.2f}%")
+        # We want to keep songs with a sustained ending intact, so if the
+        # calculated loudness drop at the end (LUFS ratio) is smaller than
+        # the set percentage, we check again, by reducing the loudness
+        # to look for by the maximum of end loudness and set extre longtail
+        # loudness
         if lufs_ratio_pct < drop:
             sustained = True
-            start_next_level = loudness + overlay + extra
+            start_next_level = max(end_lufs, loudness + overlay + extra)
             # eprint(f"Sustained; Recalc with {start_next_level} LUFS")
             start_next_time_sustained = 0.0
             for i in reversed(range(start, end)):
@@ -717,6 +738,8 @@ def analyse(
             start_next_time_sustained = max(
                 start_next_time_sustained,
                 cue_out_time - start_next_time_sustained)
+    else:
+        eprint("Already at end of track (badly cut?), no ending to analyse.")
 
     # We want to keep songs with a long fade-out intact, so if the calculated
     # overlap is longer than the "longtail_seconds" time, we check again, by reducing
@@ -742,7 +765,7 @@ def analyse(
         start_next_time_longtail
     )
     eprint(
-        f"Start next times: {start_next_time:.2f}/"
+        f"Overlay times: {start_next_time:.2f}/"
         f"{start_next_time_sustained:.2f}/"
         f"{start_next_time_longtail:.2f} s "
         f"(normal/sustained/longtail), "
@@ -1022,8 +1045,8 @@ parser.add_argument(
     "--version",
     action='version',
     version=f"%(prog)s {__version__}\nmutagen {MUTAGEN_VERSION}")
-    # version='%(prog)s {version}'.format(
-    #     version=__version__))
+# version='%(prog)s {version}'.format(
+#     version=__version__))
 parser.add_argument("file", help="File to be processed")
 parser.add_argument(
     "-t",

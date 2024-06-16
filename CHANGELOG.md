@@ -1,5 +1,23 @@
 # autocue changelog
 
+### 2024-06-16 – v4.0.2
+
+#### Bug fixes, enhancements
+
+- Allow recognition of values like `-8.33dB` (without blank before "dB") in `autocue.cue_file.liq` as well (it’s already in `cue_file`). **Note:** Metadata with units _should_ be used _with a blank in between_ value and unit.
+- Streamline "sustained endings" code.
+- Add some diagnostics output to `cue_file` on the console to easier find and fix problems:
+  ```
+  Overlay: -23.50 LUFS, Longtail: -38.50 LUFS, Measured end avg: -48.40 LUFS, Drop: 29.09%
+  Overlay times: 336.50/348.50/0.00 s (normal/sustained/longtail), using: 348.50 s.
+  Cue out time: 353.00 s
+  ```
+  Overlay times shown as `0.00` mean a calculation has not been done or wasn’t needed, like longtail above.
+  Diagnostics are output to `stderr`, so don’t interfere with the JSON on `stdout`.
+- **Changed default for "sustained endings" loudness drop** from `60.0`% to `40.0`%. This was a wish from the community and makes for a little tighter/denser song overlap.
+- Modify to your liking by using `cue_file`’s `-d`/`--drop` parameter or `settings.autocue.cue_file.sustained_loudness_drop := 40.0` in Liquidsoap/AzuraCast. A value of `0.0` switches the "sustained endings" feature completely _off_ (behaviour like in older versions).
+
+
 ### 2024-06-15 - v4.0.1
 
 - **Bug fix:** Catch index error in sustained ending calculation if we’re already at the end of the track. This could happen in very rare cases, if no earlier overlay start than the end of the track could be found.

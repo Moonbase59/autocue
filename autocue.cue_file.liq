@@ -34,6 +34,7 @@
 #                           `check_autocue_setup` function to be used after
 #                           the user-defined settings.
 # 2024-06-15 - Moonbase59 - v4.0.1 - Sync with cue_file version
+# 2024-06-16 - Moonbase59 - v4.0.2 - Allow `-8.33dB` type values with no blank
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -47,7 +48,7 @@ let settings.autocue.cue_file.version =
   settings.make(
     description=
       "Software version of autocue.cue_file. Should coincide with `cue_file`.",
-    "4.0.1"
+    "4.0.2"
   )
 
 # Internal only! Not a user setting.
@@ -127,8 +128,8 @@ let settings.autocue.cue_file.sustained_loudness_drop =
   settings.make(
     description=
       "Consider track to have a sustained ending if its loudness at the end \
-      does NOT drop more than so many percent.",
-    60.0
+      does NOT drop more than so many percent. Otherwise, it has a hard ending.",
+    40.0
   )
 
 let settings.autocue.cue_file.noclip =
@@ -651,9 +652,9 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
 
       # make a suffixed string a float
       def make_float(s) =
-        float_of_string(
-          string.replace(pattern=" (dBFS|dBTP|LUFS|dB|LU)", fun(_) -> "", s)
-        )
+        # find first number, make float & return
+        r = r/[+-]?\d*\.?\d+/g.exec(s)
+        float_of_string(default=0.0, r[0])
       end
 
       # Re-calculate amplify and amplify_correction, using true_peak
@@ -961,7 +962,7 @@ autocue.register(name="cue_file", cue_file)
 # settings.autocue.cue_file.overlay := -8.0  # LU below track loudness
 # settings.autocue.cue_file.longtail := 15.0  # seconds
 # settings.autocue.cue_file.overlay_longtail := -15.0  # extra LU
-# settings.autocue.cue_file.sustained_loudness_drop := 60.0  # max. percent drop to be considered sustained
+# settings.autocue.cue_file.sustained_loudness_drop := 40.0  # max. percent drop to be considered sustained
 # settings.autocue.cue_file.noclip := false  # clipping prevention like loudgain's `-k`
 # settings.autocue.cue_file.blankskip := 0.0  # skip silence in tracks
 # settings.autocue.cue_file.unify_loudness_correction := true  # unify `replaygain_track_gain` & `liq_amplify`
