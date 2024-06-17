@@ -46,7 +46,7 @@ Both standalone Liquidsoap operation and integrated playout systems like AzuraCa
     - [Next track and short jingle handling](#next-track-and-short-jingle-handling)
     - [Tags/Annotations that influence `autocue`’s behaviour](#tagsannotations-that-influence-autocues-behaviour)
       - [`liq_cue_file` (`true`/`false`)](#liq_cue_file-truefalse)
-      - [`liq_blankskip` (`true`/`false`)](#liq_blankskip-truefalse)
+      - [`liq_blankskip` (seconds; 0.0 to disable)](#liq_blankskip-seconds-00-to-disable)
       - [AzuraCast: `jingle_mode` (`"true"`)](#azuracast-jingle_mode-true)
     - [Effect of `settings.autocue.cue_file.unify_loudness_correction` (`true`/`false`)](#effect-of-settingsautocuecue_fileunify_loudness_correction-truefalse)
       - [ReplayGain inserted](#replaygain-inserted)
@@ -453,7 +453,7 @@ If a track has been skipped, it will be shown in the logs like this:
 
 **Note:** Using this makes only sense if you used `enable_autocue_metadata()`. When using the `autocue:` _protocol_ in your annotations, you’d simply leave the `autocue:` part off the annotation instead.
 
-#### <a name="liq_blankskip-truefalse"></a>`liq_blankskip` (`true`/`false`) <a href="#toc" class="goToc">⇧</a>
+#### <a name="liq_blankskip-seconds-00-to-disable"></a>`liq_blankskip` (seconds; 0.0 to disable) <a href="#toc" class="goToc">⇧</a>
 
 You can _override_ the "blankskip" behaviour (early cue-out of a song when silence is detected) on a per-request or per-playlist basis using a special `liq_blankskip` annotation. This is an "ultimate override" which overrides both `settings.autocue.cue_file.blankskip` and `jingle_mode`.
 
