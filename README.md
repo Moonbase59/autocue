@@ -2,11 +2,13 @@
 
 On-the-fly JSON song cue-in, cue-out, overlay, replaygain calculation for Liquidsoap, AzuraCast and other AutoDJ software.
 
-Work in progress.
+Work in progress. I’m currently updating this documentation, so bear with me if not all is up-to-date yet!
 
-**Note:** This documentation describes the standalone `cue_file` and the `autocue2` Liquidsoap protocol. _Documentation for the **integrated version** in the `integrate-with-liquidsoap` branch will follow later._
+**Note:** This documentation describes the standalone `cue_file` and the integrated `autocue.cue_file` Liquidsoap protocol.
 
-Requires Python3 and `ffmpeg` with the _ebur128_ filter. (The AzuraCast Docker already has these.)
+**Note:** The previous `integrate-with-liquidsoap` branch is gone. I updated the `master` branch and you can get the latest versions from that.
+
+Requires Python3 and `ffmpeg` with the _ebur128_ filter. _Mutagen_ highly recommended. (The AzuraCast Docker already has these.)
 
 Tested on Linux and Mac, with several `ffmpeg` versions ranging from 4.4.2–6.1.1, and running on several stations since a few weeks.
 
