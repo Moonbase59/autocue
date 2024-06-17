@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="generator" content="pandoc">
   <meta name="author" content="Matthias C. Hormann (“Moonbase59”)">
-  <meta name="dcterms.date" content="2024-05-27">
+  <meta name="dcterms.date" content="2024-06-17">
   <title>Autocue</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -46,9 +46,9 @@
   <h1 class="title">Autocue</h1>
   <p class="subtitle"><a
 href="http://www.liquidsoap.info/liquidshop/4/">Liquidshop 4</a>
-Presentation</p>
+Presentation (updated)</p>
   <p class="author">Matthias C. Hormann (“Moonbase59”)</p>
-  <p class="date">2024-05-27</p>
+  <p class="date">2024-06-17</p>
 </section>
 
 <section id="navigation" class="title-slide slide level1">
@@ -458,6 +458,8 @@ pre-installed.</p></li>
 # Uses one playlist and outputs to sound card.
 
 %include &quot;autocue.cue_file.liq&quot;
+# Ensure AutoCue settings are valid
+ignore(check_autocue_setup(shutdown=true, print=true))
 enable_autocue_metadata()
 
 radio = playlist(&quot;Classic Rock.m3u&quot;)
@@ -501,7 +503,7 @@ traces (copy-pasted code, cue_file) before using this.</li>
 <section id="settings-example" class="slide level2">
 <h2>Settings example</h2>
 <p><img data-src="images/AzuraCast%20Autocue%20Settings.png"
-alt=" " /><br />
+height="400" alt=" " /><br />
 I put <em>all</em> settings in, so I don’t have to look them up.</p>
 </section>
 <section id="initial-startup" class="slide level2">
@@ -549,17 +551,15 @@ nearly all use cases!</p>
 # settings.autocue.cue_file.overlay := -8.0  # LU below track loudness
 # settings.autocue.cue_file.longtail := 15.0  # seconds
 # settings.autocue.cue_file.overlay_longtail := -15.0  # extra LU
+# settings.autocue.cue_file.sustained_loudness_drop := 40.0  # max. percent drop to be considered sustained
 # settings.autocue.cue_file.noclip := false  # clipping prevention like loudgain&#39;s `-k`
-# settings.autocue.cue_file.blankskip := false  # skip silence in tracks
+# settings.autocue.cue_file.blankskip := 0.0  # skip silence in tracks
 # settings.autocue.cue_file.unify_loudness_correction := true  # unify `replaygain_track_gain` &amp; `liq_amplify`
 # settings.autocue.cue_file.write_tags := false  # write liq_* tags back to file
+# settings.autocue.cue_file.write_replaygain := false  # write ReplayGain tags back to file
 # settings.autocue.cue_file.force_analysis := false  # force re-analysis even if tags found
 # settings.autocue.cue_file.nice := false  # Linux/MacOS only: Use NI=18 for analysis
-
-# `enable_autocue_metadata()` will autocue ALL files Liquidsoap processes.
-# You can disable it for selected sources using &#39;annotate:liq_cue_file=false&#39;.
-# Remember you won&#39;t get `liq_amplify` data then -- expect loudness jumps!
-enable_autocue_metadata()</code></pre>
+# settings.autocue.cue_file.use_json_metadata := true  # pass metadata to `cue_file` as JSON</code></pre>
 </div>
 </section>
 <section id="the-request-queue" class="slide level2">
@@ -583,8 +583,11 @@ queue from being deleteable.</p></li>
 <p>You can use <code>cue_file</code> on the commandline.<br />
 It returns standard JSON data:</p>
 <div class="smaller">
-<pre><code>$ cue_file &quot;The_Vow_-_Spread_Some_Love.mp3&quot; 
-{&quot;duration&quot;: 181.237551, &quot;liq_cue_duration&quot;: 181.1, &quot;liq_cue_in&quot;: 0.0, &quot;liq_cue_out&quot;: 181.1, &quot;liq_cross_start_next&quot;: 177.3, &quot;liq_longtail&quot;: false, &quot;liq_loudness&quot;: &quot;-6.72 LUFS&quot;, &quot;liq_loudness_range&quot;: &quot;5.86 LU&quot;, &quot;liq_amplify&quot;: &quot;-11.28 dB&quot;, &quot;liq_amplify_adjustment&quot;: &quot;0.00 dB&quot;, &quot;liq_reference_loudness&quot;: &quot;-18.00 LUFS&quot;, &quot;liq_blankskip&quot;: false, &quot;liq_blank_skipped&quot;: false, &quot;liq_true_peak&quot;: &quot;1.42 dBFS&quot;}</code></pre>
+<pre><code>$ cue_file &quot;The_Vow_-_Spread_Some_Love.mp3&quot;
+Overlay: -14.72 LUFS, Longtail: -29.73 LUFS, Measured end avg: -30.91 LUFS, Drop: 38.45%
+Overlay times: 177.30/180.10/0.00 s (normal/sustained/longtail), using: 180.10 s.
+Cue out time: 181.10 s
+{&quot;duration&quot;: 181.2, &quot;liq_cue_duration&quot;: 181.1, &quot;liq_cue_in&quot;: 0.0, &quot;liq_cue_out&quot;: 181.1, &quot;liq_cross_start_next&quot;: 180.1, &quot;liq_longtail&quot;: false, &quot;liq_sustained_ending&quot;: true, &quot;liq_loudness&quot;: &quot;-6.72 LUFS&quot;, &quot;liq_loudness_range&quot;: &quot;5.86 LU&quot;, &quot;liq_amplify&quot;: &quot;-11.28 dB&quot;, &quot;liq_amplify_adjustment&quot;: &quot;0.00 dB&quot;, &quot;liq_reference_loudness&quot;: &quot;-18.00 LUFS&quot;, &quot;liq_blankskip&quot;: 0.0, &quot;liq_blank_skipped&quot;: false, &quot;liq_true_peak&quot;: 1.177, &quot;liq_true_peak_db&quot;: &quot;1.42 dBFS&quot;}</code></pre>
 </div>
 <p>This is ideal for debugging or pre-processing scripts.</p>
 </section>
@@ -593,13 +596,16 @@ It returns standard JSON data:</p>
 <p>For sorted, more human-readable output, use <code>jq -S</code>:</p>
 <div class="smaller">
 <pre><code>$ cue_file &quot;The_Vow_-_Spread_Some_Love.mp3&quot; | jq -S
+Overlay: -14.72 LUFS, Longtail: -29.73 LUFS, Measured end avg: -30.91 LUFS, Drop: 38.45%
+Overlay times: 177.30/180.10/0.00 s (normal/sustained/longtail), using: 180.10 s.
+Cue out time: 181.10 s
 {
-  &quot;duration&quot;: 181.237551,
+  &quot;duration&quot;: 181.2,
   &quot;liq_amplify&quot;: &quot;-11.28 dB&quot;,
   &quot;liq_amplify_adjustment&quot;: &quot;0.00 dB&quot;,
   &quot;liq_blank_skipped&quot;: false,
-  &quot;liq_blankskip&quot;: false,
-  &quot;liq_cross_start_next&quot;: 177.3,
+  &quot;liq_blankskip&quot;: 0,
+  &quot;liq_cross_start_next&quot;: 180.1,
   &quot;liq_cue_duration&quot;: 181.1,
   &quot;liq_cue_in&quot;: 0,
   &quot;liq_cue_out&quot;: 181.1,
@@ -607,7 +613,9 @@ It returns standard JSON data:</p>
   &quot;liq_loudness&quot;: &quot;-6.72 LUFS&quot;,
   &quot;liq_loudness_range&quot;: &quot;5.86 LU&quot;,
   &quot;liq_reference_loudness&quot;: &quot;-18.00 LUFS&quot;,
-  &quot;liq_true_peak&quot;: &quot;1.42 dBFS&quot;
+  &quot;liq_sustained_ending&quot;: true,
+  &quot;liq_true_peak&quot;: 1.177,
+  &quot;liq_true_peak_db&quot;: &quot;1.42 dBFS&quot;
 }</code></pre>
 </div>
 </section>
@@ -616,63 +624,96 @@ It returns standard JSON data:</p>
 <p>Use <code>cue_file --help</code> for more information.</p>
 <div class="smaller">
 <pre><code>$ cue_file --help
-usage: cue_file [-h] [-t TARGET] [-s SILENCE] [-o OVERLAY]
-                [-l LONGTAIL] [-x EXTRA] [-k] [-b] [-w] [-f]
-                [-n]
+usage: cue_file [-h] [-V] [-t TARGET] [-s SILENCE] [-o OVERLAY] [-l LONGTAIL]
+                [-x EXTRA] [-d DROP] [-k] [-b [BLANKSKIP]] [-w] [-r] [-f] [-n]
+                [-j JSON]
                 file
 
-Return cue-in, cue-out, overlay and replaygain data for an
-audio file as JSON. To be used with my Liquidsoap &quot;autocue:&quot;
-protocol.
+Analyse audio file for cue-in, cue-out, overlay and EBU R128 loudness data,
+results as JSON. Optionally writes tags to original audio file, avoiding
+unnecessary re-analysis and getting results MUCH faster. This software is
+mainly intended for use with my Liquidsoap &quot;autocue:&quot; protocol.
+
+cue_file 4.0.2 supports writing tags to these file types:
+.aac, .aif, .aifc, .aiff, .alac, .ape, .asf, .flac, .m2a, .m4a, .m4b, .m4p,
+.m4r, .m4v, .mp+, .mp2, .mp3, .mp4, .mpc, .ofr, .ofs, .oga, .ogg, .ogv, .opus,
+.spx, .wav, .wma, .wmv, .wv.
+More file types are available when Mutagen is installed (True).
 
 positional arguments:
   file                  File to be processed
 
 options:
   -h, --help            show this help message and exit
+  -V, --version         show program&#39;s version number and exit
   -t TARGET, --target TARGET
-                        LUFS reference target (default: -18.0)
+                        LUFS reference target; -23.0 to 0.0 (default: -18.0)
   -s SILENCE, --silence SILENCE
-                        LU below integrated track loudness for
-                        cue-in &amp; cue-out points (silence
-                        removal at beginning &amp; end of a track)
-                        (default: -42.0)
+                        LU below integrated track loudness for cue-in &amp; cue-
+                        out points (silence removal at beginning &amp; end of a
+                        track) (default: -42.0)
   -o OVERLAY, --overlay OVERLAY
-                        LU below integrated track loudness to
-                        trigger next track (default: -8.0)
+                        LU below integrated track loudness to trigger next
+                        track (default: -8.0)
   -l LONGTAIL, --longtail LONGTAIL
-                        More than so many seconds of calculated
-                        overlay duration are considered a long
-                        tail, and will force a recalculation
-                        using --extra, thus keeping long song
+                        More than so many seconds of calculated overlay
+                        duration are considered a long tail, and will force a
+                        recalculation using --extra, thus keeping long song
                         endings intact (default: 15.0)
   -x EXTRA, --extra EXTRA
-                        Extra LU below overlay loudness to
-                        trigger next track for songs with long
-                        tail (default: -15.0)
-  -k, --noclip          Clipping prevention: Lowers track gain
-                        if needed, to avoid peaks going above
-                        -1 dBFS. Uses true peak values of all
-                        audio channels. (default: False)
-  -b, --blankskip       Skip blank (silence) within song (get
-                        rid of &quot;hidden tracks&quot;). Sets the cue-
-                        out point to where the silence begins.
-                        Don&#39;t use this with spoken or TTS-
-                        generated text, as it will often cut
-                        the message short. (default: False)
-  -w, --write           Write Liquidsoap liq_* tags to file.
-                        USE WITH CARE, as ffmpeg can&#39;t write
-                        all tags to all file types! Ensure you
-                        have enough free space to hold a copy
-                        of the original file. (default: False)
-  -f, --force           Force re-calculation, even if tags
-                        exist (default: False)
-  -n, --nice            Linux/MacOS only: Use nice? Will run
-                        analysis at nice level 18. (default:
+                        Extra LU below overlay loudness to trigger next track
+                        for songs with long tail (default: -15.0)
+  -d DROP, --drop DROP  Max. percent loudness drop at the end to be still
+                        considered having a sustained ending. Such tracks will
+                        be recalculated using --extra, keeping the song ending
+                        intact. Zero (0.0) to switch off. (default: 40.0)
+  -k, --noclip          Clipping prevention: Lowers track gain if needed, to
+                        avoid peaks going above -1 dBFS. Uses true peak values
+                        of all audio channels. (default: False)
+  -b [BLANKSKIP], --blankskip [BLANKSKIP]
+                        Skip blank (silence) within track if longer than
+                        [BLANKSKIP] seconds (get rid of &quot;hidden tracks&quot;). Sets
+                        the cue-out point to where the silence begins. Don&#39;t
+                        use this with spoken or TTS-generated text, as it will
+                        often cut the message short. Zero (0.0) to switch off.
+                        Omitting [BLANKSKIP] defaults to 5.0 s. (default: 0.0)
+  -w, --write           Write Liquidsoap liq_* tags to file. Ensure you have
+                        enough free space to hold a copy of the original file.
+                        (default: False)
+  -r, --replaygain      Write ReplayGain tags to file (track only, no album).
+                        Useful if your files have no previous RG tags. Only
+                        valid if -w/--write is also specified. (default:
                         False)
+  -f, --force           Force re-analysis, even if tags exist (default: False)
+  -n, --nice            Linux/MacOS only: Use nice? Will run analysis at nice
+                        level 18. (default: False)
+  -j JSON, --json JSON  Read/override tags from a JSON file. Use - to read
+                        from stdin. Intended for pre-processing software which
+                        can, for instance, fill in values from their database
+                        here. (default: None)
 
-Please report any issues to
-https://github.com/Moonbase59/autocue/issues</code></pre>
+Note cue_file will use the LARGER value from the sustained ending and longtail
+calculations to set the next track overlay point. This ensures special song
+endings are always kept intact in transitions.
+
+cue_file 4.0.2 knows about these tags:
+duration, liq_amplify, liq_amplify_adjustment, liq_blank_skipped,
+liq_blankskip, liq_cross_duration, liq_cross_start_next, liq_cue_duration,
+liq_cue_in, liq_cue_out, liq_fade_in, liq_fade_out, liq_hook1_in,
+liq_hook1_out, liq_hook2_in, liq_hook2_out, liq_hook3_in, liq_hook3_out,
+liq_longtail, liq_loudness, liq_loudness_range, liq_ramp1, liq_ramp2,
+liq_ramp3, liq_reference_loudness, liq_sustained_ending, liq_true_peak,
+liq_true_peak_db, r128_track_gain, replaygain_reference_loudness,
+replaygain_track_gain, replaygain_track_peak, replaygain_track_range.
+
+The absolute minimum set to (possibly) avoid a re-analysis is:
+duration, liq_cross_start_next, liq_cue_in, liq_cue_out,
+replaygain_track_gain.
+
+A full audio file analysis can take some time. cue_file tries to avoid a
+(re-)analysis if all required data can be read from existing tags in the file.
+
+Please report any issues to https://github.com/Moonbase59/autocue/issues</code></pre>
 </div>
 </section></section>
 <section>
@@ -731,13 +772,13 @@ Tags written by <code>cue_file -w</code>.</p>
 <h2>ReplayGain Tags</h2>
 <p><img data-src="images/Replaygain%20Tags.png" alt=" " /><br />
 ReplayGain tags are <em>used</em> by <code>cue_file</code><br />
-but <em>never written back to audio files</em>.<br />
+but <em>only written back to audio files on request</em>.<br />
 This preserves your data from unintended changes.</p>
 </section>
 <section id="annotation-example" class="slide level2">
 <h2>Annotation example</h2>
 <pre class="liquidsoap"><code>uri = &quot;/home/matthias/Musik/Other/Jingles/Short&quot;
-jingles = playlist(prefix=&#39;annotate:liq_blankskip=false,&#39;
+jingles = playlist(prefix=&#39;annotate:liq_blankskip=0.0,&#39;
   ^ &#39;liq_fade_in=0.10,liq_fade_out=0.10&#39;
   ^ &#39;:&#39;, uri)</code></pre>
 <p>A jingles playlist: We want to disable blank skipping and set fade-in
@@ -764,8 +805,8 @@ priority. Just what we want.</p>
 <section id="switches" class="slide level2">
 <h2>“Switches”</h2>
 <ul>
-<li><code>liq_blankskip</code> (bool)<br />
-<small>Activates/deactivates blank skipping mode</small></li>
+<li><code>liq_blankskip</code> (float)<br />
+<small>Sets blank skipping min. duration (0.0=disable)</small></li>
 <li><code>liq_cue_file</code> (bool)<br />
 <small>Enables/disables autocue (i.e., for large video
 files)</small></li>
@@ -797,6 +838,7 @@ playlists</small></li>
 <li><code>liq_blank_skipped</code> (bool)</li>
 <li><code>liq_cue_duration</code> (s)</li>
 <li><code>liq_longtail</code> (bool)</li>
+<li><code>liq_sustained_ending</code> (bool)</li>
 <li><code>liq_loudness</code> (LUFS)</li>
 <li><code>liq_loudness_range</code> (LU)</li>
 <li><code>liq_true_peak</code> (dBFS)</li>
@@ -843,8 +885,6 @@ Shows final values used in playout<br />
 <p>GitHub repo:<br />
 <a
 href="https://github.com/Moonbase59/autocue/">https://github.com/Moonbase59/autocue/</a></p>
-<p>Currently (May 2024) please use the files from the
-<code>integrate-with-liquidsoap</code> branch!</p>
 </section>
 <section id="docs-examples-on-github" class="slide level2">
 <h2>Docs &amp; Examples on GitHub</h2>
@@ -865,9 +905,9 @@ alt="Long tail handling" />
 <section id="roadmap" class="title-slide slide level1">
 <h1>Roadmap</h1>
 <ul>
-<li>Scrap <code>autocue2</code>. <code>autocue.cue_file</code> is the
-supported integrated solution for LS 2.2.5 &amp; newer.</li>
-<li>Update documentation.</li>
+<li><del>Scrap <code>autocue2</code>. <code>autocue.cue_file</code> is
+the supported integrated solution for LS 2.2.5 &amp; newer.</del></li>
+<li><del>Update documentation.</del></li>
 <li><del>Fix “double autocue” issue.</del></li>
 <li>Fix “new fade-in &gt; old fade-out” issue with
 <strong>toots</strong>.</li>
@@ -900,7 +940,7 @@ on Discord, as “Moonbase59”.</li>
 </ul>
 <p><nbsp></p>
 <ul>
-<li>This presentation will be made available as:
+<li>This presentation is available as:
 <ul>
 <li>recording on YouTube (check the <a
 href="http://www.liquidsoap.info/liquidshop/4/">Liquidshop 4

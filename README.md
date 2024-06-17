@@ -89,7 +89,7 @@ Depending on your settings, you’ll get some result files for further study:
 
 Since AzuraCast Rolling Release \#caeea9d (2024-05-21), it is _built-in!_
 
-In your station, just got to _Profile → Edit Profile → AutoDJ → Audio Processing_ and _enable_ it here:
+In your station, just go to _Profile → Edit Profile → AutoDJ → Audio Processing_ and _enable_ it here:
 
 ![Screenshot of AzuraCast setting Enable Autocue; enabled.](https://github.com/Moonbase59/autocue/assets/3706922/4f8f6055-18f8-4fc7-99c4-0884f301c1d4)
 
