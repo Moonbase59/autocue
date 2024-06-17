@@ -2,7 +2,7 @@
 
 ### 2024-06-18 – v4.0.3
 
-- Changed default of `-x`/`--extra` and `settings.autocue.cue_file.overlay_longtail` from `-15.0` LU to `-12.0 LU`, requested by @RM-FM and the community. Together with the `-d`/`--drop` default change from `60.0` to `40.0`, this makes for a "tighter" playout and doesn’t lose too much of long or sustained endings.
+- Changed default of `-x`/`--extra` and `settings.autocue.cue_file.overlay_longtail` from `-15.0` LU to `-12.0` LU, requested by @RM-FM and the community. Together with the `-d`/`--drop` default change from `60.0` to `40.0`, this makes for a "tighter" playout and doesn’t lose too much of long or sustained endings.
 - Updated README and Presentation as well, to reflect the new default.
 
 
