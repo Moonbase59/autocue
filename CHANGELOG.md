@@ -214,6 +214,10 @@ Introducing:
   - Gracefully skip writing to write-protected files/folders/drives.
   - `cue_file` has got better CLI params checking and much improved help.
 
+### 2024-05-21
+
+- First released built-in implementation in _AzuraCast_ Rolling Release \#caeea9d.
+
 ### 2024-04-19
 
 In preparation for later merge with `master` branch:

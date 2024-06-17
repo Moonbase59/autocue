@@ -3,7 +3,7 @@
 # 2024-04-19 - Moonbase59 - renamed to "minimal_example_autocue.cue_file.liq"
 # 2024-06-14 - Moonbase59 - update for autocue v4.0.0
 
-# Minimal example for the `autocue2` protocol.
+# Minimal example for `autocue.cue_file`
 # Uses one playlist and outputs to sound card.
 
 %include "autocue.cue_file.liq"

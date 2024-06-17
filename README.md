@@ -4,9 +4,11 @@ On-the-fly JSON song cue-in, cue-out, overlay, replaygain calculation for Liquid
 
 Work in progress. I’m currently updating this documentation, so bear with me if not all is up-to-date yet!
 
-**Note:** This documentation describes the standalone `cue_file` and the integrated `autocue.cue_file` Liquidsoap protocol.
+**Check out the [presentation](https://moonbase59.github.io/autocue/presentation/autocue.html) for an introduction, and the [changelog](CHANGELOG.md) for latest information!**
 
-**Note:** The previous `integrate-with-liquidsoap` branch is gone. I updated the `master` branch and you can get the latest versions from that.
+**Note:** This documentation describes the standalone `cue_file` and `autocue.cue_file`, my integration into Liquidsoap’s `autocue:` protocol.
+
+**Note:** The previous `integrate-with-liquidsoap` branch is now gone. I updated the `master` branch and you can get the latest versions from that.
 
 Requires Python3 and `ffmpeg` with the _ebur128_ filter. _Mutagen_ highly recommended. (The AzuraCast Docker already has these.)
 
@@ -14,11 +16,9 @@ Tested on Linux and Mac, with several `ffmpeg` versions ranging from 4.4.2–6.1
 
 Basically, `autocue` consists of two parts:
 - `cue_file`, a Python3 script, that returns JSON cueing, loudness and overlay data for an audio file. This can be used standalone, as part of some pre-processing or AutoDJ software, or in conjunction with below.
-- The [Liquidsoap](https://www.liquidsoap.info/) `autocue2:` protocol, for full integration into Liquidsoap, which in turn can be used standalone or as part of a larger playout system like [AzuraCast](https://www.azuracast.com/) or others.
+- The [Liquidsoap](https://www.liquidsoap.info/) `autocue.cue_file` integration, for use with Liquidsoap’s `autocue:` protocol, which in turn can be used standalone or as part of a larger playout system like [AzuraCast](https://www.azuracast.com/) or others.
 
-**Note:** Liquidsoap recently introduced a _bultin_ `autocue:` protocol. I had to rename my `autocue:` protocol to `autocue2:` so it doesn’t clash with the other one.
-
-Both standalone Liquidsoap operation and integrated playout systems like AzuraCast (and others) are supported. `cue_file`, the central part of `autocue2`, is available as CLI executable and can be used to integrate into other applications, for example to get the `autocue2` results into a _database_, or _pre-tag your audio files_.
+Both standalone Liquidsoap operation and integrated playout systems like AzuraCast (and others) are supported. `cue_file`, the central part of `autocue.cue_file`, is available as CLI executable and can be used to integrate into other applications, for example to get the `autocue` results into a _database_, or _pre-tag your audio files_.
 
 ## <a name="table-of-contents"></a>Table of Contents <a href="#toc" class="goToc">⇧</a>
 
@@ -31,11 +31,7 @@ Both standalone Liquidsoap operation and integrated playout systems like AzuraCa
     - [Install `cue_file`](#install-cue_file)
     - [Local testing with Liquidsoap](#local-testing-with-liquidsoap)
     - [Install on AzuraCast](#install-on-azuracast)
-      - [`cue_file`](#cue_file)
-      - [Use Plugin or not?](#use-plugin-or-not)
-      - [Add the `autocue2` protocol code](#add-the-autocue2-protocol-code)
-      - [Custom crossfading code](#custom-crossfading-code)
-      - [ReplayGain vs. `liq_amplify`](#replaygain-vs-liq_amplify)
+      - [Settings](#settings)
   - [Command-line interface](#command-line-interface)
   - [Examples](#examples)
     - [Hidden track](#hidden-track)
@@ -48,11 +44,11 @@ Both standalone Liquidsoap operation and integrated playout systems like AzuraCa
   - [Liquidsoap protocol](#liquidsoap-protocol)
     - [Minimal working example](#minimal-working-example)
     - [Next track and short jingle handling](#next-track-and-short-jingle-handling)
-    - [Tags/Annotations that influence `autocue2`’s behaviour](#tagsannotations-that-influence-autocue2s-behaviour)
-      - [`liq_autocue2` (`true`/`false`)](#liq_autocue2-truefalse)
+    - [Tags/Annotations that influence `autocue`’s behaviour](#tagsannotations-that-influence-autocues-behaviour)
+      - [`liq_cue_file` (`true`/`false`)](#liq_cue_file-truefalse)
       - [`liq_blankskip` (`true`/`false`)](#liq_blankskip-truefalse)
       - [AzuraCast: `jingle_mode` (`"true"`)](#azuracast-jingle_mode-true)
-    - [Effect of `settings.autocue2.unify_loudness_correction` (`true`/`false`)](#effect-of-settingsautocue2unify_loudness_correction-truefalse)
+    - [Effect of `settings.autocue.cue_file.unify_loudness_correction` (`true`/`false`)](#effect-of-settingsautocuecue_fileunify_loudness_correction-truefalse)
       - [ReplayGain inserted](#replaygain-inserted)
       - [ReplayGain overriding `liq_amplify`](#replaygain-overriding-liq_amplify)
     - [AzuraCast Notes](#azuracast-notes)
@@ -70,104 +66,70 @@ If you wish, you can now play around with it a bit (use `cue_file --help` for he
 
 ### <a name="local-testing-with-liquidsoap"></a>Local testing with Liquidsoap <a href="#toc" class="goToc">⇧</a>
 
-Use the code in `test_autocue2.liq` for some local testing, if you have Liquidsoap installed on your machine.
+Use the code in `test_autocue.cue_file.liq` for some local testing, if you have Liquidsoap installed on your machine.
 
-Adjust the _settings_ near the beginning of the fie, then look for
+Adjust the _settings_ near the beginning of the file, then look for
 ```ruby
 # --- Use YOUR (playlist/single) here! ---
 ```
-and put in _your_ song and jingle playlist, and a `single` for testing.
+and put in _your_ song and jingle playlist, and possibly a `single` for testing.
 
 Then run
 ```
-$ liquidsoap test_autocue2.liq
+$ liquidsoap test_autocue.cue_file.liq
 ```
 
 Depending on your settings, you’ll get some result files for further study:
 
-- `test_autocue2.log` — Log file, use `tail -f test_autocue2.liq` in another terminal to follow
-- `test_autocue2.mp3` — an MP3 recording, to see how well the track transitions worked out
-- `test_autocue2.cue` — a `.cue` file to go with the MP3 recording, for finding tracks easier (open _this_ in your audio player)
+- `test_autocue.cue_file.log` — Log file, use `tail -f test_autocue.cue_file.log` in another terminal to follow
+- `test_autocue.cue_file.mp3` — an MP3 recording, to see how well the track transitions worked out
+- `test_autocue.cue_file.cue` — a `.cue` file to go with the MP3 recording, for finding tracks easier (open _this_ in your audio player)
 
 ### <a name="install-on-azuracast"></a>Install on AzuraCast <a href="#toc" class="goToc">⇧</a>
 
-#### <a name="cue_file"></a>`cue_file` <a href="#toc" class="goToc">⇧</a>
+Since AzuraCast Rolling Release \#caeea9d (2024-05-21), it is _built-in!_
 
-On your AzuraCast host, you can put it into `/var/azuracast/bin` and overlay it into the Docker by adding a line to your `docker-compose.override.yml`, like so:
+In your station, just got to _Profile → Edit Profile → AutoDJ → Audio Processing_ and _enable_ it here:
 
-```yaml
-services:
-  web:
-    volumes:
-      - /var/azuracast/bin/cue_file:/usr/local/bin/cue_file
++++image+++
+
+I also recommend to **_disable_** _Always Write Playlists to Liquidsoap_ under _Advanced Configuration_:
+
++++image+++
+
+This will automatically install `cue_file`, `mutagen` and `autocue.cue_file.liq` into AzuraCast, and change your Liquidsoap configuration as needed.
+
+#### <a name="settings"></a>Settings <a href="#toc" class="goToc">⇧</a>
+
+You can then add your personal _settings_ in the _second input box_ under _Broadcasting → Edit Liquidsoap Configuration_.
+
+Here is a little hint: Just copy _all_ possible settings into this input field, commented out, and just un-comment those you want to change. That’s a good way to never forget which settings are possible.
+
+Here is a complete list you can copy, showing the default settings:
+
+```
+# settings.autocue.cue_file.path := "cue_file"
+# settings.autocue.cue_file.fade_in := 0.1  # seconds
+# settings.autocue.cue_file.fade_out := 2.5  # seconds
+# settings.autocue.cue_file.timeout := 60.0  # seconds
+# settings.autocue.cue_file.target := -18.0  # LUFS
+# settings.autocue.cue_file.silence := -42.0  # LU below track loudness
+# settings.autocue.cue_file.overlay := -8.0  # LU below track loudness
+# settings.autocue.cue_file.longtail := 15.0  # seconds
+# settings.autocue.cue_file.overlay_longtail := -15.0  # extra LU
+# settings.autocue.cue_file.sustained_loudness_drop := 40.0  # max. percent drop to be considered sustained
+# settings.autocue.cue_file.noclip := false  # clipping prevention like loudgain's `-k`
+# settings.autocue.cue_file.blankskip := 0.0  # skip silence in tracks
+# settings.autocue.cue_file.unify_loudness_correction := true  # unify `replaygain_track_gain` & `liq_amplify`
+# settings.autocue.cue_file.write_tags := false  # write liq_* tags back to file
+# settings.autocue.cue_file.write_replaygain := false  # write ReplayGain tags back to file
+# settings.autocue.cue_file.force_analysis := false  # force re-analysis even if tags found
+# settings.autocue.cue_file.nice := false  # Linux/MacOS only: Use NI=18 for analysis
+# settings.autocue.cue_file.use_json_metadata := true  # pass metadata to `cue_file` as JSON
 ```
 
-#### <a name="use-plugin-or-not"></a>Use Plugin or not? <a href="#toc" class="goToc">⇧</a>
+Then _Save Changes_ and _Restart Broadcasting_.
 
-With AzuraCast, you now have two options for installing:
-
-1. Without modifying the generated AzuraCast Liquidsoap config. Use `enable_autocue2_metadata()` for that. _Drawback:_ You can’t use `settings.autocue2.blankskip := true` and expect "hidden" jingles to be automatically exempted from finding silent parts in the tracks.
-2. You can modify the AzuraCast Liquidsoap config by installing @RM-FM’s [`ls-config-replace`](https://github.com/RM-FM/ls-config-replace) plugin, and copying over the `ls-config-replace/liq/10_audodj_next_song_add_autocue` folder into your `/var/azuracast/plugins/ls-config-replace/liq` folder after installing the plugin. This will allow using _all features_.
-
-If you wish to disable AzuraCast’s built-in `liq_amplify` handling and rather use your tagged ReplayGain data, also copy over the `12_remove_amplify` folder.
-
-#### <a name="add-the-autocue2-protocol-code"></a>Add the `autocue2` protocol code <a href="#toc" class="goToc">⇧</a>
-
-Then copy-paste the contents of the `autocue2.liq` file into _the second input box_ in your station’s Liquidsoap Config.
-
-If you want to enable skipping silence _within tracks_, add the following line at the end of this input box:
-
-```ruby
-settings.autocue2.blankskip := true
-```
-
-**Note:** This should only be used with installation variant 2 (plugin/modify config).
-
-For installation variant 1 (`enable_autocue2_metadata()`), this command also goes here, _second input box_, just after the settings:
-
-```ruby
-enable_autocue2_metadata()
-```
-
-#### <a name="custom-crossfading-code"></a>Custom crossfading code <a href="#toc" class="goToc">⇧</a>
-
-Use the example in `test_autocue2.liq` and add your custom `amplify` and `live_aware_crossfade` code in the _third input box_ of AzuraCast’s Liquidsoap Config. You might already have modified this in your local testing above.
-
-To find the relevant parts, look out for
-
-```ruby
-# --- Copy-paste ...
-```
-
-**Note:** If you had used ReplayGain adjustment before like so (third input box)
-
-```ruby
-# Be sure to have ReplayGain applied before crossing.
-radio = amplify(1.,override="replaygain_track_gain",radio)
-```
-
-you might want to _delete_ or _comment out_ these lines. The `autocue2:` protocol already calculates a `liq_amplify` value that is recognized by AzuraCast and roughly equals a ReplayGain "track gain". If you would leave _both_ in, you’d get a much too quiet playout.
-
-#### <a name="replaygain-vs-liq_amplify"></a>ReplayGain vs. `liq_amplify` <a href="#toc" class="goToc">⇧</a>
-
-If you have disabled AzuraCast’s built-in `liq_amplify` handler (by copying `12_remove_amplify` above), _you_ have the choice. But you _must_ define your own adjustment (start of third input box).
-
-Example, to use your own tagged _ReplayGain Track Gain_ instead:
-
-```ruby
-# Be sure to have ReplayGain or "liq_amplify" applied before crossing.
-radio = amplify(1.,override="replaygain_track_gain",radio)
-#radio = amplify(1.,override="liq_amplify",radio)
-```
-
-Pros & Cons:
-- ReplayGain can be more exact (and prevent clipping) if pre-tagged with a tool like [`loudgain`](https://github.com/Moonbase59/loudgain).
-- ReplayGain values _should exist as tags_ in your audio files. If not, and `settings.autocue2.unify_loudness_correction := true`, `autocue2` will insert an (internal) `replaygain_track_gain` value.
-- `cue_file` (and thus the `autocue2:` protocol) will _always_ calculate a `liq_amplify` value _on the fly_, so it can be used with any audio file (even when not pre-tagged)
-- `liq_amplify` has no means of clipping prevention or EBU-recommended -1 dB/LU margin. The value still resembles a _ReplayGain Track Gain_ closely, in most cases.
-- _Both_ can be used with `autocue2:`.
-
-Save and _Restart Broadcasting_.
 
 ## <a name="command-line-interface"></a>Command-line interface <a href="#toc" class="goToc">⇧</a>
 
@@ -277,15 +239,21 @@ It contains the 3:48 song _Something in the Way_, followed by 10:03 of silence, 
 **Normal mode (no blank detection):**
 
 ```
-$ cue_file "Nirvana - Something in the Way _ Endless, Nameless.mp3"
-{"duration": 1235.1, "liq_cue_duration": 1231.8, "liq_cue_in": 0.4, "liq_cue_out": 1232.2, "liq_cross_start_next": 1222.3, "liq_longtail": false, "liq_cross_duration": 9.900000000000091, "liq_loudness": "-10.47 dB", "liq_amplify": "-7.53 dB", "liq_blank_skipped": false}
+$ cue_file -f "Nirvana - Something in the Way _ Endless, Nameless.mp3"
+Overlay: -18.47 LUFS, Longtail: -33.47 LUFS, Measured end avg: -41.05 LUFS, Drop: 38.91%
+Overlay times: 1222.30/1228.10/0.00 s (normal/sustained/longtail), using: 1228.10 s.
+Cue out time: 1232.20 s
+{"duration": 1235.1, "liq_cue_duration": 1232.2, "liq_cue_in": 0.0, "liq_cue_out": 1232.2, "liq_cross_start_next": 1228.1, "liq_longtail": false, "liq_sustained_ending": true, "liq_loudness": "-10.47 LUFS", "liq_loudness_range": "7.90 LU", "liq_amplify": "-7.53 dB", "liq_amplify_adjustment": "0.00 dB", "liq_reference_loudness": "-18.00 LUFS", "liq_blankskip": 0.0, "liq_blank_skipped": false, "liq_true_peak": 1.632, "liq_true_peak_db": "4.25 dBFS"}
 ```
 
 **With blank detection (cue-out at start of silence):**
 
 ```
-$ cue_file -b "Nirvana - Something in the Way _ Endless, Nameless.mp3"
-{"duration": 1235.1, "liq_cue_duration": 227.1, "liq_cue_in": 0.4, "liq_cue_out": 227.5, "liq_cross_start_next": 224.1, "liq_longtail": false, "liq_cross_duration": 3.4000000000000057, "liq_loudness": "-10.47 dB", "liq_amplify": "-7.53 dB", "liq_blank_skipped": true}
+$ cue_file -fb -- "Nirvana - Something in the Way _ Endless, Nameless.mp3"
+Overlay: -18.47 LUFS, Longtail: -33.47 LUFS, Measured end avg: -41.80 LUFS, Drop: 43.05%
+Overlay times: 224.10/0.00/0.00 s (normal/sustained/longtail), using: 224.10 s.
+Cue out time: 227.50 s
+{"duration": 1235.1, "liq_cue_duration": 227.5, "liq_cue_in": 0.0, "liq_cue_out": 227.5, "liq_cross_start_next": 224.1, "liq_longtail": false, "liq_sustained_ending": false, "liq_loudness": "-10.47 LUFS", "liq_loudness_range": "7.90 LU", "liq_amplify": "-7.53 dB", "liq_amplify_adjustment": "0.00 dB", "liq_reference_loudness": "-18.00 LUFS", "liq_blankskip": 5.0, "liq_blank_skipped": true, "liq_true_peak": 1.632, "liq_true_peak_db": "4.25 dBFS"}
 ```
 
 where
@@ -295,10 +263,16 @@ where
 - _liq_cue_out_ — cue-out point, in seconds
 - _liq_cross_start_next_ — suggested start point of next song, in seconds (counting from beginning of file)
 - _liq_longtail_ — flag to show if song has a "long tail", i.e. a very long fade-out (true/false)
-- _liq_cross_duration_ — suggested crossing duration for next song, in seconds backwards from cue-out point
-- _liq_loudness_ — song’s EBU R128 loudness, in dB (=LU)
-- _liq_amplify_ — simple "ReplayGain" value, offset to desired loudness target (i.e., -18 LUFS). This is intentionally _not_ called _replaygain_track_gain_, since that tag might already exist and have been calculated using more exact tools like [`loudgain`](https://github.com/Moonbase59/loudgain).
+- _liq_sustained_ending_ — flag to show if song has a "sustained ending", i.e. not a "hard end" (true/false)
+- _liq_loudness_ — song’s EBU R128 integrated loudness, in LUFS
+- _liq_loudness_range_ — song’s loudness range (dynamics), in LU
+- _liq_amplify_ — "ReplayGain"-like value, offset to desired loudness target (i.e., -18 LUFS), in dB. This is intentionally _not_ called _replaygain_track_gain_, since that tag might already exist and have been calculated using more exact tools like [`loudgain`](https://github.com/Moonbase59/loudgain).
+- _liq_amplify_adjustment_ — shows adjustment done by clipping prevention, in dB
+- _liq_reference_loudness_ — loudness reference target used, in LUFS, like _replaygain_reference_loudness_
+- _liq_blankskip_ — shows blank (silence) skipping used, in seconds (0.00=disabled)
 - _liq_blank_skipped_ — flag to show that we have an early cue-out, caused by silence in the song (true/false)
+- _liq_true_peak_ — linear true peak, much like _replaygain_track_peak_, but using a true peak algorithm
+- _liq_true_peak_db_ — true peak in dBFS (dBTP)
 
 ### <a name="long-tail-handling"></a>Long tail handling <a href="#toc" class="goToc">⇧</a>
 
@@ -309,11 +283,14 @@ _Bohemian Rhapsody_ by _Queen_ has a rather long ending, which we don’t want t
 Here are the values we get from `cue_file`:
 
 ```
-$ cue_file "Queen - Bohemian Rhapsody.flac"
-{"duration": 355.1, "liq_cue_duration": 353.0, "liq_cue_in": 0.0, "liq_cue_out": 353.0, "liq_cross_start_next": 348.5, "liq_longtail": true, "liq_cross_duration": 4.5, "liq_loudness": "-15.50 dB", "liq_amplify": "-2.50 dB", "liq_blank_skipped": false}
+$ cue_file -f "Queen - Bohemian Rhapsody.flac"
+Overlay: -23.50 LUFS, Longtail: -38.50 LUFS, Measured end avg: -44.31 LUFS, Drop: 23.62%
+Overlay times: 336.50/348.50/348.50 s (normal/sustained/longtail), using: 348.50 s.
+Cue out time: 353.00 s
+{"duration": 355.1, "liq_cue_duration": 353.0, "liq_cue_in": 0.0, "liq_cue_out": 353.0, "liq_cross_start_next": 348.5, "liq_longtail": true, "liq_sustained_ending": true, "liq_loudness": "-15.50 LUFS", "liq_loudness_range": "15.96 LU", "liq_amplify": "-2.50 dB", "liq_amplify_adjustment": "0.00 dB", "liq_reference_loudness": "-18.00 LUFS", "liq_blankskip": 0.0, "liq_blank_skipped": false, "liq_true_peak": 0.99, "liq_true_peak_db": "-0.09 dBFS"}
 ```
 
-We notice the `liq_longtail` flag is `true`, and the `liq_cross_duration` is `4.5` seconds.
+We notice the `liq_longtail` flag is `true`, and the "normal" overlay time would be `336.50`.
 
 Let’s follow the steps `cue_file` took to arrive at this result.
 
@@ -327,32 +304,30 @@ Let’s follow the steps `cue_file` took to arrive at this result.
 
 #### <a name="cross-duration-where-the-next-track-could-start-and-be-overlaid"></a>Cross duration (where the next track could start and be overlaid) <a href="#toc" class="goToc">⇧</a>
 
-Liquidsoap uses a `liq_cross_duration` concept instead of an abolute "start next" point, since that could be ambiguous (start counting at the beginning of the file or at the cue-in point?). The cross duration is measured in seconds _backwards from the cue-out point_.
-
 `cue_file` uses the `-o`/`--overlay` parameter value (-8 LU default) to scan _backwards from the cue-out point_ for something that is louder than -8 LU below the _average (integrated) song loudness_, thus finding a good point where the next song could start and be overlaid.
 
 ![Screenshot of Bohemian Rhapsody waveform, showing the cross duration calculated in the first run: 16.5 seconds before end – way too much](https://github.com/Moonbase59/autocue/assets/3706922/20a9396b-a31a-4a11-87b4-641d6868cc49)
 
-`cue_file` has determined a _cross duration_ of `16.5` seconds, starting at 336.5 seconds (5:36.5).
+`cue_file` has determined a "normal" overlay start point (`liq_cross_start_next`) of `336.5` seconds (5:36.5).
 
 We can see this would destroy an important part of the song’s end.
 
 #### <a name="a-long-tail"></a>A long tail! <a href="#toc" class="goToc">⇧</a>
 
-Finding that the calculated cross duration of `16.5` seconds is longer than 15 seconds (the `-l`/`--longtail` parameter), `cue_file` now _recalculates the cross duration_ automatically, using an extra -15 LU loudness offset (`-x`/`--extra` parameter), and arrives at this:
+Finding that the calculated cross duration of `16.5` seconds is longer than 15 seconds (the `-l`/`--longtail` parameter), `cue_file` now _recalculates the overlay start position_ automatically, using an extra -15 LU loudness offset (`-x`/`--extra` parameter), and arrives at this:
 
 ![Screenshot of Bohemian Rhapsody waveform, showing the newly calculated cross duration: 4.5 seconds before end – just right, not cutting off important parts of the song ending](https://github.com/Moonbase59/autocue/assets/3706922/9f9ec3af-89d4-4edc-9316-d53ed1fcf000)
 
-`cue_file` has now set `liq_cross_duration` to `4.5` seconds and `liq_longtail` to `true` so we know this song has a "long tail" and been calculated differently.
+`cue_file` has now set `liq_cross_start_next` to `348.5` seconds and `liq_longtail` to `true` so we know this song has a "long tail" and been calculated differently.
 
 Much better!
 
 #### <a name="avoiding-too-much-overlap"></a>Avoiding too much overlap <a href="#toc" class="goToc">⇧</a>
 
-We possibly don’t want the previous song to play "too much" into the next song, so we can set a _default fade-out_ in our custom crossfading. This will ensure a limit in case no user-defined fade-out has been set. We use `2.5` seconds in the example below (under _AzuraCast Notes_, in `live_aware_crossfade`):
+We possibly don’t want the previous song to play "too much" into the next song, so we can set a _default fade-out_ (`settings.autocue.cue_file.fade_out`). This will ensure a pleasing limit. We use `2.5` seconds as a default:
 
 ```ruby
-add(normalize=false, [fade.in(duration=.1, delay=delay, new.source), fade.out(duration=2.5, delay=delay, old.source)])
+settings.autocue.cue_file.fade_out := 2.5  # seconds
 ```
 
 ![Screenshot of Bohemian Rhapsody waveform, showing the user-defined fade-out of 2.5 seconds, starting 4.5 seconds before song ends](https://github.com/Moonbase59/autocue/assets/3706922/f1e96db6-2f23-4cdd-9693-24711fe91895)
@@ -361,77 +336,72 @@ Fading area, using above settings. The rest of the ending won’t be heard.
 
 ### <a name="blank-silence-detection"></a>Blank (silence) detection <a href="#toc" class="goToc">⇧</a>
 
-**Note:** Blank detection _within a song_ is experimental. It will most certainly _fail_ on spoken or TTS-generated messages (since spoken text has long pauses), and it can fail on some songs with very smooth beginnings, like _Sarah McLachlan’s Fallen_:
+Blank (silence) detection within a song is a great feature if you have songs with silence in the middle and a "hidden track" at the end. Autocue can then perform an early cue-out at the point where the silence begins. No one wants to broadcast 10 minutes of dead air, right?
 
-![Screenshot of Sarah McLachlan's "Fallen" waveform. The song has a long silent beginning, which makes blank detection fail, using the default settings.](https://github.com/Moonbase59/autocue/assets/3706922/c1085156-5483-4474-afd8-cb437d0d2e4b)
+This feature should be used _wisely_, because it could truncate tracks you wouldn’t like to end early, like jingles, ads, prerecorded shows, DJ sets or podcast episodes!
 
-This song works fine in "normal mode", but only a 0.5 second portion (marked) of the beginning is played in "blank detection" mode when using the default settings:
+The default minimum silence length before it triggers is set to `5.0` seconds.
 
-```
-$ cue_file -b "McLachlan, Sarah - Fallen (radio mix).flac"
-{"duration": 229.0, "liq_cue_duration": 0.5, "liq_cue_in": 2.3, "liq_cue_out": 2.8, "liq_cross_start_next": 2.8, "liq_longtail": false, "liq_cross_duration": 0.0, "liq_loudness": "-8.97 dB", "liq_amplify": "-9.03 dB", "liq_blank_skipped": true}
-```
-
-You can avoid such issues in several ways:
-- Don’t use the `-b`/`--blankstrip` option (default).
-- Lower the silence level: `-s -50`/`--silence -50`.
+You can avoid issues in several ways:
+- Don’t use the `-b`/`--blankskip` option (default).
+- Set it to `0.00`, which disables the feature.
+- Increase the minimum silence length: `-b 10.0` for 10 seconds.
 - Manually assign later cue-in/cue-out points in the AzuraCast UI (user settings here overrule the automatic values).
-
-Example result when reducing the silence level to -50 LU below average:
-
-```
-$ cue_file -b -s -50 "McLachlan, Sarah - Fallen (radio mix).flac"
-{"duration": 229.0, "liq_cue_duration": 221.79999999999998, "liq_cue_in": 1.9, "liq_cue_out": 223.7, "liq_cross_start_next": 215.6, "liq_longtail": false, "liq_cross_duration": 8.099999999999994, "liq_loudness": "-8.97 dB", "liq_amplify": "-9.03 dB", "liq_blank_skipped": false}
-```
-
-Notice the new cue-in and cue-out times as well as the long cross duration with this change! Additionally, `liq_blank_skipped` is `false`, showing us that no silent (blank) parts have been skipped in this case.
 
 
 ## <a name="liquidsoap-protocol"></a>Liquidsoap protocol <a href="#toc" class="goToc">⇧</a>
 
-**Note: The `autocue2:` protocol is meant to be used with [Liquidsoap 2.2.5](https://github.com/savonet/liquidsoap/releases) or newer.**
+**Note: `autocue.cue_file` is meant to be used with [Liquidsoap 2.2.5](https://github.com/savonet/liquidsoap/releases) or newer.**
 
-The protocol is invoked by prefixing a playlist or request with `autocue2:` like so:
+The protocol is invoked by prefixing a playlist or request with `autocue:` like so:
 
 ```ruby
-radio = playlist(prefix="autocue2:", "/home/matthias/Musik/Playlists/Radio/Classic Rock.m3u")
+radio = playlist(prefix="autocue:", "/home/matthias/Musik/Playlists/Radio/Classic Rock.m3u")
 ```
 
-Alternatively, you can set `enable_autocue2_metadata()` and it will process _all files_ Liquidsoap handles. Use _either_—_or_, but not _both_ variants together. If running video streams, you might also want to _exclude_ the video files from processing, by annotating `liq_autocue2=false` for them, for instance as a playlist prefix. `autocue2` _can_ handle multi-gigabyte video files, but that will eat up _lots_ of CPU (and bandwidth) and might bring your station down.
+Alternatively, you can set `enable_autocue_metadata()` and it will process _all files_ Liquidsoap handles. Use _either_—_or_, but not _both_ variants together. If running video streams, you might also want to _exclude_ the video files from processing, by annotating `liq_cue_file=false` for them, for instance as a playlist prefix. `autocue` _can_ handle multi-gigabyte video files, but that will eat up _lots_ of CPU (and bandwidth) and might bring your station down.
 
-`autocue2` offers the following settings (defaults shown):
+`autocue` offers the following settings (defaults shown):
 
 ```ruby
-settings.autocue2.path := "cue_file"
-settings.autocue2.timeout := 60.
-settings.autocue2.target := -18
-settings.autocue2.silence := -42
-settings.autocue2.overlay := -8
-settings.autocue2.longtail := 15.0
-settings.autocue2.overlay_longtail := -15
-# The following can be overridden by the `liq_blankskip` annotation
-# on a per-request or per-playlist basis
-settings.autocue2.blankskip := false
-# Unify can only work correctly if your files have been replaygained
-# to the same LUFS target as your `settings.autocue2.target`,
-# usually -23 or -18 LUFS (-18 corresponds to the now obsolete `mp3gain` value "89 dB").
-settings.autocue2.unify_loudness_correction := true
+settings.autocue.cue_file.path := "cue_file"
+settings.autocue.cue_file.fade_in := 0.1  # seconds
+settings.autocue.cue_file.fade_out := 2.5  # seconds
+settings.autocue.cue_file.timeout := 60.0  # seconds
+settings.autocue.cue_file.target := -18.0  # LUFS
+settings.autocue.cue_file.silence := -42.0  # LU below track loudness
+settings.autocue.cue_file.overlay := -8.0  # LU below track loudness
+settings.autocue.cue_file.longtail := 15.0  # seconds
+settings.autocue.cue_file.overlay_longtail := -15.0  # extra LU
+settings.autocue.cue_file.sustained_loudness_drop := 40.0  # max. percent drop to be considered sustained
+settings.autocue.cue_file.noclip := false  # clipping prevention like loudgain's `-k`
+settings.autocue.cue_file.blankskip := 0.0  # skip silence in tracks
+settings.autocue.cue_file.unify_loudness_correction := true  # unify `replaygain_track_gain` & `liq_amplify`
+settings.autocue.cue_file.write_tags := false  # write liq_* tags back to file
+settings.autocue.cue_file.write_replaygain := false  # write ReplayGain tags back to file
+settings.autocue.cue_file.force_analysis := false  # force re-analysis even if tags found
+settings.autocue.cue_file.nice := false  # Linux/MacOS only: Use NI=18 for analysis
+settings.autocue.cue_file.use_json_metadata := true  # pass metadata to `cue_file` as JSON
 ```
 
 ### <a name="minimal-working-example"></a>Minimal working example <a href="#toc" class="goToc">⇧</a>
 
-This [minimal example](minimal_example_autocue2.liq) enables `autocue2` for all tracks, using default settings, and plays a nicely crossfaded playlist to your sound card, so you can get a first impression. Just change the playlist to one of your own!
+This [minimal example](minimal_example_autocue.cue_file.liq) enables `autocue` for all tracks, using default settings, and plays a nicely crossfaded playlist to your sound card, so you can get a first impression. Just change the playlist to one of your own!
 
 ```ruby
-# minimal_example_autocue2.liq
-# 2024-04-09 - Moonbase59
-# 2024-04-19 - Moonbase59 - rename to "minimal_example_autocue2.liq"
+# minimal_example_autocue.cue_file.liq
 
-# Minimal example for the `autocue2` protocol.
+# Minimal example for `autocue.cue_file`
 # Uses one playlist and outputs to sound card.
 
-%include "autocue2.liq"
-enable_autocue2_metadata()
+%include "autocue.cue_file.liq"
+
+# Your special non-default settings go here
+
+# Check Autocue setup, print result, shutdown if problems
+ignore(check_autocue_setup(shutdown=true, print=true))
+
+enable_autocue_metadata()
 
 # --- Use YOUR playlist here! ---
 radio = playlist("/home/matthias/Musik/Playlists/Radio/Classic Rock.m3u")
@@ -439,9 +409,9 @@ radio = playlist("/home/matthias/Musik/Playlists/Radio/Classic Rock.m3u")
 # Use calculated `liq_amplify` for loudness correction
 radio = amplify(1.,override="liq_amplify",radio)
 
-# simplest crossfade possible, using `autocue2` calculated data
-# set fades to your preference
-radio = crossfade(radio, fade_in=0.1, fade_out=2.5)
+# simplest crossfade possible, using `autocue.cue_file` calculated data
+# and default settings
+radio = crossfade(radio)
 
 radio = mksafe(radio)
 output(radio)
@@ -451,60 +421,58 @@ output(radio)
 
 With _Liquidsoap 2.2.5+git@cadd05596_ and newer:
 
-If you have a long `liq_cross_duration` and a jingle following that is _shorter_ than the computed crossing duration, Liquidsoap will now try to ensure the jingle _still_ starts at the right position, and simply _cut off_ the "overhang" from the previous track.
+If you have a long cross duration and a jingle following that is _shorter_ than the computed crossing duration, Liquidsoap will now try to ensure the jingle _still_ starts at the right position, and simply _cut off_ the "overhang" from the previous track.
 
-`autocue2`, if used, sets `settings.request.prefetch := 2` to ensure there is always _one more track ready_. This is also new functionality. It helps "bridging the time" until `autocue2` has calculated data for the next track, which might take a while.
+`autocue`, if used, sets `settings.request.prefetch := 2` to ensure there is always _one more track ready_. This is also new functionality. It helps "bridging the time" until `autocue` has calculated data for the next track, which might take a while.
 
-### <a name="tagsannotations-that-influence-autocue2s-behaviour"></a>Tags/Annotations that influence `autocue2`’s behaviour <a href="#toc" class="goToc">⇧</a>
+### <a name="tagsannotations-that-influence-autocues-behaviour"></a>Tags/Annotations that influence `autocue`’s behaviour <a href="#toc" class="goToc">⇧</a>
 
-There are three possible _annotations_ (or tags from a file) that can influence `autocue2`’s behaviour. In an annotation string, these must occur _to the right_ of the protcol, i.e. `autocue2:annotate:...` to work as intended. Think of these as "switches" to enable or disable features.
+There are three possible _annotations_ (or tags from a file) that can influence `autocue`’s behaviour. In an annotation string, these must occur _to the right_ of the protcol, i.e. `autocue:annotate:...` to work as intended. Think of these as "switches" to enable or disable features.
 
-#### <a name="liq_autocue2-truefalse"></a>`liq_autocue2` (`true`/`false`) <a href="#toc" class="goToc">⇧</a>
+#### <a name="liq_cue_file-truefalse"></a>`liq_cue_file` (`true`/`false`) <a href="#toc" class="goToc">⇧</a>
 
-**Note:** I had to rename my original `liq_autocue` to `liq_autocue2`, because Liquidsoap now also uses `liq_autocue`, for another purpose. Sigh.
-
-You can _disable_ autocueing for selected sources, like maybe a playlist of large video files, even when `autocue2` is globally enabled.
+You can _disable_ autocueing for selected sources, like maybe a playlist of large video files, even when `autocue` is globally enabled.
 
 So if you’ve used
 
 ```ruby
-enable_autocue2_metadata()
+enable_autocue_metadata()
 ```
 
-to globally enable `autocue2`, and want to _exclude_ a playlist from processing, use:
+to globally enable `autocue`, and want to _exclude_ a playlist from processing, use:
 
 ```ruby
-p = playlist(prefix='annotate:liq_autocue2="false":', '/path/to/playlist.ext')
+p = playlist(prefix='annotate:liq_cue_file=false:', '/path/to/playlist.ext')
 ```
 
 If a track has been skipped, it will be shown in the logs like this:
 
 ```
-2024/04/01 10:47:00 [autocue2_metadata:2] Skipping autocue2 for file "/home/matthias/Musik/Other/Jingles/Short/Magenta - How sentimental.flac" because liq_autocue2=false forbids it.
+2024/04/01 10:47:00 [autocue.cue_file:2] Skipping cue_file for file "/home/matthias/Musik/Other/Jingles/Short/Magenta - How sentimental.flac" because liq_cue_file=false forbids it.
 ```
 
-**Note:** Using this makes only sense if you used `enable_autocue2_metadata()`. When using the `autocue2:` _protocol_ in your annotations, you’d simply leave the `autocue2:` part off the annotation instead.
+**Note:** Using this makes only sense if you used `enable_autocue_metadata()`. When using the `autocue:` _protocol_ in your annotations, you’d simply leave the `autocue:` part off the annotation instead.
 
 #### <a name="liq_blankskip-truefalse"></a>`liq_blankskip` (`true`/`false`) <a href="#toc" class="goToc">⇧</a>
 
-You can _override_ the "blankskip" behaviour (early cue-out of a song when silence is detected) on a per-request or per-playlist basis using a special `liq_blankskip` annotation. This is an "ultimate override" which overrides both `settings.autocue2.blankskip` and `jingle_mode`.
+You can _override_ the "blankskip" behaviour (early cue-out of a song when silence is detected) on a per-request or per-playlist basis using a special `liq_blankskip` annotation. This is an "ultimate override" which overrides both `settings.autocue.cue_file.blankskip` and `jingle_mode`.
 
 For a `playlist`, you could use its `prefix`, like in
 
 ```ruby
-p = playlist(prefix='autocue2:annotate:liq_blankskip="false":', '/path/to/playlist.ext')
+p = playlist(prefix='autocue:annotate:liq_blankskip=0.00:', '/path/to/playlist.ext')
 ```
 
 For a `single`, this would look like
 
 ```ruby
-s = single('autocue2:annotate:liq_blankskip="false":/path/to/file.ext')
+s = single('autocue:annotate:liq_blankskip=0.00:/path/to/file.ext')
 ```
 
 Or for a `request` like
 
 ```ruby
-r = request.create('autocue2:annotate:liq_blankskip="false":/path/to/file.ext')
+r = request.create('autocue:annotate:liq_blankskip=0.00:/path/to/file.ext')
 ```
 
 This allows for a general protocol-wide setting, but exceptions for special content, like a playlist containing spoken content that would otherwise be cut.
@@ -512,37 +480,37 @@ This allows for a general protocol-wide setting, but exceptions for special cont
 The logs will show if blank skipping has been used on a track:
 
 ```
-2024/04/01 06:43:40 [autocue2.compute:3] Blank (silence) skipping active: true
+2024/06/17 21:18:53 [autocue.cue_file:3] Blank (silence) skipping active: true, set to 5. s
 ```
 
 In the returned _metadata_, in `liq_blank_skipped`, you’ll also receive information if something actually _has_ been skipped. So for the _Nirvana_ song above, it would show:
 
 ```
-2024/04/01 11:00:47 [autocue2.metadata:3] ("liq_blank_skipped", "true")
+2024/06/17 21:25:14 [autocue.cue_file:3] ("liq_blank_skipped", "true")
 ```
 
-`liq_blankskip` is the _switch_ that controls `autocue2`’s behaviour, while `liq_blank_skipped` is the _result_ of the operation.
+`liq_blankskip` is the _switch_ that controls `autocue`’s behaviour, while `liq_blank_skipped` is the _result_ of the operation.
 
 #### <a name="azuracast-jingle_mode-true"></a>AzuraCast: `jingle_mode` (`"true"`) <a href="#toc" class="goToc">⇧</a>
 
 This is a convenience feature for AzuraCast users. If you set _Hide Metadata from Listeners ("Jingle Mode")_ to ON for a playlist in AzuraCast, it will annotate requests for this playlist with `jingle_mode="true"`. Even if blank skipping for songs is globally enabled, we would not want this to happen for jingles. They might contain pauses in speech that could cut them off early.
 
-So if `autocue2` sees this annotation (or tag in a file), it will automatically _disable_ "blankskip" for this track.
+So if `autocue` sees this annotation (or tag in a file), it will automatically _disable_ "blankskip" for this track.
 
 Note this setting is superceded by `liq_blankskip`, the "ultimate blankskip switch". So if _both_ are there, the setting from `liq_blankskip` will "win".
 
-### <a name="effect-of-settingsautocue2unify_loudness_correction-truefalse"></a>Effect of `settings.autocue2.unify_loudness_correction` (`true`/`false`) <a href="#toc" class="goToc">⇧</a>
+### <a name="effect-of-settingsautocuecue_fileunify_loudness_correction-truefalse"></a>Effect of `settings.autocue.cue_file.unify_loudness_correction` (`true`/`false`) <a href="#toc" class="goToc">⇧</a>
 
 Unify `replaygain_track_gain` and `liq_amplify`. If enabled, this will ensure both have the same value, with `replaygain_track_gain` taking precedence if we can see it. Allows scripts to amplify on either value, without getting loudness jumps.
 
-**Note:** This can only work correctly if your files have been replaygained to _the same LUFS target_ as your `settings.autocue2.target`!
+**Note:** This can only work correctly if your files have been replaygained to _the same LUFS target_ as your `settings.autocue.cue_file.target`!
 
 #### <a name="replaygain-inserted"></a>ReplayGain inserted <a href="#toc" class="goToc">⇧</a>
 
 Here is an example of an inserted `replaygain_track_gain` value (taken from the calculated `liq_amplify`):
 
 ```
-2024/04/02 09:07:57 [autocue2.metadata:3] Inserted replaygain_track_gain: -8.36 dB
+2024/06/17 18:23:11 [autocue.cue_file:3] Inserted replaygain_track_gain -8.36 dB and replaygain_reference_loudness -18.00 LUFS
 ```
 
 #### <a name="replaygain-overriding-liq_amplify"></a>ReplayGain overriding `liq_amplify` <a href="#toc" class="goToc">⇧</a>
@@ -550,98 +518,98 @@ Here is an example of an inserted `replaygain_track_gain` value (taken from the 
 Here `liq_amplify` has been corrected, because we have seen a different `replaygain_track_gain` (coming from a pre-tagged file where [loudgain](https://github.com/Moonbase59/loudgain) was used to ensure clipping prevention):
 
 ```
-2024/04/02 08:54:48 [autocue2.metadata:3] Replaced liq_amplify=-8.72 dB with -9.71 dB from replaygain_track_gain
+2024/04/02 08:54:48 [autocue.cue_file:3] Replaced liq_amplify=-8.72 dB with -9.71 dB from adjusted replaygain_track_gain
 ```
 
 ### <a name="azuracast-notes"></a>AzuraCast Notes <a href="#toc" class="goToc">⇧</a>
 
 - `media:` URIs will be resolved.
-- Works well with smart crossfades. (But these are definitely not needed, see code below!)
-- Even when `settings.autocue2.blankskip := true`, hidden jingles (those with a `jingle_mode="true"` annotation) will be _excluded_ from blank detection within the track, because the chance is too high that spoken text gets cut.
+- Even when `settings.autocue.cue_file.blankskip := 5.0`, hidden jingles (those with a `jingle_mode="true"` annotation) will be _excluded_ from blank detection within the track, because the chance is too high that spoken text gets cut.
 - User settings in the AzuraCast UI ("Edit Song") always "win" over the calculated values.
-- Currently needs a patch to the AzuraCast-generated Liquidsoap code to enable _all features_, but you can also opt to use `enable_autocue2_metadata()` instead, _not_ use `settings.autocue2.blankskip := true` and skip all the plugin-related things.
 - Currently generates _lots_ of log data, for debugging. This will eventually change. But hey, you can see what it does!
 
 Typical log sample (level 3; level 4 gives much more details):
 
 ```
-2024/04/13 14:24:12 [autocue2.metadata:3] jingle_mode=, liq_blankskip=
-2024/04/13 14:24:12 [autocue2:3] Now autocueing: "/home/matthias/Musik/Playlists/Radio/../../Tagged/Blackfoot/Blackfoot - Marauder/Blackfoot - Diary Of A Workingman.mp3"
-2024/04/13 14:24:12 [autocue2:3] Blank (silence) skipping active: true
+2024/06/17 21:31:56 [autocue.cue_file:3] Now autocueing: "/var/azuracast/stations/niteradio/media/Tagged/Flogging Molly/Flogging Molly - Float (2008 album, DE)/Flogging Molly - Punch Drunk Grinning Soul.flac"
+2024/06/17 21:31:56 [autocue.cue_file:3] Blank (silence) skipping active: true, set to 5. s
+2024/06/17 21:31:56 [autocue.cue_file:3] Clipping prevention active: true
+2024/06/17 21:31:56 [autocue.cue_file:3] Writing tags: false, including ReplayGain: false
+2024/06/17 21:31:56 [autocue.cue_file:3] Writing metadata to /tmp/cue_file2fb6d2.json
 
 ...
 
-2024/04/13 14:24:16 [autocue2:3] Autocue2 result for "/home/matthias/Musik/Playlists/Radio/../../Tagged/Blackfoot/Blackfoot - Marauder/Blackfoot - Diary Of A Workingman.mp3": {"duration": 336.40000000000003, "liq_cue_duration": 333.8, "liq_cue_in": 0.7, "liq_cue_out": 334.5, "liq_cross_start_next": 323.5, "liq_longtail": false, "liq_cross_duration": 11.0, "liq_loudness": "-13.35 dB", "liq_amplify": "-4.65 dB", "liq_blank_skipped": false}
-2024/04/13 14:24:16 [autocue2.metadata:3] Replaced liq_amplify=-4.65 dB with -4.66 dB from replaygain_track_gain
-2024/04/13 14:24:16 [autocue2.metadata:3] Metadata added/corrected:
-2024/04/13 14:24:16 [autocue2.metadata:3] ("duration", "336.4")
-2024/04/13 14:24:16 [autocue2.metadata:3] ("liq_amplify", "-4.66 dB")
-2024/04/13 14:24:16 [autocue2.metadata:3] ("liq_blank_skipped", "false")
-2024/04/13 14:24:16 [autocue2.metadata:3] ("liq_cross_duration", "11.")
-2024/04/13 14:24:16 [autocue2.metadata:3] ("liq_cross_start_next", "323.5")
-2024/04/13 14:24:16 [autocue2.metadata:3] ("liq_cue_duration", "333.80")
-2024/04/13 14:24:16 [autocue2.metadata:3] ("liq_cue_in", "0.7")
-2024/04/13 14:24:16 [autocue2.metadata:3] ("liq_cue_out", "334.5")
-2024/04/13 14:24:16 [autocue2.metadata:3] ("liq_longtail", "false")
-2024/04/13 14:24:16 [autocue2.metadata:3] ("liq_loudness", "-13.35 dB")
-2024/04/13 14:24:16 [autocue2.metadata:3] ("replaygain_track_gain", "-4.66 dB")
+2024/06/17 21:31:58 [autocue.cue_file:3] cue_file result for "/var/azuracast/stations/niteradio/media/Tagged/Flogging Molly/Flogging Molly - Float (2008 album, DE)/Flogging Molly - Punch Drunk Grinning Soul.flac": {"duration": 260.70000000000005, "liq_cue_duration": 260.5, "liq_cue_in": 0.0, "liq_cue_out": 260.5, "liq_cross_start_next": 259.9, "liq_longtail": true, "liq_sustained_ending": true, "liq_loudness": "-6.99 LUFS", "liq_loudness_range": "17.78 LU", "liq_amplify": "-11.02 dB", "liq_amplify_adjustment": "0.00 dB", "liq_reference_loudness": "-18.00 LUFS", "liq_blankskip": 5.0, "liq_blank_skipped": false, "liq_true_peak": 1.099, "liq_true_peak_db": "0.82 dBFS"}
+2024/06/17 21:31:58 [autocue.cue_file:3] Clipping prevention: Adjusted calculated replaygain_track_gain from -11.02 dB to -11.01 dB
+2024/06/17 21:31:58 [autocue.cue_file:3] No fade-in duration given, using default setting (0.1 s).
+2024/06/17 21:31:58 [autocue.cue_file:3] No fade-out duration given, using default setting (2.5 s).
+2024/06/17 21:31:58 [autocue.cue_file:2] Given fade-out duration (2.5 s) exceeds available time, using 0.6 s.
+2024/06/17 21:31:58 [autocue.cue_file:3] Metadata added/corrected for "/var/azuracast/stations/niteradio/media/Tagged/Flogging Molly/Flogging Molly - Float (2008 album, DE)/Flogging Molly - Punch Drunk Grinning Soul.flac":
+2024/06/17 21:31:58 [autocue.cue_file:3] ("duration", "260.70")
+2024/06/17 21:31:58 [autocue.cue_file:3] ("liq_amplify", "-11.01 dB")
+2024/06/17 21:31:58 [autocue.cue_file:3] ("liq_amplify_adjustment", "0.00 dB")
+2024/06/17 21:31:58 [autocue.cue_file:3] ("liq_blank_skipped", "false")
+2024/06/17 21:31:58 [autocue.cue_file:3] ("liq_blankskip", "5.")
+2024/06/17 21:31:58 [autocue.cue_file:3] ("liq_cross_start_next", "259.9")
+2024/06/17 21:31:58 [autocue.cue_file:3] ("liq_cue_duration", "260.50")
+2024/06/17 21:31:58 [autocue.cue_file:3] ("liq_cue_in", "0.")
+2024/06/17 21:31:58 [autocue.cue_file:3] ("liq_cue_out", "260.5")
+2024/06/17 21:31:58 [autocue.cue_file:3] ("liq_fade_in", "0.1")
+2024/06/17 21:31:58 [autocue.cue_file:3] ("liq_fade_out", "0.6")
+2024/06/17 21:31:58 [autocue.cue_file:3] ("liq_longtail", "true")
+2024/06/17 21:31:58 [autocue.cue_file:3] ("liq_loudness", "-6.99 LUFS")
+2024/06/17 21:31:58 [autocue.cue_file:3] ("liq_loudness_range", "17.78 LU")
+2024/06/17 21:31:58 [autocue.cue_file:3] ("liq_reference_loudness", "-18.00 LUFS")
+2024/06/17 21:31:58 [autocue.cue_file:3] ("liq_sustained_ending", "true")
+2024/06/17 21:31:58 [autocue.cue_file:3] ("liq_true_peak", "1.099")
+2024/06/17 21:31:58 [autocue.cue_file:3] ("liq_true_peak_db", "0.82 dBFS")
+2024/06/17 21:31:58 [autocue.cue_file:3] ("replaygain_reference_loudness", "-18.00 LUFS")
+2024/06/17 21:31:58 [autocue.cue_file:3] ("replaygain_track_gain", "-11.01 dB")
 ```
 
 #### <a name="custom-crossfading"></a>Custom crossfading <a href="#toc" class="goToc">⇧</a>
 
 I currently[^1] use these crossfade settings (third input box in AzuraCast; lots of debugging info here, could be much shorter).
 
-Be sure to check the _copy-paste sections_ in `test_autocue2.liq`, which always holds the most current code.
+Be sure to check the _copy-paste sections_ in `test_autocue.cue_file.liq`, which always holds the most current code.
 
 ```ruby
 # Fading/crossing/segueing
 def live_aware_crossfade(old, new) =
-    label = "live_aware_crossfade"
     if to_live() then
         # If going to the live show, play a simple sequence
         # fade out AutoDJ, do (almost) not fade in streamer
-        sequence([fade.out(duration=2.5,old.source),fade.in(duration=0.1,new.source)])
+        sequence([
+          fade.out(duration=settings.autocue.cue_file.fade_out(), old.source),
+          fade.in(duration=settings.autocue.cue_file.fade_in(), new.source)
+        ])
     else
-        # Otherwise, use the simple transition
-        log.important(label=label, "Using custom crossfade")
-        if (old.metadata["jingle_mode"] == "true")
-          and (new.metadata["jingle_mode"] == "true") then
-            log.important(label=label, "Jingle → Jingle transition")
-        end
-        if (old.metadata["jingle_mode"] == "true")
-          and (new.metadata["jingle_mode"] == "") then
-            log.important(label=label, "Jingle → Song transition")
-        end
-        if (old.metadata["jingle_mode"] == "")
-          and (new.metadata["jingle_mode"] == "true") then
-            log.important(label=label, "Song → Jingle transition")
-        end
-        if (old.metadata["jingle_mode"] == "")
-          and (new.metadata["jingle_mode"] == "") then
-            log.important(label=label, "Song → Song transition")
-        end
-
-        nd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_cue_duration", new.metadata))
-        xd = float_of_string(default=0.1, list.assoc(default="0.1", "liq_cross_duration", old.metadata))
-        delay = max(0., xd - nd)
-        log.important(label=label, "Cross/new/delay: #{xd} / #{nd} / #{delay} s")
-        if (xd > nd) then
-          log.severe(label=label, "Cross duration #{xd} s longer than next track (#{nd} s)!")
-          #log.severe(label=label, "Delaying fade-out & next track fade-in by #{delay} s.")
-        end
-
-        # Starting with LS 2.2.5+git@cadd05596, we don’t need the delay anymore
-        add(normalize=false, [fade.in(initial_metadata=new.metadata, duration=.1, new.source), fade.out(initial_metadata=old.metadata, duration=2.5, old.source)])
-
-        #cross.simple(old.source, new.source, fade_in=0.1, fade_out=2.5)
-        #cross.smart(old, new, fade_in=0.1, fade_out=2.5, margin=8.)
+        # Otherwise, use a beautiful add
+        add(normalize=false, [
+          fade.in(
+            initial_metadata=new.metadata,
+            duration=settings.autocue.cue_file.fade_in(),
+            new.source
+          ),
+          fade.out(
+            initial_metadata=old.metadata,
+            duration=settings.autocue.cue_file.fade_out(),
+            old.source
+          )
+        ])
     end
 end
 
-radio = cross(duration=3.0, width=2.0, live_aware_crossfade, radio)
+radio = cross(
+  duration=settings.autocue.cue_file.fade_out(),
+  live_aware_crossfade,
+  radio
+)
 ```
 
-The 2.5 s fade-out helps tuning long overlap durations down, so they won’t distract the listener by overlaying songs and possibly jingles too long. If using `cross.smart`, the increased margin (8 dB/LU) helps making the smart crossfades sound much better.
+With Liquidsoap 2.2.5, it’s important to _pass the metadata_ to `fade.in` and `fade.out`. Otherwise, your autocue can’t function properly.
+
+Using the `autocue.cue_file` settings for the `duration` parameter in `fade.in`, `fade.out` and `cross` helps to always keep these settings in sync in case you change them: You now only have to change them in _one_ place.
 
 
-[^1]: As of 2024-04-07, using _Liquidsoap 2.2.5+git@317f191c0_. _Liquidsoap_ has a very active development, so things might change.
+[^1]: As of 2024-06-17, using _Liquidsoap 2.2.5_. _Liquidsoap_ has a very active development, so things might change.
