@@ -91,11 +91,11 @@ Since AzuraCast Rolling Release \#caeea9d (2024-05-21), it is _built-in!_
 
 In your station, just got to _Profile → Edit Profile → AutoDJ → Audio Processing_ and _enable_ it here:
 
-+++image+++
+![Screenshot of AzuraCast setting Enable Autocue; enabled.](https://github.com/Moonbase59/autocue/assets/3706922/4f8f6055-18f8-4fc7-99c4-0884f301c1d4)
 
 I also recommend to **_disable_** _Always Write Playlists to Liquidsoap_ under _Advanced Configuration_:
 
-+++image+++
+![Screenshot of AzuraCast setting Always Write Playlists to Liquidsoap; disabled.](https://github.com/Moonbase59/autocue/assets/3706922/d0d6c180-ab16-4a66-94f9-490d6ada7906)
 
 This will automatically install `cue_file`, `mutagen` and `autocue.cue_file.liq` into AzuraCast, and change your Liquidsoap configuration as needed.
 
