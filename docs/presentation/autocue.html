@@ -356,7 +356,7 @@ above).</li>
 <li>Check if calculated overlay duration &gt; <strong>15 s</strong> (a
 “long tail”).</li>
 <li><code>settings.autocue.cue_file.longtail</code></li>
-<li>If so, reduce overlay level by an extra <strong>-15 LU</strong> and
+<li>If so, reduce overlay level by an extra <strong>-12 LU</strong> and
 repeat the calculation.</li>
 <li><code>settings.autocue.cue_file.overlay_longtail</code></li>
 <li>We now start the next song much later, keeping the song’s “long
@@ -550,7 +550,7 @@ nearly all use cases!</p>
 # settings.autocue.cue_file.silence := -42.0  # LU below track loudness
 # settings.autocue.cue_file.overlay := -8.0  # LU below track loudness
 # settings.autocue.cue_file.longtail := 15.0  # seconds
-# settings.autocue.cue_file.overlay_longtail := -15.0  # extra LU
+# settings.autocue.cue_file.overlay_longtail := -12.0  # extra LU
 # settings.autocue.cue_file.sustained_loudness_drop := 40.0  # max. percent drop to be considered sustained
 # settings.autocue.cue_file.noclip := false  # clipping prevention like loudgain&#39;s `-k`
 # settings.autocue.cue_file.blankskip := 0.0  # skip silence in tracks

@@ -231,7 +231,7 @@ _Nirvana: Something in the Way / Endless, Nameless_
 
 - Check if calculated overlay duration > **15 s** (a "long tail").
 - `settings.autocue.cue_file.longtail`
-- If so, reduce overlay level by an extra **-15 LU** and repeat the calculation.
+- If so, reduce overlay level by an extra **-12 LU** and repeat the calculation.
 - `settings.autocue.cue_file.overlay_longtail`
 - We now start the next song much later, keeping the song’s "long tail" intact!
 - `liq_longtail` shows if a long tail was detected.
@@ -391,7 +391,7 @@ You _can_ fine-tune everything, but the defaults are great for nearly all use ca
 # settings.autocue.cue_file.silence := -42.0  # LU below track loudness
 # settings.autocue.cue_file.overlay := -8.0  # LU below track loudness
 # settings.autocue.cue_file.longtail := 15.0  # seconds
-# settings.autocue.cue_file.overlay_longtail := -15.0  # extra LU
+# settings.autocue.cue_file.overlay_longtail := -12.0  # extra LU
 # settings.autocue.cue_file.sustained_loudness_drop := 40.0  # max. percent drop to be considered sustained
 # settings.autocue.cue_file.noclip := false  # clipping prevention like loudgain's `-k`
 # settings.autocue.cue_file.blankskip := 0.0  # skip silence in tracks

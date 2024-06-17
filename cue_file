@@ -56,13 +56,15 @@
 #                       - Use max. LUGS of longtail & right end for sustained
 #                       - Default SUSTAINED_LOUDNESS_DROP to 40.0% instead of 60.0%,
 #                         for slightly tighter/denser playout (community wish)
+# 2024-06-18 Moonbase59 - v4.0.3 Change LONGTAIL_EXTRA_LU from -15 to -12,
+#                         most people seem to want transitions a bit tighter
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
 # Some collaborative work with RM-FM (@RM-FM): Sustained ending analysis.
 
 __author__ = 'Matthias C. Hormann'
-__version__ = '4.0.2'
+__version__ = '4.0.3'
 
 import os
 import sys
@@ -109,7 +111,7 @@ SILENCE = -42.0  # LU below average for cue-in/cue-out trigger ("silence")
 OVERLAY_LU = -8.0  # LU below average for overlay trigger (start next song)
 # more than LONGTAIL_SECONDS below OVERLAY_LU are considered a "long tail"
 LONGTAIL_SECONDS = 15.0
-LONGTAIL_EXTRA_LU = -15.0  # reduce 15 dB extra on long tail songs to find overlap point
+LONGTAIL_EXTRA_LU = -12.0  # reduce 15 dB extra on long tail songs to find overlap point
 SUSTAINED_LOUDNESS_DROP = 40.0  # max. percent drop to be considered sustained
 BLANKSKIP = 5.0  # min. seconds silence to detect blank
 NICE = False  # use Linux/MacOS nice?

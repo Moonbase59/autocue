@@ -116,7 +116,7 @@ Here is a complete list you can copy, showing the default settings:
 # settings.autocue.cue_file.silence := -42.0  # LU below track loudness
 # settings.autocue.cue_file.overlay := -8.0  # LU below track loudness
 # settings.autocue.cue_file.longtail := 15.0  # seconds
-# settings.autocue.cue_file.overlay_longtail := -15.0  # extra LU
+# settings.autocue.cue_file.overlay_longtail := -12.0  # extra LU
 # settings.autocue.cue_file.sustained_loudness_drop := 40.0  # max. percent drop to be considered sustained
 # settings.autocue.cue_file.noclip := false  # clipping prevention like loudgain's `-k`
 # settings.autocue.cue_file.blankskip := 0.0  # skip silence in tracks
@@ -172,7 +172,7 @@ options:
                         endings intact (default: 15.0)
   -x EXTRA, --extra EXTRA
                         Extra LU below overlay loudness to trigger next track
-                        for songs with long tail (default: -15.0)
+                        for songs with long tail (default: -12.0)
   -d DROP, --drop DROP  Max. percent loudness drop at the end to be still
                         considered having a sustained ending. Such tracks will
                         be recalculated using --extra, keeping the song ending
@@ -314,7 +314,7 @@ We can see this would destroy an important part of the song’s end.
 
 #### <a name="a-long-tail"></a>A long tail! <a href="#toc" class="goToc">⇧</a>
 
-Finding that the calculated cross duration of `16.5` seconds is longer than 15 seconds (the `-l`/`--longtail` parameter), `cue_file` now _recalculates the overlay start position_ automatically, using an extra -15 LU loudness offset (`-x`/`--extra` parameter), and arrives at this:
+Finding that the calculated cross duration of `16.5` seconds is longer than 15 seconds (the `-l`/`--longtail` parameter), `cue_file` now _recalculates the overlay start position_ automatically, using an extra -15 LU loudness offset (`-x`/`--extra` parameter, defaults to `-12` in v4.0.3+), and arrives at this:
 
 ![Screenshot of Bohemian Rhapsody waveform, showing the newly calculated cross duration: 4.5 seconds before end – just right, not cutting off important parts of the song ending](https://github.com/Moonbase59/autocue/assets/3706922/9f9ec3af-89d4-4edc-9316-d53ed1fcf000)
 
@@ -372,7 +372,7 @@ settings.autocue.cue_file.target := -18.0  # LUFS
 settings.autocue.cue_file.silence := -42.0  # LU below track loudness
 settings.autocue.cue_file.overlay := -8.0  # LU below track loudness
 settings.autocue.cue_file.longtail := 15.0  # seconds
-settings.autocue.cue_file.overlay_longtail := -15.0  # extra LU
+settings.autocue.cue_file.overlay_longtail := -12.0  # extra LU
 settings.autocue.cue_file.sustained_loudness_drop := 40.0  # max. percent drop to be considered sustained
 settings.autocue.cue_file.noclip := false  # clipping prevention like loudgain's `-k`
 settings.autocue.cue_file.blankskip := 0.0  # skip silence in tracks

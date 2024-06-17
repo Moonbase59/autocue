@@ -35,6 +35,8 @@
 #                           the user-defined settings.
 # 2024-06-15 - Moonbase59 - v4.0.1 - Sync with cue_file version
 # 2024-06-16 - Moonbase59 - v4.0.2 - Allow `-8.33dB` type values with no blank
+# 2024-06-18 - Moonbase59 - v4.0.3 - Changed overlay_longtail from -15 to -12,
+#                           most people seem to want transitions a bit tighter
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -48,7 +50,7 @@ let settings.autocue.cue_file.version =
   settings.make(
     description=
       "Software version of autocue.cue_file. Should coincide with `cue_file`.",
-    "4.0.2"
+    "4.0.3"
   )
 
 # Internal only! Not a user setting.
@@ -121,7 +123,7 @@ let settings.autocue.cue_file.overlay_longtail =
     description=
       "Extra LU level below overlay loudness, to recalculate songs with long \
        tails.",
-    -15.0
+    -12.0
   )
 
 let settings.autocue.cue_file.sustained_loudness_drop =
