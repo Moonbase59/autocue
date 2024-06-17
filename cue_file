@@ -6,56 +6,6 @@
 # 2024-03-23 Moonbase59 - first published version
 # 2024-04-11 Moonbase59 - Added liq_cross_start_next
 # 2024-04-12 Moonbase59 - Rename `liq_duration` -> `liq_cue_duration`
-#                       - Change to create correctly typed JSON (thanks @toots!)
-# 2024-04-20 Moonbase59 - optimized skip_analysis for different loudness targets
-#                       - allow loudness values as floats
-# 2024-04-24 Moonbase59 - completely remove `liq_cross_duration`, so it won’t
-#                         be written to file’s tags
-# 2024-04-25 Moonbase59 - handle old RG1/mp3gain positive loudness reference
-#                       - more sanity checks & adjustments
-#                       - add -n/--nice option, increases nice value by 10
-# 2024-05-01 Moonbase59 - Add (future) ramp & hook points to `tags_to_check`
-# 2024-05-02 Moonbase59 - Add -k/--noclip option, prevents clipping by
-#                         correcting liq_amplify. Correction shown in
-#                         liq_amplify_adjustment. Adds liq_true_peak in dBFS.
-# 2024-05-04 Moonbase59 - Fix liq_loudness unit: It is LUFS, not dB
-#                       - Add (informational) liq_loudness_range
-# 2024-06-02 Moonbase59 - use Mutagen for writing tags to MP4-type files
-#                       - v1.1.0 add version numbering (semver)
-# 2024-06-04 Moonbase59 - v1.2.0 Ensure all supported file types tagged safely.
-#                       - Show Mutagen status, supported file types in help.
-#                       - v1.2.1 Much more informative help, nicer formatting.
-#                       - v1.2.2 Limit -t/--target input range to -23.0..0.0
-#                       - v1.2.3 Limit all params to sensible ranges
-#                       - v2.0.0 Breaking: Add -r/--replaygain overwrite
-#                       - Changed `liq_true_peak` to `liq_true_peak_db`,
-#                         add new `liq_true_peak` (linear, like RG)
-#                       - v2.0.1 Fix `liq_true_peak` reading when it still
-#                         contains ` dBFS` from v1.2.3.
-# 2024-06-05 Moonbase59 - No change, just version number.
-# 2024-06-08 Moonbase59 - v2.0.3 Fix ffmpeg treating `.ogg` with cover as video
-# 2024-06-09 Moonbase59 - v2.1.0 Read/override tags from JSON file (can be stdin)
-#                       - Make variable checking more robust (bool & unit suffixes)
-#                       - Add `liq_fade_in` & `liq_fade_out` tags for reading/writing,
-#                         in case a preprocessor needs to set fade durations.
-# 2024-06-11 Moonbase59 - v2.2.0 Sync version numver with autocue.cue_file
-# 2024-06-11 Moonbase59 - v2.2.1 Sync version number with autocue.cue_file
-# 2024-06-11 Moonbase59 - v3.0.0 Add variable blankskip (0.0=off)
-#                       - BREAKING: `liq_blankskip` now flot, not bool anymore!
-#                         Pre-v3.0.0 tags will be read graciously.
-# 2024-06-12 Moonbase59 - v3.0.1 Increase default min. silence to 5.0 s
-# 2024-06-13 Moonbase59 - Add `liq_sustained_ending`.
-# 2024-06-13 Moonbase59 & RM-FM - v4.0.0 Add sustained ending analysis,
-#                         a collaborative work.
-#                         Breaking: JSON & metadata (`liq_sustained_ending`)
-# 2024-06-14 Moonbase59 - Add mutagen vserion to `-V`/`--version`.
-# 2024-06-15 Moonbase59 - v4.0.1 Catch IndexError in sustained calculation if we are
-#                         already at the end of the track.
-#                       - Remove eprint in slope
-# 2024-06-16 Moonbase59 - v4.0.2 Cleanup ending calculation code
-#                       - Use max. LUGS of longtail & right end for sustained
-#                       - Default SUSTAINED_LOUDNESS_DROP to 40.0% instead of 60.0%,
-#                         for slightly tighter/denser playout (community wish)
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
@@ -774,21 +724,6 @@ def analyse(
     start_next_time = start_next_time_new
     eprint(f"Cue out time: {cue_out_time:.2f} s")
 
-    # Now that we know where to start the next song, calculate Liquidsoap's
-    # cross duration from it, allowing for an extra 0.1s of overlap -- no, reverse
-    # (a value of 0.0 is invalid in Liquidsoap)
-    cross_duration = cue_out_time - start_next_time
-
-    amplify, amplify_correction = amplify_correct(
-        target, loudness, true_peak_dB, noclip)
-
-    # We now also return start_next_time
-
-    # NOTE: Liquidsoap doesn’t currently accept `liq_cross_duration=0.`,
-    # or `liq_cross_start_next == liq_cue_out`, but this can happen.
-    # We adjust for that in the Liquidsoap protocol, because other AutoDJ
-    # applications might want the correct values.
-
     # return a dict
     return ({
         "duration": duration,
@@ -797,8 +732,6 @@ def analyse(
         "liq_cue_out": cue_out_time,
         "liq_cross_start_next": start_next_time,
         "liq_longtail": longtail,
-        "liq_sustained_ending": sustained,
-        # "liq_cross_duration": cross_duration,
         "liq_loudness": loudness,
         "liq_loudness_range": loudness_range,
         "liq_amplify": amplify,
@@ -1179,30 +1112,6 @@ if args.json:
         pass
     args.json.close()
 
-skip_analysis, tags_found = read_tags(
-    args.file, tags_json, args.target, args.blankskip, args.noclip)
-
-if args.force or not skip_analysis:
-    result = analyse(
-        filename=args.file,
-        target=args.target,
-        overlay=args.overlay,
-        silence=args.silence,
-        longtail_seconds=args.longtail,
-        extra=args.extra,
-        drop=args.drop,
-        blankskip=args.blankskip,
-        nice=args.nice,
-        noclip=args.noclip
-    )
-else:
-    result = add_missing(tags_found, args.target, args.blankskip, args.noclip)
-
-# eprint(result)
-
-if args.write:
-    write_tags(args.file, result, args.replaygain)
-
 # prepare JSON result
 # we use "dB" instead of "LU" units, because LS & others don’t understand "LU"
 liq_result = {
@@ -1212,17 +1121,9 @@ liq_result = {
     "liq_cue_out": result['liq_cue_out'],
     "liq_cross_start_next": result['liq_cross_start_next'],
     "liq_longtail": result["liq_longtail"],
-    "liq_sustained_ending": result['liq_sustained_ending'],
-    # "liq_cross_duration": result['liq_cross_duration'],
-    "liq_loudness": f"{result['liq_loudness']:.2f} LUFS",
-    "liq_loudness_range": f"{result['liq_loudness_range']:.2f} LU",
+    "liq_loudness": f"{result['liq_loudness']:.2f} dB",
     "liq_amplify": f"{result['liq_amplify']:.2f} dB",
-    "liq_amplify_adjustment": f"{result['liq_amplify_adjustment']:.2f} dB",
-    "liq_reference_loudness": f"{result['liq_reference_loudness']:.2f} LUFS",
-    "liq_blankskip": result['liq_blankskip'],
     "liq_blank_skipped": result['liq_blank_skipped'],
-    "liq_true_peak": result['liq_true_peak'],
-    "liq_true_peak_db": f"{result['liq_true_peak_db']:.2f} dBFS",
 }
 
 # output compact (one line) JSON, for use in Liquidsoap "autocue:" protocol
