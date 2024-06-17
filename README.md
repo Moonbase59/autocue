@@ -172,28 +172,36 @@ Save and _Restart Broadcasting_.
 ## <a name="command-line-interface"></a>Command-line interface <a href="#toc" class="goToc">⇧</a>
 
 ```
-usage: cue_file [-h]
-                [-t {-23,-22,-21,-20,-19,-18,-17,-16,-15,-14,-13,-12,-11,-10,-9,-8,-7,-6,-5,-4,-3,-2,-1,0}]
-                [-s SILENCE] [-o OVERLAY] [-l LONGTAIL] [-x EXTRA] [-b] [-w]
-                [-f]
+usage: cue_file [-h] [-V] [-t TARGET] [-s SILENCE] [-o OVERLAY] [-l LONGTAIL]
+                [-x EXTRA] [-d DROP] [-k] [-b [BLANKSKIP]] [-w] [-r] [-f] [-n]
+                [-j JSON]
                 file
 
-Return cue-in, cue-out, overlay and replaygain data for an audio file as JSON.
-To be used with my Liquidsoap "autocue:" protocol.
+Analyse audio file for cue-in, cue-out, overlay and EBU R128 loudness data,
+results as JSON. Optionally writes tags to original audio file, avoiding
+unnecessary re-analysis and getting results MUCH faster. This software is
+mainly intended for use with my Liquidsoap "autocue:" protocol.
+
+cue_file 4.0.2 supports writing tags to these file types:
+.aac, .aif, .aifc, .aiff, .alac, .ape, .asf, .flac, .m2a, .m4a, .m4b, .m4p,
+.m4r, .m4v, .mp+, .mp2, .mp3, .mp4, .mpc, .ofr, .ofs, .oga, .ogg, .ogv, .opus,
+.spx, .wav, .wma, .wmv, .wv.
+More file types are available when Mutagen is installed (True).
 
 positional arguments:
   file                  File to be processed
 
 options:
   -h, --help            show this help message and exit
-  -t {-23,-22,-21,-20,-19,-18,-17,-16,-15,-14,-13,-12,-11,-10,-9,-8,-7,-6,-5,-4,-3,-2,-1,0}, --target {-23,-22,-21,-20,-19,-18,-17,-16,-15,-14,-13,-12,-11,-10,-9,-8,-7,-6,-5,-4,-3,-2,-1,0}
-                        LUFS reference target (default: -18.0)
+  -V, --version         show program's version number and exit
+  -t TARGET, --target TARGET
+                        LUFS reference target; -23.0 to 0.0 (default: -18.0)
   -s SILENCE, --silence SILENCE
-                        LU/dB below integrated track loudness for cue-in &
-                        cue-out points (silence removal at beginning & end of
-                        a track) (default: -42.0)
+                        LU below integrated track loudness for cue-in & cue-
+                        out points (silence removal at beginning & end of a
+                        track) (default: -42.0)
   -o OVERLAY, --overlay OVERLAY
-                        LU/dB below integrated track loudness to trigger next
+                        LU below integrated track loudness to trigger next
                         track (default: -8.0)
   -l LONGTAIL, --longtail LONGTAIL
                         More than so many seconds of calculated overlay
@@ -201,19 +209,57 @@ options:
                         recalculation using --extra, thus keeping long song
                         endings intact (default: 15.0)
   -x EXTRA, --extra EXTRA
-                        Extra LU/dB below overlay loudness to trigger next
-                        track for songs with long tail (default: -15.0)
-  -b, --blankskip       Skip blank (silence) within song (get rid of "hidden
-                        tracks"). Sets the cue-out point to where the silence
-                        begins. Don't use this with spoken or TTS-generated
-                        text, as it will often cut the message short.
+                        Extra LU below overlay loudness to trigger next track
+                        for songs with long tail (default: -15.0)
+  -d DROP, --drop DROP  Max. percent loudness drop at the end to be still
+                        considered having a sustained ending. Such tracks will
+                        be recalculated using --extra, keeping the song ending
+                        intact. Zero (0.0) to switch off. (default: 40.0)
+  -k, --noclip          Clipping prevention: Lowers track gain if needed, to
+                        avoid peaks going above -1 dBFS. Uses true peak values
+                        of all audio channels. (default: False)
+  -b [BLANKSKIP], --blankskip [BLANKSKIP]
+                        Skip blank (silence) within track if longer than
+                        [BLANKSKIP] seconds (get rid of "hidden tracks"). Sets
+                        the cue-out point to where the silence begins. Don't
+                        use this with spoken or TTS-generated text, as it will
+                        often cut the message short. Zero (0.0) to switch off.
+                        Omitting [BLANKSKIP] defaults to 5.0 s. (default: 0.0)
+  -w, --write           Write Liquidsoap liq_* tags to file. Ensure you have
+                        enough free space to hold a copy of the original file.
                         (default: False)
-  -w, --write           Write Liquidsoap liq_* tags to file. Use with care, as
-                        ffmpeg can't write all tags to all file types! Ensure
-                        you have enough free space to hold a copy of the
-                        original file. (default: False)
-  -f, --force           Force re-calculation, even if tags exist (default:
+  -r, --replaygain      Write ReplayGain tags to file (track only, no album).
+                        Useful if your files have no previous RG tags. Only
+                        valid if -w/--write is also specified. (default:
                         False)
+  -f, --force           Force re-analysis, even if tags exist (default: False)
+  -n, --nice            Linux/MacOS only: Use nice? Will run analysis at nice
+                        level 18. (default: False)
+  -j JSON, --json JSON  Read/override tags from a JSON file. Use - to read
+                        from stdin. Intended for pre-processing software which
+                        can, for instance, fill in values from their database
+                        here. (default: None)
+
+Note cue_file will use the LARGER value from the sustained ending and longtail
+calculations to set the next track overlay point. This ensures special song
+endings are always kept intact in transitions.
+
+cue_file 4.0.2 knows about these tags:
+duration, liq_amplify, liq_amplify_adjustment, liq_blank_skipped,
+liq_blankskip, liq_cross_duration, liq_cross_start_next, liq_cue_duration,
+liq_cue_in, liq_cue_out, liq_fade_in, liq_fade_out, liq_hook1_in,
+liq_hook1_out, liq_hook2_in, liq_hook2_out, liq_hook3_in, liq_hook3_out,
+liq_longtail, liq_loudness, liq_loudness_range, liq_ramp1, liq_ramp2,
+liq_ramp3, liq_reference_loudness, liq_sustained_ending, liq_true_peak,
+liq_true_peak_db, r128_track_gain, replaygain_reference_loudness,
+replaygain_track_gain, replaygain_track_peak, replaygain_track_range.
+
+The absolute minimum set to (possibly) avoid a re-analysis is:
+duration, liq_cross_start_next, liq_cue_in, liq_cue_out,
+replaygain_track_gain.
+
+A full audio file analysis can take some time. cue_file tries to avoid a
+(re-)analysis if all required data can be read from existing tags in the file.
 
 Please report any issues to https://github.com/Moonbase59/autocue/issues
 ```
