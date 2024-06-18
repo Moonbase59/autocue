@@ -247,7 +247,7 @@ Here is a **reference table** for settings and parameters in `cue_file` and Liqu
 |`-r`, `--replaygain`|`settings.autocue.cue_file.write_replaygain`|false|true/false|
 |`-f`, `--force`|`settings.autocue.cue_file.force_analysis`|false|true/false|
 |`-n`, `--nice`|`settings.autocue.cue_file.nice`|false|true/false|
-|`-j`, `--json`|—|None|file (-=stdin)
+|`-j`, `--json`|—|None|file (`-`=`stdin`)
 |—|`settings.autocue.cue_file.use_json_metadata`|true|true/false|
 |—|`settings.autocue.cue_file.path`|cue_file|file|
 |—|`settings.autocue.cue_file.fade_in`|0.1|seconds|
