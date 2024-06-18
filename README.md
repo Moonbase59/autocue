@@ -33,6 +33,7 @@ Both standalone Liquidsoap operation and integrated playout systems like AzuraCa
     - [Install on AzuraCast](#install-on-azuracast)
       - [Settings](#settings)
   - [Command-line interface](#command-line-interface)
+  - [Reference to parameters and settings](#reference-to-parameters-and-settings)
   - [Examples](#examples)
     - [Hidden track](#hidden-track)
     - [Long tail handling](#long-tail-handling)
@@ -60,7 +61,7 @@ Both standalone Liquidsoap operation and integrated playout systems like AzuraCa
 
 ### <a name="install-cue_file"></a>Install `cue_file` <a href="#toc" class="goToc">⇧</a>
 
-Put `cue_file` in your path locally (i.e., into `~/bin`, `~/.local/bin` or `/usr/local/bin`) and `chmod+x` it.
+Put `cue_file` in your path locally (i.e., into `~/bin`, `~/.local/bin` or `/usr/local/bin`) and `chmod +x` it (make executable).
 
 If you wish, you can now play around with it a bit (use `cue_file --help` for help), or follow our examples below and analyze some of your audio files. _Audacity_ and _[spec](https://gist.github.com/Moonbase59/5e70279740a5b227c2106cff45abd706)_ can be helpful in checking.
 
@@ -225,6 +226,36 @@ A full audio file analysis can take some time. cue_file tries to avoid a
 
 Please report any issues to https://github.com/Moonbase59/autocue/issues
 ```
+
+## <a name="reference-to-parameters-and-settings"></a>Reference to parameters and settings <a href="#toc" class="goToc">⇧</a>
+
+Here is a **reference table** for settings and parameters in `cue_file` and Liquidsoap:
+
+|cue_file|Liquidsoap|Default|Note|
+|--------|----------|-------|----|
+|`-h`, `--help`|—|—|show help|
+|`-V`, `--version`|—|—|show version|
+|`-t`, `--target`|`settings.autocue.cue_file.target`|-18.0|LUFS|
+|`-s`, `--silence`|`settings.autocue.cue_file.silence`|-42.0|LU|
+|`-o`, `--overlay`|`settings.autocue.cue_file.overlay`|-8.0|LU|
+|`-l`, `--longtail`|`settings.autocue.cue_file.longtail`|15.0|seconds|
+|`-x`, `--extra`|`settings.autocue.cue_file.overlay_longtail`|-12.0|LU (0=disable)|
+|`-d`, `--drop`|`settings.autocue.cue_file.sustained_loudness_drop`|40.0|% (0=disable)|
+|`-k`, `--noclip`|`settings.autocue.cue_file.noclip`|false|true/false|
+|`-b`, `--blankskip`|`settings.autocue.cue_file.blankskip`|0.0|seconds (0=disable)|
+|`-w`, `--write`|`settings.autocue.cue_file.write_tags`|false|true/false|
+|`-r`, `--replaygain`|`settings.autocue.cue_file.write_replaygain`|false|true/false|
+|`-f`, `--force`|`settings.autocue.cue_file.force_analysis`|false|true/false|
+|`-n`, `--nice`|`settings.autocue.cue_file.nice`|false|true/false|
+|`-j`, `--json`|—|None|file (-=stdin)
+|—|`settings.autocue.cue_file.use_json_metadata`|true|true/false|
+|—|`settings.autocue.cue_file.path`|cue_file|file|
+|—|`settings.autocue.cue_file.fade_in`|0.1|seconds|
+|—|`settings.autocue.cue_file.fade_out`|2.5|seconds|
+|—|`settings.autocue.cue_file.timeout`|60.0|seconds|
+|—|`settings.autocue.cue_file.unify_loudness_correction`|true|true/false|
+
+**Before changing any of these, please _know exactly what you’re doing_, and test locally before applying changes to your station!**
 
 ## <a name="examples"></a>Examples <a href="#toc" class="goToc">⇧</a>
 
