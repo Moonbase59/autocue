@@ -2,9 +2,7 @@
 
 On-the-fly JSON song cue-in, cue-out, overlay, replaygain calculation for Liquidsoap, AzuraCast and other AutoDJ software.
 
-Work in progress. I’m currently updating this documentation, so bear with me if not all is up-to-date yet!
-
-**Check out the [presentation](https://moonbase59.github.io/autocue/presentation/autocue.html) for an introduction, and the [changelog](CHANGELOG.md) for latest information!**
+**Check out the [presentation](https://moonbase59.github.io/autocue/presentation/autocue.html) for an introduction, the [FAQ – Frequently Asked Questions](FAQ.md), and the [changelog](CHANGELOG.md) for latest information!**
 
 **Note:** This documentation describes the standalone `cue_file` and `autocue.cue_file`, my integration into Liquidsoap’s `autocue:` protocol.
 
