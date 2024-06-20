@@ -27,6 +27,7 @@ Both standalone Liquidsoap operation and integrated playout systems like AzuraCa
   - [Table of Contents](#table-of-contents)
   - [Install](#install)
     - [Install `cue_file`](#install-cue_file)
+    - [Install Mutagen](#install-mutagen)
     - [Local testing with Liquidsoap](#local-testing-with-liquidsoap)
     - [Install on AzuraCast](#install-on-azuracast)
       - [Settings](#settings)
@@ -62,6 +63,22 @@ Both standalone Liquidsoap operation and integrated playout systems like AzuraCa
 Put `cue_file` in your path locally (i.e., into `~/bin`, `~/.local/bin` or `/usr/local/bin`) and `chmod +x` it (make executable).
 
 If you wish, you can now play around with it a bit (use `cue_file --help` for help), or follow our examples below and analyze some of your audio files. _Audacity_ and _[spec](https://gist.github.com/Moonbase59/5e70279740a5b227c2106cff45abd706)_ can be helpful in checking.
+
+### <a name="install-mutagen"></a>Install Mutagen <a href="#toc" class="goToc">⇧</a>
+
+Refer to the [Mutagen Docs](https://mutagen.readthedocs.io/en/latest/index.html#installing).
+
+When installed, check `cue_file --help`. It should tell you the file types it can handle, and if _Mutagen_ is installed.
+
+![cue_file supported file types](docs/images/cue_file-supported-file-types.png)
+
+You can use `cue_file --version` to find out the version of `cue_file` _and_ _Mutagen_, if it is installed.
+
+```
+$ cue_file --version
+cue_file 4.0.3
+mutagen 1.47.0
+```
 
 ### <a name="local-testing-with-liquidsoap"></a>Local testing with Liquidsoap <a href="#toc" class="goToc">⇧</a>
 
