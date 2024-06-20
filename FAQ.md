@@ -140,7 +140,7 @@ As always, you should _know what you’re doing_, and set up these tools appropr
 
 ## <a name="can-i-use-cue_file-to-replaygain-my-files"></a>Can I use `cue_file` to replaygain my files? <a href="#toc" class="goToc">⇧</a>
 
-- _Yes_, you absolutely can, if you can live without the ReplayGain album data (`cue_file` has no concept of an album). `cue_file` basically follows the same logic [`loadgain`](https://github.com/Moonbase59/loudgain) uses, but doesn’t have all its features.
+- _Yes_, you absolutely can, if you can live without the ReplayGain album data (`cue_file` has no concept of an album). `cue_file` basically follows the same logic [`loudgain`](https://github.com/Moonbase59/loudgain) uses, but doesn’t have all its features.
 - Just add the `-r`/`--replaygain` parameter _in addition to_ `-w`/`--write` when using `cue_file` for pre-processing and it will write these ReplayGain2 tags:
   |Tag|Unit|
   |---|----|
