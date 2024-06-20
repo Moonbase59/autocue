@@ -116,11 +116,14 @@ That very much depends, but most of them have some drawbacks, can’t handle all
 
 ### Tagging software I trust and use
 
+Most of these are available for Linux, MacOS and Windows.
+
 - [_MusicBrainz Picard_](https://picard.musicbrainz.org/) — Ideal for initial tagging of files, and you help the community when getting a free MusicBrainz account and help adding new albums. Uses _Mutagen_.
 - [_Kid3_](https://kid3.kde.org/) — Originally part of the KDE desktop, but can be installed on others. Very good for "the quick fix", like changing `liq_blankskip`.
 - _cue_file_. For pre-processing and adding Autocue/ReplayGain (track) data. Uses _Mutagen_.
-- _mid3v2_ — Part of _Mutagen_, nice to quickly change a tag or two in a shell script. Only for MP3, though.
+- [_mid3v2_](https://mutagen.readthedocs.io/en/latest/man/mid3v2.html) — Part of _Mutagen_, nice to quickly change a tag or two in a shell script. Only for MP3, though.
 - [MP3 Diags](https://mp3diags.sourceforge.net/) — To repair some hard-to-catch problems with MP3 files. Not for general tagging.
+- Honorable mention: [foobar2000](https://www.foobar2000.org/) — Windows only. Versatile player/tag editor that also does things right.
 
 As always, you should _know what you’re doing_, and set up these tools appropriately.
 
@@ -133,7 +136,7 @@ As always, you should _know what you’re doing_, and set up these tools appropr
 
 ## <a name="can-i-use-cue_file-to-replaygain-my-files"></a>Can I use `cue_file` to replaygain my files? <a href="#toc" class="goToc">⇧</a>
 
-- Yes, you absolutely can, if you can live without the ReplayGain album data (`cue_file` has no concept of an album). `cue_file` basically follows the same logic [`loadgain`](https://github.com/Moonbase59/loudgain) uses, but doesn’t have all its features.
+- _Yes_, you absolutely can, if you can live without the ReplayGain album data (`cue_file` has no concept of an album). `cue_file` basically follows the same logic [`loadgain`](https://github.com/Moonbase59/loudgain) uses, but doesn’t have all its features.
 - Just add the `-r`/`--replaygain` parameter _in addition to_ `-w`/`--write` when using `cue_file` for pre-processing and it will write these ReplayGain2 tags:
   |Tag|Unit|
   |---|----|
