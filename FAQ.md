@@ -166,7 +166,7 @@ I recommend _testing_ this on a few selected test songs, _before_ you modify you
 ## <a name="how-to-make-transitions-longer-ie-overlay-later-and-keep-every-bit-of-a-song-ending"></a>How to make transitions _longer_, i.e. overlay later and keep every bit of a song ending? <a href="#toc" class="goToc">⇧</a>
 
 - First, try to _increase_ `-d`/`--drop`/`settings.autocue.cue_file.sustained_loudness_drop` _gradually_. The default is `40.0`%, so maybe go up in 10% increments and see how you like it. A good value is `60.0`%.
-- Second, if the above isn’t sufficient, try _increasing_ `-x`/`--extra`/`settings.autocue.cue_file.overlay_longtail` _gradually_. The (new) default is `-12.0` LU, you could try reducing in 2 LU increments. A good value is `-15.0` LU. **Note:** This affects _both_ "sustaned endings" and "longtail" handling.
+- Second, if the above isn’t sufficient, try _increasing_ `-x`/`--extra`/`settings.autocue.cue_file.overlay_longtail` _gradually_. The (new) default is `-12.0` LU, you could try increasing in 2 LU increments. A good value is `-15.0` LU. **Note:** This affects _both_ "sustaned endings" and "longtail" handling.
 - Don’t forget the `-f`/`--force` switch in `cue_file`, so you get real, freshly analyzed results!
 
 I recommend _testing_ this on a few selected test songs, _before_ you modify your station settings or re-tag all your files! A good tool is for instance [_Audacity_](https://www.audacityteam.org/), you can switch the selection input to seconds start & end, and just enter the values cue_file got you on the test file.
