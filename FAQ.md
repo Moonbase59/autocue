@@ -288,4 +288,13 @@ So _always_ use it, _after_ your settings and _before_ a possible `enable_autocu
   - `enable_autocue_metadata()` if you want to use it.
   - Rest of your script.
 
+If you plan to use _custom crossfading_,
+
+- remember that some functions, like `fade_in` and `fade_out` need _metadata passed to them_.
+- instead of hard-coding values into the crossfading function, use the `autocue.cue_file` _settings_. Doing so will later allow easy changing _in just one place_ and avoid obscure side-effects if you forgot to change something.
+
+Plan for _diagnostics logging_. The Liquidsoap integration layer might change things you can’t see in the `autocue.cue_file` log output. It can be useful to write a `show_meta` function that gets called `on_metadata`.
+
+Good examples for all this are in [`test_autocue.cue_file.liq`](test_autocue.cue_file.liq). Study the `def live_aware_crossfade(old, new)` and `def show_meta(m)` function definitions and their usage.
+
 Have fun!
