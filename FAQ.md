@@ -33,7 +33,7 @@ To ensure continuous playout without interruptions, Liquidsoap tries to prepare 
 
 There are two basic strategies to avoid this, which can also be used in combination:
 
-- _Pre-process_ your files (at least the long ones!) using the commandline tool `cue_file`, using the same settings your station uses. The docs have a [reference table](README.md#reference-to-parameters-and-settings) for easy lookup.
+- _Pre-process_ your files (at least the long ones!) using the commandline tool `cue_file`, using the same settings your station uses. The docs have a [reference table](https://github.com/Moonbase59/autocue/blob/master/README.md#reference-to-parameters-and-settings) for easy lookup.
 - Disable processing _all_ files at startup.
 
 ### AzuraCast
@@ -279,11 +279,11 @@ So _always_ use it, _after_ your settings and _before_ a possible `enable_autocu
 
 ## <a name="what-are-good-first-steps-to-include-autocue-in-my-own-liquidsoap-script"></a>What are good first steps to include Autocue in my own Liquidsoap script? <a href="#toc" class="goToc">⇧</a>
 
-- Install Liquidsoap and [Autocue](README.md#install), obviously.
+- Install Liquidsoap and [Autocue](https://github.com/Moonbase59/autocue/blob/master/README.md#install), obviously.
 - _Start simple, use the defaults._ It should _work_ first, _then_ you can fine-tune it.
 - A good example is in [minimal_example_autocue.cue_file.liq](minimal_example_autocue.cue_file.liq). It shows the basic structure:
   - `%include "autocue.cue_file.liq"`
-  - Do your settings. You can copy _all_ settings [from the README](README.md#settings), and only un-comment those you need. The advantage is: You have them all together and don’t have to look them up every time.
+  - Do your settings. You can copy _all_ settings [from the README](https://github.com/Moonbase59/autocue/blob/master/README.md#settings), and only un-comment those you need. The advantage is: You have them all together and don’t have to look them up every time.
   - `ignore(check_autocue_setup(shutdown=true, print=true))`
   - `enable_autocue_metadata()` if you want to use it.
   - Rest of your script.
