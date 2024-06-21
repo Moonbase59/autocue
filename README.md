@@ -48,6 +48,7 @@ Both standalone Liquidsoap operation and integrated playout systems like AzuraCa
       - [`liq_cue_file` (`true`/`false`)](#liq_cue_file-truefalse)
       - [`liq_blankskip` (seconds; 0.0 to disable)](#liq_blankskip-seconds-00-to-disable)
       - [AzuraCast: `jingle_mode` (`"true"`)](#azuracast-jingle_mode-true)
+      - [SAM Broadcaster Smart Categories](#sam-broadcaster-smart-categories)
     - [Effect of `settings.autocue.cue_file.unify_loudness_correction` (`true`/`false`)](#effect-of-settingsautocuecue_fileunify_loudness_correction-truefalse)
       - [ReplayGain inserted](#replaygain-inserted)
       - [ReplayGain overriding `liq_amplify`](#replaygain-overriding-liq_amplify)
@@ -542,6 +543,14 @@ In the returned _metadata_, in `liq_blank_skipped`, you’ll also receive inform
 This is a convenience feature for AzuraCast users. If you set _Hide Metadata from Listeners ("Jingle Mode")_ to ON for a playlist in AzuraCast, it will annotate requests for this playlist with `jingle_mode="true"`. Even if blank skipping for songs is globally enabled, we would not want this to happen for jingles. They might contain pauses in speech that could cut them off early.
 
 So if `autocue` sees this annotation (or tag in a file), it will automatically _disable_ "blankskip" for this track.
+
+Note this setting is superceded by `liq_blankskip`, the "ultimate blankskip switch". So if _both_ are there, the setting from `liq_blankskip` will "win".
+
+#### <a name="sam-broadcaster-smart-categories"></a>SAM Broadcaster Smart Categories <a href="#toc" class="goToc">⇧</a>
+
+This is a convenience feature for those who came from _SAM Broadcaster/SAM DJ_, or share a music library with SAM, and have used [SAM Broadcaster "Smart Categories"](https://support.spacial.com/hc/en-us/articles/229535987-SAM-Broadcaster-SAM-DJ-Using-Smart-Categories) to categorize their tracks. _Smart Categories_ are held in a `songtype` tag, whose contents is a single letter: `S` for normal songs, `I` for Station ID, `J` for Jingle, `N` for News, and so on.
+
+When detecting the `songtype` tag in a file, and it is _not_ `S` (Song), `autocue` will automatically _disable_ "blankskip" for this track.
 
 Note this setting is superceded by `liq_blankskip`, the "ultimate blankskip switch". So if _both_ are there, the setting from `liq_blankskip` will "win".
 
