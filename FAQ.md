@@ -346,7 +346,7 @@ In AzuraCast’s _Edit Liquidsoap Configuration_, in the _second input box_, add
 settings.autocue.cue_file.timeout := 90.0
 ```
 
-**Note:** Please do _not_ use arbitrary large values like `480` "just to prevent it happening"! Doing so could well have adverse side effects.
+**Note:** Please do _not_ use arbitrary large values like `480.0` "just to prevent it happening"! Doing so could well have adverse side effects.
 
 _Save Changes_ and _Restart Broadcasting_.
 
