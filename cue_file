@@ -63,15 +63,13 @@
 #                         errors when piping something to cue_file
 #                       - streamline tag conversion code a little
 #                       - only write known tags, not all `liq_*`
-# 2024-07-01 Moonbase59 - v5.0.0-dev
-#                       - New more compatible JSON output
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
 # Some collaborative work with RM-FM (@RM-FM): Sustained ending analysis.
 
 __author__ = 'Matthias C. Hormann'
-__version__ = '5.0.0-dev'
+__version__ = '4.0.4'
 
 import os
 import sys
@@ -1256,15 +1254,5 @@ liq_result = {
 }
 
 # output compact (one line) JSON, for use in Liquidsoap "autocue:" protocol
-method = "tags" if skip_analysis else "full"
-method = "forced" if args.force else method
-
-json_output = json.dumps(
-    {
-        "apiVersion": __version__,
-        "id": args.file,
-        "method": method,
-        "data": liq_result
-    }
-)
+json_output = json.dumps(liq_result)
 print(json_output)
