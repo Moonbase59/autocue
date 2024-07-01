@@ -1,5 +1,12 @@
 # autocue changelog
 
+### 2024-07-01 – v4.0.4
+
+- Allow to override results via JSON even _after_ having done a fresh analysis (automatic or forced), for ultimate flexibility when using `cue_file` for pre-processing. You can now add fades, ramp or hook points, or do other calculations and feed the results into `cue_file` for tagging. **Use with care**, because some values are dependent on others. In any case, `cue_file` will ever _only_ write tags beginning with `liq_` and (if requested) `replaygain_`.
+- Prevent some strange errors that could happen when piping something into `cue_file` and JSON input was not `stdin`. We now use `ffmpeg -nostdin` to prevent it reading input that was meant for `cue_file`.
+- Don’t write _all_ `liq_*` tags (could have side effects), but only those _known_ (see `cue_file --help` for current list).
+- Streamlined tag conversion code a little.
+
 ### 2024-06-18 – v4.0.3
 
 - Changed default of `-x`/`--extra` and `settings.autocue.cue_file.overlay_longtail` from `-15.0` LU to `-12.0` LU, requested by @RM-FM and the community. Together with the `-d`/`--drop` default change from `60.0` to `40.0`, this makes for a "tighter" playout and doesn’t lose too much of long or sustained endings.

@@ -1,5 +1,7 @@
 # <a name="autocue"></a>autocue <a href="#toc" class="goToc">⇧</a>
 
+**If you like what you got, please consider to [![Donate with Paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/donate/?hosted_button_id=PBPR63362LDEU). Thank you! ❤️**
+
 On-the-fly JSON song cue-in, cue-out, overlay, replaygain calculation for Liquidsoap, AzuraCast and other AutoDJ software.
 
 **Check out the [presentation](https://moonbase59.github.io/autocue/presentation/autocue.html) for an introduction, the [FAQ – Frequently Asked Questions](FAQ.md), and the [changelog](CHANGELOG.md) for latest information!**
