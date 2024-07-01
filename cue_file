@@ -1258,12 +1258,21 @@ liq_result = {
 # output compact (one line) JSON, for use in Liquidsoap "autocue:" protocol
 method = "tags" if skip_analysis else "full"
 method = "forced" if args.force else method
+method = method + "+json" if args.json else method
+method = method + "+write" if args.write else method
+method = method + "+replaygain" if args.replaygain else method
+
+# get parameters used on command line
+params = vars(args)
+# json file is TextIOWrapper, get its name only
+params['json'] = args.json.name if args.json else None
 
 json_output = json.dumps(
     {
         "apiVersion": __version__,
         "id": args.file,
         "method": method,
+        "params": params,
         "data": liq_result
     }
 )
