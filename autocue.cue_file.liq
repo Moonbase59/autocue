@@ -38,6 +38,7 @@
 # 2024-06-18 - Moonbase59 - v4.0.3 - Changed overlay_longtail from -15 to -12,
 #                           most people seem to want transitions a bit tighter
 # 2024-07-01 - Moonbase59 - v4.0.4 - Sync with cue_file version
+# 2024-07-01 - Moonbase59 - v5.0.0-dev - New JSON API
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -51,7 +52,7 @@ let settings.autocue.cue_file.version =
   settings.make(
     description=
       "Software version of autocue.cue_file. Should coincide with `cue_file`.",
-    "4.0.4"
+    "5.0.0-dev"
   )
 
 # Internal only! Not a user setting.
