@@ -1,5 +1,5 @@
 ---
-date: 2024-06-26
+date: 2024-07-01
 author: Matthias C. Hormann (Moonbase59)
 ---
 # FAQ – Frequently Asked Questions
@@ -16,6 +16,7 @@ author: Matthias C. Hormann (Moonbase59)
 - [How to pre-process more than one file at a time ("mass tagging")?](#how-to-pre-process-more-than-one-file-at-a-time-mass-tagging)
 - [What tagging software to use?](#what-tagging-software-to-use)
 - [Can I use `cue_file` to replaygain my files?](#can-i-use-cue_file-to-replaygain-my-files)
+- [Can I use `cue_file` to _manually_ add/overwrite tags when pre-processing?](#can-i-use-cue_file-to-manually-addoverwrite-tags-when-pre-processing)
 - [How to make transitions _tighter_, i.e. overlay earlier?](#how-to-make-transitions-tighter-ie-overlay-earlier)
 - [How to make transitions _longer_, i.e. overlay later and keep every bit of a song ending?](#how-to-make-transitions-longer-ie-overlay-later-and-keep-every-bit-of-a-song-ending)
 - [Can I completely _disable_ the "sustained endings" feature?](#can-i-completely-disable-the-sustained-endings-feature)
@@ -154,6 +155,36 @@ As always, you should _know what you’re doing_, and set up these tools appropr
   |replaygain_track_gain|dB|
   |replaygain_track_peak|true peak, linear|
   |replaygain_track_range|dB|
+
+
+## <a name="can-i-use-cue_file-to-manually-addoverwrite-tags-when-pre-processing"></a>Can I use `cue_file` to _manually_ add/overwrite tags when pre-processing? <a href="#toc" class="goToc">⇧</a>
+
+- _Yes_, you can, even _after_ forcing a re-analysis (v4.0.4+).
+- _Only_ tags from `cue_file`’s list of _known_ tags (see `cue_file --help`) will ever been written by `cue_file`. So no overriding artist or title here—that’s what should have been done in an earlier step, using a good tagging software.
+- **Use with care!** Some values are dependent on others, you could easily mess up something.
+- You **must** create _well-formed JSON_ and can then use `cue_file` with the `-j`/`--json` switch to let your tags override or add to what’s already there.
+
+#### Example: Adding fade-in and fade-out, using `echo` and `stdin`
+
+```bash
+echo '{"liq_fade_in": 0.1, "liq_fade_out": 0.1}' | cue_file -j - -fwr "filename.ext"
+```
+- `-j -` — sets JSON input to `stdin`
+- `-fwr` — _force_ re-analysis, _write_ tags, write _replaygain_
+
+#### Example: using a JSON file `fades.json`
+
+```json
+{
+  "liq_fade_in": 0.10,
+  "liq_fade_out": 0.10
+}
+```
+```bash
+cue_file -j fades.json -fwr "filename.ext"
+```
+- `-j fades.json` — read JSON data from file `fades.json`
+- `-fwr` — _force_ re-analysis, _write_ tags, write _replaygain_
 
 
 ## <a name="how-to-make-transitions-tighter-ie-overlay-earlier"></a>How to make transitions _tighter_, i.e. overlay earlier? <a href="#toc" class="goToc">⇧</a>
@@ -308,7 +339,7 @@ Nothing is definite yet, Liquidsoap 2.3.0 is still under heavy development.
 
 Most certainly, as of 2024-06-23…
 
-- you will need a _new version_ 5.x.x of both `autocue.cue_file` and `cue_file`, because Liquidsoap will change the tags and API.
+- you will need a _new version_ of both `autocue.cue_file` and `cue_file`, because Liquidsoap will change the tags and API.
 - you’ll need to _pre-process your files again_, if you have used that feature.
 - I will see that `cue_file` will be able to _remove obsolete tags_.
 - if possible, I’ll do some _checking_ so that you don’t run `autocue.cue_file` (and thus `cue_file`) under an incompatible Liquidsoap version. The `check_autocue_setup()` function will take care of that.

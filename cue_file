@@ -58,13 +58,18 @@
 #                         for slightly tighter/denser playout (community wish)
 # 2024-06-18 Moonbase59 - v4.0.3 Change LONGTAIL_EXTRA_LU from -15 to -12,
 #                         most people seem to want transitions a bit tighter
+# 2024-07-01 Moonbase59 - v4.0.4 Fix JSON override after analysis
+#                       - Add `-nostdin` to ffmpeg commands, prevents strange
+#                         errors when piping something to cue_file
+#                       - streamline tag conversion code a little
+#                       - only write known tags, not all `liq_*`
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
 # Some collaborative work with RM-FM (@RM-FM): Sustained ending analysis.
 
 __author__ = 'Matthias C. Hormann'
-__version__ = '4.0.3'
+__version__ = '4.0.4'
 
 import os
 import sys
@@ -250,6 +255,56 @@ def amplify_correct(target, loudness, true_peak_dB, noclip):
     return amplify, amplify_correction
 
 
+# remove " dB", " LU", " dBFS", " dBTP" and " LUFS" suffixes from
+# tags_found
+def remove_suffix(tags):
+    suffixed_tags = [
+        "liq_amplify", "liq_amplify_adjustment",
+        "liq_loudness", "liq_loudness_range", "liq_reference_loudness",
+        "replaygain_track_gain", "replaygain_track_range",
+        "replaygain_reference_loudness",
+        "liq_true_peak_db",
+        "liq_true_peak",  # in case old " dBFS" values were stored in v1.2.3
+    ]
+    for tag in suffixed_tags:
+        if tag in tags and isinstance(tags[tag], str):
+            # No need to check for unit name, only using defined tags
+            m = re.search(r'([+-]?\d*\.?\d+)', tags[tag])
+            if m is not None:
+                tags[tag] = m.group()
+
+    return tags
+
+
+# convert tags into their typed variants, ready for calculations
+def convert_tags(tags):
+    items = tags.items()
+
+    # make keys lowercase, include only tags in tags_to_check
+    tags = {
+        k.lower(): v for k,
+        v in items if k.lower() in tags_to_check}
+
+    # remove suffixes from several tags
+    tags = remove_suffix(tags)
+
+    # convert tag string values to the correct types, listed in tags_to_check
+    tags = {k: tags_to_check[k](v) for k, v in tags.items()}
+
+    return tags
+
+# override a (typed) result with JSON overrides
+def override_from_JSON(tags, tags_json={}):
+    # get tags in JSON override file
+    tags_in_json = convert_tags(tags_json)
+
+    # unify, right overwrites left if key in both
+    # tags_found = tags_in_stream | tags_in_format | tags_in_json
+    tags = {**tags, **tags_in_json}
+
+    return tags
+
+
 def read_tags(
         filename,
         tags_json={},
@@ -282,28 +337,20 @@ def read_tags(
 
     # get tags in stream #0 (mka, opus, etc.)
     try:
-        stream_items = result['streams'][0]['tags'].items()
+        stream_tags = result['streams'][0]['tags']
     except KeyError:
-        stream_items = {}
+        stream_tags = {}
 
     # get tags in format (flac, mp3, etc.)
     try:
-        format_items = result['format']['tags'].items()
+        format_tags = result['format']['tags']
     except KeyError:
-        format_items = {}
+        format_tags = {}
 
-    # get tags in JSON override file
-    json_items = tags_json.items()
+    tags_in_stream = convert_tags(stream_tags)
+    tags_in_format = convert_tags(format_tags)
+    tags_in_json = convert_tags(tags_json)
 
-    tags_in_stream = {
-        k.lower(): v for k,
-        v in stream_items if k.lower() in tags_to_check}
-    tags_in_format = {
-        k.lower(): v for k,
-        v in format_items if k.lower() in tags_to_check}
-    tags_in_json = {
-        k.lower(): v for k,
-        v in json_items if k.lower() in tags_to_check}
     # unify, right overwrites left if key in both
     # tags_found = tags_in_stream | tags_in_format | tags_in_json
     tags_found = {**tags_in_stream, **tags_in_format, **tags_in_json}
@@ -320,29 +367,6 @@ def read_tags(
         except KeyError:
             pass
 
-    # remove " dB", " LU", " dBFS", " dBTP" and " LUFS" suffixes from
-    # tags_found
-    def remove_suffix(tags):
-        suffixed_tags = [
-            "liq_amplify", "liq_amplify_adjustment",
-            "liq_loudness", "liq_loudness_range", "liq_reference_loudness",
-            "replaygain_track_gain", "replaygain_track_range",
-            "replaygain_reference_loudness",
-            "liq_true_peak_db",
-            "liq_true_peak",  # in case old " dBFS" values were stored in v1.2.3
-        ]
-        for tag in suffixed_tags:
-            if tag in tags and isinstance(tags[tag], str):
-                # No need to check for unit name, only using defined tags
-                m = re.search(r'([+-]?\d*\.?\d+)', tags[tag])
-                if m is not None:
-                    tags[tag] = m.group()
-
-        return tags
-
-    # remove suffixes from several tags
-    tags_found = remove_suffix(tags_found)
-
     # create replaygain_track_gain from Opus R128_TRACK_GAIN (ref: -23 LUFS)
     if "r128_track_gain" in tags_found:
         rg = float(tags_found["r128_track_gain"]) / 256 + (target - -23.0)
@@ -352,9 +376,6 @@ def read_tags(
     if ("liq_amplify" not in tags_found) and (
             "replaygain_track_gain" in tags_found):
         tags_found["liq_amplify"] = tags_found["replaygain_track_gain"]
-
-    # convert tag string values to the correct types, listed in tags_to_check
-    tags_found = {k: tags_to_check[k](v) for k, v in tags_found.items()}
 
     # Handle old RG1/mp3gain positive loudness reference
     # "89 dB" (SPL) should actually be -14 LUFS, but as a reference
@@ -445,7 +466,7 @@ def add_missing(tags_found, target=TARGET_LUFS, blankskip=0.0, noclip=False):
         tags_found["liq_amplify"] = tags_found["replaygain_track_gain"]
 
     if "liq_amplify_adjustment" not in tags_found:
-        tags_found["liq_amplify_adjustment"] = "0.00 dB"
+        tags_found["liq_amplify_adjustment"] = 0.00  # dB
 
     if "liq_loudness" not in tags_found:
         tags_found["liq_loudness"] = target - \
@@ -501,6 +522,7 @@ def analyse(
         FFMPEG,
         "-v",
         "quiet",
+        "-nostdin",
         "-y",
         "-i",
         filename,
@@ -841,7 +863,7 @@ def write_tags(filename, tags={}, replaygain=False):
         # copy only `liq_*`, float with 2 decimals, bools and strings lowercase
         tags_new = {k: "{:.2f}".format(v)
                     if isinstance(v, float) else str(v).lower()
-                    for k, v in tags.items() if k.startswith("liq_") or k in rg_tags
+                    for k, v in tags.items() if k in tags_to_check or k in rg_tags
                     }
         # liq_true_peak & replaygain_track_peak have 6 decimals, fix it
         if "liq_true_peak" in tags_new:
@@ -955,6 +977,7 @@ def write_tags(filename, tags={}, replaygain=False):
             args = [
                 FFMPEG,
                 '-v', 'quiet',
+                '-nostdin',
                 '-y',
                 '-i', str(filename.absolute()),
                 '-map_metadata', '0',
@@ -1197,6 +1220,9 @@ if args.force or not skip_analysis:
         nice=args.nice,
         noclip=args.noclip
     )
+    # allow to override even the analysis results
+    if args.json:
+        result = override_from_JSON(result, tags_json)
 else:
     result = add_missing(tags_found, args.target, args.blankskip, args.noclip)
 
