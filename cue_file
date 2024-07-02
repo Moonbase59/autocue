@@ -63,6 +63,7 @@
 #                         errors when piping something to cue_file
 #                       - streamline tag conversion code a little
 #                       - only write known tags, not all `liq_*`
+# 2024-07-02 Moonbase59 - v4.0.5 Fix minor bugs with file duration
 # 2024-07-01 Moonbase59 - v5.0.0-dev
 #                       - New more compatible JSON output
 #
@@ -376,10 +377,10 @@ def read_tags(
     tags_found = {**tags_in_stream, **tags_in_format, **tags_in_json}
     # eprint(json.dumps(tags_found, indent=2, sort_keys=True))
 
-    # add duration of stream #0
+    # add duration of stream #0 if it exists and can be converted to float
     try:
-        tags_found["duration"] = result['streams'][0]['duration']
-    except KeyError:
+        tags_found["duration"] = float(result['streams'][0]['duration'])
+    except (KeyError, ValueError):
         try:
             # we might have a video duration (.mka) like "00:07:01.117000000",
             # ignore
@@ -923,6 +924,10 @@ def write_tags(filename, tags={}, replaygain=False):
                 tags_new.pop(k, None)
             del tags_new["R128_TRACK_GAIN"]
 
+        # Never write "duration" to tags
+        if "duration" in tags_new:
+            del tags_new["duration"]
+
         # eprint(replaygain, temp, json.dumps(tags_new, indent=2))
 
         if MUTAGEN_AVAILABLE and filename.suffix.casefold() in mp4_ext:
@@ -1243,6 +1248,9 @@ if args.force or not skip_analysis:
     # allow to override even the analysis results
     if args.json:
         result = override_from_JSON(result, tags_json)
+    # override duration, seems ffprobe can be more exact
+    if "duration" in tags_found:
+        result["duration"] = tags_found["duration"]
 else:
     result = add_missing(tags_found, args.target, args.blankskip, args.noclip)
 
