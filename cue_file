@@ -83,6 +83,7 @@ import re
 import math
 from pathlib import Path
 import textwrap
+import datetime as dt
 
 # like print(), but prints to stderr
 
@@ -90,6 +91,23 @@ import textwrap
 def eprint(*args, **kwargs):
     """Print to stderr, nicely."""
     print(*args, file=sys.stderr, **kwargs)
+
+def rfc3339_date(dt, utc_z=False):
+    """Return datetime object as RFC 3339 string.
+
+    RFC 3339 is an ISO 8601 profile, compatible with W3C-DTF format.
+
+    utc_z=True outputs ``Z`` instead of ``+00:00`` for UTC datetimes.
+    """
+    if dt.tzinfo is None:
+        suffix = "-00:00"  # unknown offset, naive dt
+    else:
+        # use "%z" because "%:z" not yet supported everywhere
+        suffix = dt.strftime("%z")
+        suffix = suffix[:-2] + ":" + suffix[-2:]
+        if utc_z and suffix == "+00:00":
+            suffix = "Z"
+    return dt.strftime("%Y-%m-%dT%H:%M:%S") + suffix
 
 
 # see if we have Mutagen and import it if available
@@ -1267,13 +1285,16 @@ params = vars(args)
 # json file is TextIOWrapper, get its name only
 params['json'] = args.json.name if args.json else None
 
+data = liq_result
+data["updated"] = rfc3339_date(dt.datetime.now().astimezone())
+
 json_output = json.dumps(
     {
         "apiVersion": __version__,
         "id": args.file,
         "method": method,
         "params": params,
-        "data": liq_result
+        "data": data
     }
 )
 print(json_output)
