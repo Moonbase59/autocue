@@ -368,6 +368,8 @@ Check your Liquidsoap log for entries like
 
 This can happen if the _downloading/preparing is slow_, or the _files are large_ (recordings, prerecorded shows, DJ sets, podcasts) or _hard to analyse_. These factors are out of our control. If a request timeout happens, the file will simply _not be played_, and the _next available used_.
 
+Playing from a _remote playlist_ presents another hurdle: Liquidsoap will then _download_ a temporary copy of the file(s) in the playlist, autocue _that copy_, and when it has played, will _delete it again_. So next time round, the same file will have to be _analyzed again_.
+
 In such cases, I suggest to _pre-tag_ files using the `cue_file` tool, but this might not always be possible.
 
 In the above case, I’d suggest _increasing the Autocue timeout slightly_ from the default `60.0` seconds to `60` + timeout shown (`16.0`) + a small "safety margin", say another `10` seconds, making for `86` seconds. Let’s round that up to `90` seconds.
