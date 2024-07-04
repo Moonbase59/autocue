@@ -64,6 +64,7 @@
 #                       - streamline tag conversion code a little
 #                       - only write known tags, not all `liq_*`
 # 2024-07-02 Moonbase59 - v4.0.5 Fix minor bugs with file duration
+# 2024-07-04 Moonbase59 - v4.0.6 Sync version with autocue.cue_file.liq
 # 2024-07-01 Moonbase59 - v5.0.0-dev
 #                       - New more compatible JSON output
 #

@@ -1,5 +1,12 @@
 # autocue changelog
 
+### 2024-07-04 – v4.0.6
+
+- Make `duration` non-overridable by existing metadata or annotations.
+  - The real file duration is not a tag, but determined otherwise.
+  - If such a tag is found, it is typically unusable, incorrect or in a different format.
+  - AzuraCast might annotate the duration from an earlier version of the file, because the media scan is only done once in a while. With frequently changing files of the same name, like syndicated news or time announcements, this could be problematic.
+
 ### 2024-07-02 – v4.0.5
 
 - Fixed a situation where `cue_file` would read a string duration from ffprobe for audio stream \#0, which led to an error in the AzuraCast log like this:

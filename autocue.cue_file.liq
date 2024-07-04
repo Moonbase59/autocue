@@ -39,6 +39,8 @@
 #                           most people seem to want transitions a bit tighter
 # 2024-07-01 - Moonbase59 - v4.0.4 - Sync with cue_file version
 # 2024-07-02 - Moonbase59 - v4.0.5 - Sync with cue_file version
+# 2024-07-04 - Moonbase59 - v4.0.6 - Make duration non-overridable, i.e.,
+#                           it’s ALWAYS taken from the cue_file result.
 # 2024-07-01 - Moonbase59 - v5.0.0-dev - New JSON API
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
@@ -203,6 +205,15 @@ let settings.autocue.cue_file.use_json_metadata =
        autocue-relevant metadata stored in file tags. This can help to avoid \
        unnecessary re-analysis runs.',
     true
+  )
+
+let settings.autocue.cue_file.ignored_overrides =
+  settings.make(
+    description=
+      'List of cue_file results that cannot be overridden by existing \
+       metadata or annotations. One such field is `duration`, as it is not \
+       a tag, and determined otherwise.',
+    ['duration']
   )
 
 stdlib_metadata = metadata
@@ -451,21 +462,6 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
       end
     end
 
-    # # Handle annotated `liq_blankskip`, the ultimate switch
-    # # Pre-v3.0.0 compatibility: Check for true/false (now float)
-    # if list.assoc.mem("liq_blankskip", meta) then
-    #   b = meta["liq_blankskip"]
-    #   if b == "true" then
-    #     blankskip := blankskip()
-    #   elsif b == "false" then
-    #     blankskip := 0.0
-    #   else
-    #     blankskip := float_of_string(default=0.0, b)
-    #   end
-    #   m := list.assoc.remove("liq_blankskip", m())
-    #   m := list.add(("liq_blankskip", string.float(decimal_places=2, blankskip())), m())
-    # end
-
     # Handle annotated `liq_blankskip`, the ultimate switch
     # Pre-v3.0.0 compatibility: Check for true/false (now float)
     if list.assoc.mem("liq_blankskip", meta) then
@@ -643,13 +639,19 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
       )
 
       # only use calculated values if not already annotated in AzuraCast
-      # so we don't overwrite manually set values in the database
+      # so we don't overwrite manually set values in the database,
+      # except for non-overridable values like `duration`, which are
+      # ALWAYS taken from the cue_file result.
       result := list.fold(
         fun(res, entry) ->
           if list.assoc.mem(fst(entry), res) then
-            res
+            if list.mem(fst(entry), settings.autocue.cue_file.ignored_overrides()) then
+              [...list.assoc.remove(fst(entry), res), entry]  # take cue_file result
+            else
+              res  # take existing metadata
+            end
           else
-            [...res, entry]
+            [...res, entry]  # append new metadata
           end,
           m(),
           result()
