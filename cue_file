@@ -64,13 +64,14 @@
 #                       - streamline tag conversion code a little
 #                       - only write known tags, not all `liq_*`
 # 2024-07-02 Moonbase59 - v4.0.5 Fix minor bugs with file duration
+# 2024-07-04 Moonbase59 - v4.0.6 Sync version with autocue.cue_file.liq
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
 # Some collaborative work with RM-FM (@RM-FM): Sustained ending analysis.
 
 __author__ = 'Matthias C. Hormann'
-__version__ = '4.0.5'
+__version__ = '4.0.6'
 
 import os
 import sys
