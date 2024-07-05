@@ -41,6 +41,14 @@
 # 2024-07-02 - Moonbase59 - v4.0.5 - Sync with cue_file version
 # 2024-07-04 - Moonbase59 - v4.0.6 - Make duration non-overridable, i.e.,
 #                           it’s ALWAYS taken from the cue_file result.
+# 2024-07-05 - Moonbase59 - v4.1.0 - New `liq_cue_file handling, allows to
+#                           ignore overrides for cue_file data if true. This is
+#                           mainly for fast-changing files like news or time,
+#                           for which LS/AzuraCast might not yet have updated
+#                           the metadata.
+#                           - not set = default (metadata can override cue_file)
+#                           - false = don’t autocue (still use metadata if present)
+#                           - true = cue_file results override metadata
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -54,7 +62,7 @@ let settings.autocue.cue_file.version =
   settings.make(
     description=
       "Software version of autocue.cue_file. Should coincide with `cue_file`.",
-    "4.0.6"
+    "4.1.0"
   )
 
 # Internal only! Not a user setting.
@@ -637,24 +645,52 @@ def cue_file(~request_metadata, ~file_metadata, filename) =
         ]
       )
 
-      # only use calculated values if not already annotated in AzuraCast
-      # so we don't overwrite manually set values in the database,
-      # except for non-overridable values like `duration`, which are
-      # ALWAYS taken from the cue_file result.
-      result := list.fold(
-        fun(res, entry) ->
-          if list.assoc.mem(fst(entry), res) then
-            if list.mem(fst(entry), settings.autocue.cue_file.ignored_overrides()) then
-              [...list.assoc.remove(fst(entry), res), entry]  # take cue_file result
+      # `liq_cue_file` determines what happens now:
+      #   tag absent - normal handling, existing metadata preferred
+      #   false - we'll never arrive here (don’t process, use existing metadata)
+      #   true - cue_file metadata preferred (for news, time, etc.)
+
+      if meta["liq_cue_file"] == "" then
+        # no `liq_cue_file`, existing metadata preferred
+        log(
+          level=4,
+          label=label,
+          'Existing metadata can override cue_file results \
+           (default; no liq_cue_file seen).'
+        )
+        result := list.fold(
+          fun(res, entry) ->
+            if list.assoc.mem(fst(entry), res) then
+              if list.mem(fst(entry), settings.autocue.cue_file.ignored_overrides()) then
+                [...list.assoc.remove(fst(entry), res), entry]  # take cue_file result
+              else
+                res  # take existing metadata (meta)
+              end
             else
-              res  # take existing metadata
-            end
-          else
-            [...res, entry]  # append new metadata
-          end,
+              [...res, entry]  # append new metadata (cue_file)
+            end,
           m(),
           result()
-      )
+        )
+      elsif meta["liq_cue_file"] == "true" then
+        # `liq_cue_file=true`, cue_file metadata preferred
+        log(
+          level=3,
+          label=label,
+          'cue_file results override existing metadata \
+           because liq_cue_file=true tells us to.'
+        )
+        result := list.fold(
+          fun(res, entry) ->
+            if list.assoc.mem(fst(entry), res) then
+              res  # take existing metadata (cue_file)
+            else
+              [...res, entry]  # append new metadata (meta)
+            end,
+          result(),
+          m()
+        )
+      end
 
       # make a suffixed string a float
       def make_float(s) =

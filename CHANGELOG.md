@@ -1,11 +1,24 @@
 # autocue changelog
 
+### 2024-07-05 – v4.1.0
+
+#### New features
+
+- New `liq_cue_file` handling, allows to ignore overrides for `cue_file` data if true. This is mainly for fast-changing files like news or time, for which LS/AzuraCast might not yet have updated the metadata.
+  - _not set_ — default behaviour (metadata can override `cue_file` results)
+  - `false` — don’t autocue (still use metadata if present)
+  - `true` — `cue_file` results override metadata (special use cases)
+
+For a more thorough explanation, see the [FAQ](FAQ.md#what-exactly-is-liq_cue_file-for-and-should-i-use-it)
+
+
 ### 2024-07-04 – v4.0.6
 
 - Make `duration` non-overridable by existing metadata or annotations.
   - The real file duration is not a tag, but determined otherwise.
   - If such a tag is found, it is typically unusable, incorrect or in a different format.
   - AzuraCast might annotate the duration from an earlier version of the file, because the media scan is only done once in a while. With frequently changing files of the same name, like syndicated news or time announcements, this could be problematic.
+
 
 ### 2024-07-02 – v4.0.5
 

@@ -65,13 +65,16 @@
 #                       - only write known tags, not all `liq_*`
 # 2024-07-02 Moonbase59 - v4.0.5 Fix minor bugs with file duration
 # 2024-07-04 Moonbase59 - v4.0.6 Sync version with autocue.cue_file.liq
+# 2024-07-05 Moonbase59 - v4.1.0 Add `liq_cue_file` to known tags, so we can
+#                         forbid external processes to call us again and
+#                         possibly deliver outdated metadata to us.
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
 # Some collaborative work with RM-FM (@RM-FM): Sustained ending analysis.
 
 __author__ = 'Matthias C. Hormann'
-__version__ = '4.0.6'
+__version__ = '4.1.0'
 
 import os
 import sys
@@ -214,6 +217,7 @@ tags_to_check = {
     "liq_cross_duration": float,
     "liq_cross_start_next": float,
     "liq_cue_duration": float,
+    "liq_cue_file": is_true,
     "liq_cue_in": float,
     "liq_cue_out": float,
     "liq_fade_in": float,
