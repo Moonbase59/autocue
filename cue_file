@@ -65,6 +65,9 @@
 #                       - only write known tags, not all `liq_*`
 # 2024-07-02 Moonbase59 - v4.0.5 Fix minor bugs with file duration
 # 2024-07-04 Moonbase59 - v4.0.6 Sync version with autocue.cue_file.liq
+# 2024-07-05 Moonbase59 - v4.1.0 Add `liq_cue_file` to known tags, so we can
+#                         forbid external processes to call us again and
+#                         possibly deliver outdated metadata to us.
 # 2024-07-01 Moonbase59 - v5.0.0-dev
 #                       - New more compatible JSON output
 #
@@ -234,6 +237,7 @@ tags_to_check = {
     "liq_cross_duration": float,
     "liq_cross_start_next": float,
     "liq_cue_duration": float,
+    "liq_cue_file": is_true,
     "liq_cue_in": float,
     "liq_cue_out": float,
     "liq_fade_in": float,

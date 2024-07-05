@@ -47,7 +47,7 @@ Both standalone Liquidsoap operation and integrated playout systems like AzuraCa
     - [Minimal working example](#minimal-working-example)
     - [Next track and short jingle handling](#next-track-and-short-jingle-handling)
     - [Tags/Annotations that influence `autocue`’s behaviour](#tagsannotations-that-influence-autocues-behaviour)
-      - [`liq_cue_file` (`true`/`false`)](#liq_cue_file-truefalse)
+      - [`liq_cue_file` (`true`/`false`/not set)](#liq_cue_file-truefalsenot-set)
       - [`liq_blankskip` (seconds; 0.0 to disable)](#liq_blankskip-seconds-00-to-disable)
       - [AzuraCast: `jingle_mode` (`"true"`)](#azuracast-jingle_mode-true)
       - [SAM Broadcaster Smart Categories](#sam-broadcaster-smart-categories)
@@ -478,7 +478,11 @@ If you have a long cross duration and a jingle following that is _shorter_ than 
 
 There are three possible _annotations_ (or tags from a file) that can influence `autocue`’s behaviour. In an annotation string, these must occur _to the right_ of the protcol, i.e. `autocue:annotate:...` to work as intended. Think of these as "switches" to enable or disable features.
 
-#### <a name="liq_cue_file-truefalse"></a>`liq_cue_file` (`true`/`false`) <a href="#toc" class="goToc">⇧</a>
+#### <a name="liq_cue_file-truefalsenot-set"></a>`liq_cue_file` (`true`/`false`/not set) <a href="#toc" class="goToc">⇧</a>
+
+- _not set_ — default behaviour (metadata can override `cue_file` results)
+- `false` — don’t autocue (still use metadata if present)
+- `true` — `cue_file` results override metadata (special use cases)
 
 You can _disable_ autocueing for selected sources, like maybe a playlist of large video files, even when `autocue` is globally enabled.
 
@@ -501,6 +505,8 @@ If a track has been skipped, it will be shown in the logs like this:
 ```
 
 **Note:** Using this makes only sense if you used `enable_autocue_metadata()`. When using the `autocue:` _protocol_ in your annotations, you’d simply leave the `autocue:` part off the annotation instead.
+
+For a more thorough explanation, see the [FAQ](FAQ.md#what-exactly-is-liq_cue_file-for-and-should-i-use-it)
 
 #### <a name="liq_blankskip-seconds-00-to-disable"></a>`liq_blankskip` (seconds; 0.0 to disable) <a href="#toc" class="goToc">⇧</a>
 
