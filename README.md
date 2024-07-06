@@ -163,7 +163,7 @@ results as JSON. Optionally writes tags to original audio file, avoiding
 unnecessary re-analysis and getting results MUCH faster. This software is
 mainly intended for use with my Liquidsoap "autocue:" protocol.
 
-cue_file 4.0.2 supports writing tags to these file types:
+cue_file 4.1.0 supports writing tags to these file types:
 .aac, .aif, .aifc, .aiff, .alac, .ape, .asf, .flac, .m2a, .m4a, .m4b, .m4p,
 .m4r, .m4v, .mp+, .mp2, .mp3, .mp4, .mpc, .ofr, .ofs, .oga, .ogg, .ogv, .opus,
 .spx, .wav, .wma, .wmv, .wv.
@@ -225,15 +225,16 @@ Note cue_file will use the LARGER value from the sustained ending and longtail
 calculations to set the next track overlay point. This ensures special song
 endings are always kept intact in transitions.
 
-cue_file 4.0.2 knows about these tags:
+cue_file 4.1.0 knows about these tags:
 duration, liq_amplify, liq_amplify_adjustment, liq_blank_skipped,
 liq_blankskip, liq_cross_duration, liq_cross_start_next, liq_cue_duration,
-liq_cue_in, liq_cue_out, liq_fade_in, liq_fade_out, liq_hook1_in,
-liq_hook1_out, liq_hook2_in, liq_hook2_out, liq_hook3_in, liq_hook3_out,
-liq_longtail, liq_loudness, liq_loudness_range, liq_ramp1, liq_ramp2,
-liq_ramp3, liq_reference_loudness, liq_sustained_ending, liq_true_peak,
-liq_true_peak_db, r128_track_gain, replaygain_reference_loudness,
-replaygain_track_gain, replaygain_track_peak, replaygain_track_range.
+liq_cue_file, liq_cue_in, liq_cue_out, liq_fade_in, liq_fade_out,
+liq_hook1_in, liq_hook1_out, liq_hook2_in, liq_hook2_out, liq_hook3_in,
+liq_hook3_out, liq_longtail, liq_loudness, liq_loudness_range, liq_ramp1,
+liq_ramp2, liq_ramp3, liq_reference_loudness, liq_sustained_ending,
+liq_true_peak, liq_true_peak_db, r128_track_gain,
+replaygain_reference_loudness, replaygain_track_gain, replaygain_track_peak,
+replaygain_track_range.
 
 The absolute minimum set to (possibly) avoid a re-analysis is:
 duration, liq_cross_start_next, liq_cue_in, liq_cue_out,
@@ -247,9 +248,9 @@ Please report any issues to https://github.com/Moonbase59/autocue/issues
 
 ## <a name="reference-to-parameters-and-settings"></a>Reference to parameters and settings <a href="#toc" class="goToc">⇧</a>
 
-Here is a **reference table** for settings and parameters in `cue_file` and Liquidsoap:
+Here is a **reference table** for settings and parameters in `cue_file` (the external executable) and `autocue.cue_file` (the Liquidsoap integration):
 
-|cue_file|Liquidsoap|Default|Note|
+|cue_file|autocue.cue_file|Default|Note|
 |--------|----------|-------|----|
 |`-h`, `--help`|—|—|show help|
 |`-V`, `--version`|—|—|show version|
@@ -272,6 +273,7 @@ Here is a **reference table** for settings and parameters in `cue_file` and Liqu
 |—|`settings.autocue.cue_file.fade_out`|2.5|seconds|
 |—|`settings.autocue.cue_file.timeout`|60.0|seconds|
 |—|`settings.autocue.cue_file.unify_loudness_correction`|true|true/false|
+|—|`settings.autocue.cue_file.ignored_overrides`|['duration']|(list)
 
 **Before changing any of these, please _know exactly what you’re doing_, and test locally before applying changes to your station!**
 
