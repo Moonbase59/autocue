@@ -34,7 +34,10 @@ Both standalone Liquidsoap operation and integrated playout systems like AzuraCa
     - [Install on AzuraCast](#install-on-azuracast)
       - [Settings](#settings)
   - [Command-line interface](#command-line-interface)
-  - [Reference to parameters and settings](#reference-to-parameters-and-settings)
+  - [Parameters and settings reference](#parameters-and-settings reference)
+  - [Tags and metadata reference](#tags-and-metadata-reference)
+    - [Categories](#categories)
+    - [Tags and metadata used by Autocue](#tags-and-metadata-used-by-autocue)
   - [Examples](#examples)
     - [Hidden track](#hidden-track)
     - [Long tail handling](#long-tail-handling)
@@ -163,7 +166,7 @@ results as JSON. Optionally writes tags to original audio file, avoiding
 unnecessary re-analysis and getting results MUCH faster. This software is
 mainly intended for use with my Liquidsoap "autocue:" protocol.
 
-cue_file 4.0.2 supports writing tags to these file types:
+cue_file 4.1.0 supports writing tags to these file types:
 .aac, .aif, .aifc, .aiff, .alac, .ape, .asf, .flac, .m2a, .m4a, .m4b, .m4p,
 .m4r, .m4v, .mp+, .mp2, .mp3, .mp4, .mpc, .ofr, .ofs, .oga, .ogg, .ogv, .opus,
 .spx, .wav, .wma, .wmv, .wv.
@@ -225,15 +228,16 @@ Note cue_file will use the LARGER value from the sustained ending and longtail
 calculations to set the next track overlay point. This ensures special song
 endings are always kept intact in transitions.
 
-cue_file 4.0.2 knows about these tags:
+cue_file 4.1.0 knows about these tags:
 duration, liq_amplify, liq_amplify_adjustment, liq_blank_skipped,
 liq_blankskip, liq_cross_duration, liq_cross_start_next, liq_cue_duration,
-liq_cue_in, liq_cue_out, liq_fade_in, liq_fade_out, liq_hook1_in,
-liq_hook1_out, liq_hook2_in, liq_hook2_out, liq_hook3_in, liq_hook3_out,
-liq_longtail, liq_loudness, liq_loudness_range, liq_ramp1, liq_ramp2,
-liq_ramp3, liq_reference_loudness, liq_sustained_ending, liq_true_peak,
-liq_true_peak_db, r128_track_gain, replaygain_reference_loudness,
-replaygain_track_gain, replaygain_track_peak, replaygain_track_range.
+liq_cue_file, liq_cue_in, liq_cue_out, liq_fade_in, liq_fade_out,
+liq_hook1_in, liq_hook1_out, liq_hook2_in, liq_hook2_out, liq_hook3_in,
+liq_hook3_out, liq_longtail, liq_loudness, liq_loudness_range, liq_ramp1,
+liq_ramp2, liq_ramp3, liq_reference_loudness, liq_sustained_ending,
+liq_true_peak, liq_true_peak_db, r128_track_gain,
+replaygain_reference_loudness, replaygain_track_gain, replaygain_track_peak,
+replaygain_track_range.
 
 The absolute minimum set to (possibly) avoid a re-analysis is:
 duration, liq_cross_start_next, liq_cue_in, liq_cue_out,
@@ -245,11 +249,11 @@ A full audio file analysis can take some time. cue_file tries to avoid a
 Please report any issues to https://github.com/Moonbase59/autocue/issues
 ```
 
-## <a name="reference-to-parameters-and-settings"></a>Reference to parameters and settings <a href="#toc" class="goToc">⇧</a>
+## <a name="parameters-and-settings reference"></a>Parameters and settings reference <a href="#toc" class="goToc">⇧</a>
 
-Here is a **reference table** for settings and parameters in `cue_file` and Liquidsoap:
+Here is a **reference table** for settings and parameters in `cue_file` (the external executable) and `autocue.cue_file` (the Liquidsoap integration):
 
-|cue_file|Liquidsoap|Default|Note|
+|cue_file|autocue.cue_file|Default|Note|
 |--------|----------|-------|----|
 |`-h`, `--help`|—|—|show help|
 |`-V`, `--version`|—|—|show version|
@@ -272,8 +276,72 @@ Here is a **reference table** for settings and parameters in `cue_file` and Liqu
 |—|`settings.autocue.cue_file.fade_out`|2.5|seconds|
 |—|`settings.autocue.cue_file.timeout`|60.0|seconds|
 |—|`settings.autocue.cue_file.unify_loudness_correction`|true|true/false|
+|—|`settings.autocue.cue_file.ignored_overrides`|['duration']|_(list)_|
+|—|`settings.autocue.cue_file.version`|_(version)_|_([SemVer](https://semver.org/))_|
+|—|`settings.autocue.cue_file.version_external`|_(version)_|_([SemVer](https://semver.org/))_|
 
 **Before changing any of these, please _know exactly what you’re doing_, and test locally before applying changes to your station!**
+
+
+## <a name="tags-and-metadata-reference"></a>Tags and metadata reference <a href="#toc" class="goToc">⇧</a>
+
+### <a name="categories"></a>Categories <a href="#toc" class="goToc">⇧</a>
+
+Tags and metadata can be roughly grouped into categories:
+
+|Category|Short|   |
+|---|---|---|
+|Settings|S|can be set in Autocue settings|
+|Controls|C|control Autocue behaviour and features|
+|Results from `cue_file`|R|(JSON)|
+|Results from `autocue.cue_file`|R|(Liquidsoap)|
+|Informational results|I|not used for computations, but useful to have|
+|Overrides|O|can be set in Visual Cue Editor/Advanced tab|
+|Reserved for future expansion|X|_Planning ahead, so no one else accidentally uses these for something else_|
+
+
+### <a name="tags-and-metadata-used-by-autocue"></a>Tags and metadata used by Autocue <a href="#toc" class="goToc">⇧</a>
+
+For easier lookup, this table will be kept in _alphabetical order_. If in doubt, please also check the _footnotes_.
+
+|Name|Type|Data type|Stored as|Unit|Example|
+|---|---|---|---|---|---|
+|duration[^6]|R|float|float|s|1235.121633|
+|liq_hook1_in|X,O[^7]|float|float|s|_(reserved)_|
+|liq_hook1_out|X,O[^7]|float|float|s|_(reserved)_|
+|liq_hook2_in|X|float|float|s|_(reserved)_|
+|liq_hook2_out|X|float|float|s|_(reserved)_|
+|liq_hook3_in|X|float|float|s|_(reserved)_|
+|liq_hook3_out|X|float|float|s|_(reserved)_|
+|jingle_mode[^5]|C|bool|bool|—|true|
+|liq_amplify_adjustment|R,I|float|string|dB|0.00 dB|
+|liq_amplify|R|float|string|dB|-7.53 dB|
+|liq_blankskip|S,C|float|float|s|5.00|
+|liq_blank_skipped|R|bool|bool|—|true|
+|liq_cross_duration[^2]|—|float|float|s|**_(do not use)_**|
+|liq_cross_start_next|R,O|float|float|s|224.10|
+|liq_cue_duration|R,I|float|float|s|227.50|
+|liq_cue_file|C|bool|bool|—|false|
+|liq_cue_in|R,O|float|float|s|0.00|
+|liq_cue_out|R,O|float|float|s|227.50|
+|liq_fade_in|O|float|float|s|0.10|
+|liq_fade_out|R,O|float|float|s|2.50|
+|liq_longtail|R,I|bool|bool|—|false|
+|liq_loudness|R|float|string|LUFS|-10.47 LUFS|
+|liq_loudness_range|R,I|float|string|LU|7.90 LU|
+|liq_ramp1|X,O[^7]|float|float|s|_(reserved)_|
+|liq_ramp2|X|float|float|s|_(reserved)_|
+|liq_ramp3|X|float|float|s|_(reserved)_|
+|liq_reference_loudness|S|float|string|LUFS|-18.00 LUFS|
+|liq_sustained_ending|R,I|bool|bool|—|false|
+|liq_true_peak_db|R,I|float|string|dBFS|4.25 dBFS|
+|liq_true_peak|R,I|float|float|_(linear)_|1.632000|
+|r128_track_gain[^3]|R|int|int|—|-3359|
+|replaygain_reference_loudness|S|float|string|LUFS|-18.00 LUFS|
+|replaygain_track_gain|R|float|string|dB|-7.53 dB|
+|replaygain_track_peak|R,I|float|float|_(linear)_|1.632000|
+|replaygain_track_range|R,I|float|string|LU|7.90 LU|
+|songtype[^4]|C|char|string|—|S|
 
 ## <a name="examples"></a>Examples <a href="#toc" class="goToc">⇧</a>
 
@@ -476,7 +544,7 @@ If you have a long cross duration and a jingle following that is _shorter_ than 
 
 ### <a name="tagsannotations-that-influence-autocues-behaviour"></a>Tags/Annotations that influence `autocue`’s behaviour <a href="#toc" class="goToc">⇧</a>
 
-There are three possible _annotations_ (or tags from a file) that can influence `autocue`’s behaviour. In an annotation string, these must occur _to the right_ of the protcol, i.e. `autocue:annotate:...` to work as intended. Think of these as "switches" to enable or disable features.
+There are three possible _annotations_ (or tags from a file) that can influence `autocue`’s behaviour. In an annotation string, these must occur _to the right_ of the protcol, i.e. `autocue:annotate:...` to work as intended. Think of these as "controls" to enable or disable features.
 
 #### <a name="liq_cue_file-truefalsenot-set"></a>`liq_cue_file` (`true`/`false`/not set) <a href="#toc" class="goToc">⇧</a>
 
@@ -544,7 +612,7 @@ In the returned _metadata_, in `liq_blank_skipped`, you’ll also receive inform
 2024/06/17 21:25:14 [autocue.cue_file:3] ("liq_blank_skipped", "true")
 ```
 
-`liq_blankskip` is the _switch_ that controls `autocue`’s behaviour, while `liq_blank_skipped` is the _result_ of the operation.
+`liq_blankskip` is the _control_ that controls `autocue`’s behaviour, while `liq_blank_skipped` is the _result_ of the operation.
 
 #### <a name="azuracast-jingle_mode-true"></a>AzuraCast: `jingle_mode` (`"true"`) <a href="#toc" class="goToc">⇧</a>
 
@@ -552,7 +620,7 @@ This is a convenience feature for AzuraCast users. If you set _Hide Metadata fro
 
 So if `autocue` sees this annotation (or tag in a file), it will automatically _disable_ "blankskip" for this track.
 
-Note this setting is superceded by `liq_blankskip`, the "ultimate blankskip switch". So if _both_ are there, the setting from `liq_blankskip` will "win".
+Note this setting is superceded by `liq_blankskip`, the "ultimate blankskip control". So if _both_ are there, the setting from `liq_blankskip` will "win".
 
 #### <a name="sam-broadcaster-smart-categories"></a>SAM Broadcaster Smart Categories <a href="#toc" class="goToc">⇧</a>
 
@@ -560,7 +628,7 @@ This is a convenience feature for those who came from _SAM Broadcaster/SAM DJ_, 
 
 When detecting the `songtype` tag in a file, and it is _not_ `S` (Song), `autocue` will automatically _disable_ "blankskip" for this track.
 
-Note this setting is superceded by `liq_blankskip`, the "ultimate blankskip switch". So if _both_ are there, the setting from `liq_blankskip` will "win".
+Note this setting is superceded by `liq_blankskip`, the "ultimate blankskip control". So if _both_ are there, the setting from `liq_blankskip` will "win".
 
 ### <a name="effect-of-settingsautocuecue_fileunify_loudness_correction-truefalse"></a>Effect of `settings.autocue.cue_file.unify_loudness_correction` (`true`/`false`) <a href="#toc" class="goToc">⇧</a>
 
@@ -676,3 +744,15 @@ Using the `autocue.cue_file` settings for the `duration` parameter in `fade.in`,
 
 
 [^1]: As of 2024-06-17, using _Liquidsoap 2.2.5_. _Liquidsoap_ has a very active development, so things might change.
+
+[^2]: Liquidsoap internal, do not use!
+
+[^3]: R128_TRACK_GAIN is typically used in Ogg Opus files, and always referenced to -23 LUFS. Opus files must _not_ have `replaygain_*` tags.
+
+[^4]: The tag `songtype` is used by SAM Broadcaster/SAM DJ to categorize tracks.
+
+[^5]: The `jingle_mode` tag is used by AzuraCast to indicate if a track’s metadata should be suppressed. It is either `true` or non-existent.
+
+[^6]: Note `duration` is _not a tag_, and shouldn’t be used as such! A file’s duration is determined by other means and that value returned as `duration` metadata.
+
+[^7]: Note that `liq_hook1_in`, `liq_hook1_out` and `liq_ramp1` are _not_ in AzuraCast yet, but I hope they’ll eventually be included. Having a measure for ramp talk/liners and being able to auto-generate hook sequence teasers would just be _so nice!_
