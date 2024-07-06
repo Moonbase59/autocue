@@ -34,7 +34,7 @@ Both standalone Liquidsoap operation and integrated playout systems like AzuraCa
     - [Install on AzuraCast](#install-on-azuracast)
       - [Settings](#settings)
   - [Command-line interface](#command-line-interface)
-  - [Parameters and settings reference⇧](#parameters-and-settings reference)
+  - [Parameters and settings reference](#parameters-and-settings reference)
   - [Tags and metadata reference](#tags-and-metadata-reference)
     - [Categories](#categories)
     - [Tags and metadata used by Autocue](#tags-and-metadata-used-by-autocue)
@@ -249,7 +249,7 @@ A full audio file analysis can take some time. cue_file tries to avoid a
 Please report any issues to https://github.com/Moonbase59/autocue/issues
 ```
 
-## <a name="parameters-and-settings reference"></a>Parameters and settings reference⇧ <a href="#toc" class="goToc">⇧</a>
+## <a name="parameters-and-settings reference"></a>Parameters and settings reference <a href="#toc" class="goToc">⇧</a>
 
 Here is a **reference table** for settings and parameters in `cue_file` (the external executable) and `autocue.cue_file` (the Liquidsoap integration):
 
@@ -307,8 +307,8 @@ For easier lookup, this table will be kept in _alphabetical order_. If in doubt,
 |Name|Type|Data type|Stored as|Unit|Example|
 |---|---|---|---|---|---|
 |duration[^6]|R|float|float|s|1235.121633|
-|liq_hook1_in|X|float|float|s|_(reserved)_|
-|liq_hook1_out|X|float|float|s|_(reserved)_|
+|liq_hook1_in|X,O[^7]|float|float|s|_(reserved)_|
+|liq_hook1_out|X,O[^7]|float|float|s|_(reserved)_|
 |liq_hook2_in|X|float|float|s|_(reserved)_|
 |liq_hook2_out|X|float|float|s|_(reserved)_|
 |liq_hook3_in|X|float|float|s|_(reserved)_|
@@ -329,7 +329,7 @@ For easier lookup, this table will be kept in _alphabetical order_. If in doubt,
 |liq_longtail|R,I|bool|bool|—|false|
 |liq_loudness|R|float|string|LUFS|-10.47 LUFS|
 |liq_loudness_range|R,I|float|string|LU|7.90 LU|
-|liq_ramp1|X|float|float|s|_(reserved)_|
+|liq_ramp1|X,O[^7]|float|float|s|_(reserved)_|
 |liq_ramp2|X|float|float|s|_(reserved)_|
 |liq_ramp3|X|float|float|s|_(reserved)_|
 |liq_reference_loudness|S|float|string|LUFS|-18.00 LUFS|
@@ -754,3 +754,5 @@ Using the `autocue.cue_file` settings for the `duration` parameter in `fade.in`,
 [^5]: The `jingle_mode` tag is used by AzuraCast to indicate if a track’s metadata should be suppressed. It is either `true` or non-existent.
 
 [^6]: Note `duration` is _not a tag_, and shouldn’t be used as such! A file’s duration is determined by other means and that value returned as `duration` metadata.
+
+[^7]: Note that `liq_hook1_in`, `liq_hook1_out` and `liq_ramp1` are _not_ in AzuraCast yet, but I hope they’ll eventually be included. Having a measure for ramp talk/liners and being able to auto-generate hook sequence teasers would just be _so nice!_
