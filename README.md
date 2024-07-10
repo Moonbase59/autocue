@@ -41,6 +41,7 @@ Both standalone Liquidsoap operation and integrated playout systems like AzuraCa
   - [Tags and metadata reference](#tags-and-metadata-reference)
     - [Categories](#categories)
     - [Tags and metadata used by Autocue](#tags-and-metadata-used-by-autocue)
+    - [Tags and metadata format rules](#tags-and-metadata-format-rules)
   - [Examples](#examples)
     - [Hidden track](#hidden-track)
     - [Long tail handling](#long-tail-handling)
@@ -345,6 +346,20 @@ For easier lookup, this table will be kept in _alphabetical order_. If in doubt,
 |replaygain_track_peak|R,I|float|float|_(linear)_|1.632000|
 |replaygain_track_range|R,I|float|string|LU|7.90 LU|
 |songtype[^4]|C|char|string|—|S|
+
+### <a name="tags-and-metadata-format-rules"></a>Tags and metadata format rules <a href="#toc" class="goToc">⇧</a>
+
+If pre-tagging files manually, or modifying values in Liquidsoap, you _must_ adhere to some rules:
+
+- _Float_ values typcially have a 2 decimals precision, peak values have 6 decimals.
+- Do _not_ use _only a trailing period_ to indicate a _float_ (like `0.`, as is often done in Liquidsoap).
+- The _decimal point_ is always a _period_, _never_ a _decimal comma_ as in some languages like German.
+- _Integer_ values like `R128_TRACK_GAIN` must not be specified with a dot or any decimals.
+- _Boolean_ values _must_ be either `true` or `false`, in all lowercase. We have no concept of "truthy" or "falsy" like some programming languages, so `True`, `TRUE`, `yes`, `1` or `1.00` for example _will not work_ as `true`.
+- _Units_ should be written exactly as shown in above reference table, in the "Example" column. So _do_ use a blank between value and unit, and use the exact name and casing shown, like `dB`, not `db` or `DB`. This is not so much a requirement for Autocue and `cue_file`, but more for other software, especially for the ReplayGain metadata.
+- _Do not_ save `R128_TRACK_GAIN` to non-Opus files, and _do not_ save `replaygain_*` tags to Opus files. `cue_file` will take care of the necessary conversions, but you could have accidentally provided these in a tagging program, JSON or Liquidsoap.
+- _Never_ save `duration` as a tag. The file duration is determined by other means (calculated or taken from the header info in various file types). Again _cue_file_ takes care of it for its own calculations, but you could have set it elsewhere (tagging software, JSON).
+
 
 ## <a name="examples"></a>Examples <a href="#toc" class="goToc">⇧</a>
 
