@@ -314,17 +314,11 @@ For easier lookup, this table will be kept in _alphabetical order_. If in doubt,
 |Name|Type|Data type|Stored as|Unit|Example|
 |---|---|---|---|---|---|
 |duration[^6]|R|float|float|s|1235.121633|
-|liq_hook1_in|X,O[^7]|float|float|s|_(reserved)_|
-|liq_hook1_out|X,O[^7]|float|float|s|_(reserved)_|
-|liq_hook2_in|X|float|float|s|_(reserved)_|
-|liq_hook2_out|X|float|float|s|_(reserved)_|
-|liq_hook3_in|X|float|float|s|_(reserved)_|
-|liq_hook3_out|X|float|float|s|_(reserved)_|
 |jingle_mode[^5]|C|bool|bool|—|true|
 |liq_amplify_adjustment|R,I|float|string|dB|0.00 dB|
 |liq_amplify|R|float|string|dB|-7.53 dB|
-|liq_blankskip|S,C|float|float|s|5.00|
 |liq_blank_skipped|R|bool|bool|—|true|
+|liq_blankskip|S,C|float|float|s|5.00|
 |liq_cross_duration[^2]|—|float|float|s|**_(do not use)_**|
 |liq_cross_start_next|R,O|float|float|s|224.10|
 |liq_cue_duration|R,I|float|float|s|227.50|
@@ -333,9 +327,15 @@ For easier lookup, this table will be kept in _alphabetical order_. If in doubt,
 |liq_cue_out|R,O|float|float|s|227.50|
 |liq_fade_in|O|float|float|s|0.10|
 |liq_fade_out|R,O|float|float|s|2.50|
+|liq_hook1_in|X,O[^7]|float|float|s|_(reserved)_|
+|liq_hook1_out|X,O[^7]|float|float|s|_(reserved)_|
+|liq_hook2_in|X|float|float|s|_(reserved)_|
+|liq_hook2_out|X|float|float|s|_(reserved)_|
+|liq_hook3_in|X|float|float|s|_(reserved)_|
+|liq_hook3_out|X|float|float|s|_(reserved)_|
 |liq_longtail|R,I|bool|bool|—|false|
-|liq_loudness|R|float|string|LUFS|-10.47 LUFS|
 |liq_loudness_range|R,I|float|string|LU|7.90 LU|
+|liq_loudness|R|float|string|LUFS|-10.47 LUFS|
 |liq_ramp1|X,O[^7]|float|float|s|_(reserved)_|
 |liq_ramp2|X|float|float|s|_(reserved)_|
 |liq_ramp3|X|float|float|s|_(reserved)_|
