@@ -1,5 +1,10 @@
 # autocue changelog
 
+### 2024-08-05 - v4.1.1
+
+- Fix situation where supplied JSON data could still overwrite `cue_file` results even if a file’s `liq_cue_file` tag was set to `true`, meaning the `cue_file` results should be preferred in any case.
+- For freshly generated/downloaded news or time announcements, this could lead to erroneous cut-offs or loudness jumps in case AzuraCast’s media checker hadn’t yet picked up the new data. It would then overwrite the actual file data with stored values from the database.
+
 ### 2024-07-05 – v4.1.0
 
 #### New features

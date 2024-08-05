@@ -68,13 +68,14 @@
 # 2024-07-05 Moonbase59 - v4.1.0 Add `liq_cue_file` to known tags, so we can
 #                         forbid external processes to call us again and
 #                         possibly deliver outdated metadata to us.
+# 2024-08-05 Moonbase59 - v4.1.1 Fix JSON overriding if `liq_cue_file` is true
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
 # Some collaborative work with RM-FM (@RM-FM): Sustained ending analysis.
 
 __author__ = 'Matthias C. Hormann'
-__version__ = '4.1.0'
+__version__ = '4.1.1'
 
 import os
 import sys
@@ -304,9 +305,12 @@ def override_from_JSON(tags, tags_json={}):
     # get tags in JSON override file
     tags_in_json = convert_tags(tags_json)
 
-    # unify, right overwrites left if key in both
-    # tags_found = tags_in_stream | tags_in_format | tags_in_json
-    tags = {**tags, **tags_in_json}
+    # do NOT overwrite from JSON if `liq_cue_file` is true
+    if "liq_cue_file" in tags and tags["liq_cue_file"] == True:
+        pass
+    else:
+        # unify, right overwrites left if key in both
+        tags = {**tags, **tags_in_json}
 
     return tags
 
@@ -1230,7 +1234,7 @@ if args.force or not skip_analysis:
         nice=args.nice,
         noclip=args.noclip
     )
-    # allow to override even the analysis results
+    # allow to override even the analysis results (not if `liq_cue_file=true`)
     if args.json:
         result = override_from_JSON(result, tags_json)
     # override duration, seems ffprobe can be more exact

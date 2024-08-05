@@ -49,6 +49,7 @@
 #                           - not set = default (metadata can override cue_file)
 #                           - false = don’t autocue (still use metadata if present)
 #                           - true = cue_file results override metadata
+# 2024-08-05 - Moonbase59 - v4.1.1 Sync with cue_file version
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
@@ -62,7 +63,7 @@ let settings.autocue.cue_file.version =
   settings.make(
     description=
       "Software version of autocue.cue_file. Should coincide with `cue_file`.",
-    "4.1.0"
+    "4.1.1"
   )
 
 # Internal only! Not a user setting.
