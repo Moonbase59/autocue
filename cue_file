@@ -951,7 +951,7 @@ def write_tags(filename, tags={}, replaygain=False, skip=False):
             if f.tags is None:
                 f.add_tags()
             for k, v in tags_new.items():
-                f[f'----:com.apple.iTunes:{k}'] = bytes(v, 'utf-8')
+                f[f'----:com.apple.iTunes:{k}'] = bytes(str(v), 'utf-8')
             f.save()
 
         elif MUTAGEN_AVAILABLE and filename.suffix.casefold() in id3_ext:
