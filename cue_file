@@ -70,9 +70,9 @@
 #                         possibly deliver outdated metadata to us.
 # 2024-08-05 Moonbase59 - v4.1.1 Fix JSON overriding if `liq_cue_file` is true
 # 2024-08-12 t0mtaylor  - v4.2.0 Introduce `skip` arg and `liq_cue_skip` tag for files 
-                          to avoid reprocessing by force, and fix Mutagen m4a python
-                          TypeError: encoding without a string argument on Mac when
-                          writing tags for m4a/mp4 files.
+#                         to avoid reprocessing by force, and fix Mutagen m4a python
+#                         TypeError: encoding without a string argument on Mac when
+#                         writing tags for m4a/mp4 files.
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
@@ -871,7 +871,7 @@ def analyse(
     })
 
 
-def write_tags(filename, tags={}, replaygain=False, skip=False):
+def write_tags(filename, tags={}, replaygain=False, writeSkipTag=False):
     # Add the liq_* tags (and only these)
     # Only touch replaygain_track_gain or R128_TRACK_GAIN if so requested.
     # Only write tags to files if we can safely do so.
@@ -920,7 +920,7 @@ def write_tags(filename, tags={}, replaygain=False, skip=False):
         tags_new["replaygain_reference_loudness"] += " LUFS"
         
         
-        if skip:
+        if writeSkipTag:
             tags_new["liq_cue_skip"] = True
         
 
@@ -1264,11 +1264,21 @@ if args.debug:
     
 if not "liq_cue_skip" in tags_found:
     NO_SKIP_TAGS = True
+    
+if args.debug:
+    print('Before args.skip: ' + str(args.skip) + ' | skip_analysis: ' + str(skip_analysis) + ' - if true because no tag change')
 
-if args.skip and "liq_cue_skip" in tags_found and tags_found["liq_cue_skip"] == True:
+if args.skip:
+    if "liq_cue_skip" in tags_found and tags_found["liq_cue_skip"] == True:
+        skip_analysis = True
+
+if "liq_cue_file" in tags_found and tags_found["liq_cue_file"] == True:
     skip_analysis = True
-if args.skip and "liq_cue_file" in tags_found and tags_found["liq_cue_file"] == True:
-    skip_analysis = True
+
+if args.debug and args.skip:
+    print('args.skip is enabled: ' + str(args.skip))
+if args.debug:
+    print('After args.skip: ' + str(args.skip) + ' | skip_analysis: ' + str(skip_analysis))
 
 if args.force and skip_analysis != True:
     result = analyse(
@@ -1298,7 +1308,7 @@ else:
 if args.write and NO_SKIP_TAGS: #and not args.skip
     if args.debug:
         print('START: writing autocue tags for '+args.file)
-    write_tags(args.file, result, args.replaygain, NO_SKIP_TAGS)
+    write_tags(args.file, result, args.replaygain, NO_SKIP_TAGS) #args.skip
     if args.debug:
         print('FINISHED: autocue tags written for '+args.file)
 
