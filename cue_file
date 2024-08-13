@@ -131,7 +131,7 @@ SUSTAINED_LOUDNESS_DROP = 40.0  # max. percent drop to be considered sustained
 BLANKSKIP = 5.0  # min. seconds silence to detect blank
 NICE = False  # use Linux/MacOS nice?
 SKIP = False  # force skip reprocessing of file if tags already exist
-NO_SKIP_TAGS = False # allow new tags to be writen to file (when write enabled) unless skip tag exists and skip arg is set
+NO_SKIP_TAGS = False  # allow new tags to be writen to file (when write enabled) unless skip tag exists and skip arg is set
 
 # These file types can be handled correctly by ffmpeg
 safe_ext = [
@@ -480,15 +480,10 @@ def add_missing(tags_found, target=TARGET_LUFS, blankskip=0.0, noclip=False):
         tags_found["liq_sustained_ending"] = False
 
     if not "liq_cue_file" in tags_found:
-        tags_found["liq_cue_file"] = False
+        tags_found["liq_cue_file"] = True
 
     if not "liq_cue_skip" in tags_found:
         tags_found["liq_cue_skip"] = False
-
-    if args.skip:
-        tags_found["liq_cue_file"] = True
-        tags_found["liq_cue_skip"] = True
-        tags_found["liq_blankskip"] = 0.0
 
     # if not "liq_cross_duration" in tags_found:
     #    tags_found["liq_cross_duration"] = tags_found["liq_cue_out"] - tags_found["liq_cross_start_next"]
@@ -918,11 +913,11 @@ def write_tags(filename, tags={}, replaygain=False, writeSkipTag=False):
         tags_new["replaygain_track_gain"] += " dB"
         tags_new["replaygain_track_range"] += " dB"
         tags_new["replaygain_reference_loudness"] += " LUFS"
-        
-        
+
         if writeSkipTag:
             tags_new["liq_cue_skip"] = True
-        
+            tags_new["liq_cue_file"] = False
+            tags_new["liq_blankskip"] = 0.0
 
         if replaygain:
             # delete unwanted tags
@@ -1280,7 +1275,7 @@ if args.debug and args.skip:
 if args.debug:
     print('After args.skip: ' + str(args.skip) + ' | skip_analysis: ' + str(skip_analysis))
 
-if args.force and skip_analysis != True:
+if args.force or skip_analysis != True:
     result = analyse(
         filename=args.file,
         target=args.target,
@@ -1305,7 +1300,10 @@ else:
 
 # eprint(result)
 
-if args.write and NO_SKIP_TAGS: #and not args.skip
+if not args.skip:
+    NO_SKIP_TAGS = True
+
+if args.write and NO_SKIP_TAGS:
     if args.debug:
         print('START: writing autocue tags for '+args.file)
     write_tags(args.file, result, args.replaygain, NO_SKIP_TAGS) #args.skip
