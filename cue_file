@@ -916,7 +916,7 @@ def write_tags(filename, tags={}, replaygain=False, writeSkipTag=False):
 
         if writeSkipTag:
             tags_new["liq_cue_skip"] = True
-            tags_new["liq_cue_file"] = False
+            tags_new["liq_cue_file"] = True
             tags_new["liq_blankskip"] = 0.0
 
         if replaygain:
