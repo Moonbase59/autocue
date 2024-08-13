@@ -69,13 +69,17 @@
 #                         forbid external processes to call us again and
 #                         possibly deliver outdated metadata to us.
 # 2024-08-05 Moonbase59 - v4.1.1 Fix JSON overriding if `liq_cue_file` is true
+# 2024-08-12 t0mtaylor  - v4.2.0 Introduce `skip` arg and `liq_cue_skip` tag for files 
+#                         to avoid reprocessing by force, and fix Mutagen m4a python
+#                         TypeError: encoding without a string argument on Mac when
+#                         writing tags for m4a/mp4 files.
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
 # Some collaborative work with RM-FM (@RM-FM): Sustained ending analysis.
 
 __author__ = 'Matthias C. Hormann'
-__version__ = '4.1.1'
+__version__ = '4.2.0'
 
 import os
 import sys
@@ -126,6 +130,8 @@ LONGTAIL_EXTRA_LU = -12.0  # reduce 15 dB extra on long tail songs to find overl
 SUSTAINED_LOUDNESS_DROP = 40.0  # max. percent drop to be considered sustained
 BLANKSKIP = 5.0  # min. seconds silence to detect blank
 NICE = False  # use Linux/MacOS nice?
+SKIP = False  # force skip reprocessing of file if tags already exist
+NO_SKIP_TAGS = False  # allow new tags to be writen to file (when write enabled) unless skip tag exists and skip arg is set
 
 # These file types can be handled correctly by ffmpeg
 safe_ext = [
@@ -219,6 +225,7 @@ tags_to_check = {
     "liq_cross_start_next": float,
     "liq_cue_duration": float,
     "liq_cue_file": is_true,
+    "liq_cue_skip": is_true,
     "liq_cue_in": float,
     "liq_cue_out": float,
     "liq_fade_in": float,
@@ -308,12 +315,14 @@ def override_from_JSON(tags, tags_json={}):
     # do NOT overwrite from JSON if `liq_cue_file` is true
     if "liq_cue_file" in tags and tags["liq_cue_file"] == True:
         pass
+    # do NOT overwrite from JSON if `liq_cue_skip` is true
+    elif "liq_cue_skip" in tags and tags["liq_cue_skip"] == True:
+        pass
     else:
         # unify, right overwrites left if key in both
         tags = {**tags, **tags_in_json}
 
     return tags
-
 
 def read_tags(
         filename,
@@ -420,6 +429,7 @@ def read_tags(
         tags_found["liq_amplify"] += (target -
                                       tags_found["liq_reference_loudness"])
         tags_found["liq_reference_loudness"] = target
+        
     else:
         # liq_amplify or liq_reference_loudness missing, must re-analyse
         skip_analysis = False
@@ -468,6 +478,12 @@ def add_missing(tags_found, target=TARGET_LUFS, blankskip=0.0, noclip=False):
 
     if "liq_sustained_ending" not in tags_found:
         tags_found["liq_sustained_ending"] = False
+
+    if not "liq_cue_file" in tags_found:
+        tags_found["liq_cue_file"] = True
+
+    if not "liq_cue_skip" in tags_found:
+        tags_found["liq_cue_skip"] = False
 
     # if not "liq_cross_duration" in tags_found:
     #    tags_found["liq_cross_duration"] = tags_found["liq_cue_out"] - tags_found["liq_cross_start_next"]
@@ -850,7 +866,7 @@ def analyse(
     })
 
 
-def write_tags(filename, tags={}, replaygain=False):
+def write_tags(filename, tags={}, replaygain=False, writeSkipTag=False):
     # Add the liq_* tags (and only these)
     # Only touch replaygain_track_gain or R128_TRACK_GAIN if so requested.
     # Only write tags to files if we can safely do so.
@@ -898,6 +914,11 @@ def write_tags(filename, tags={}, replaygain=False):
         tags_new["replaygain_track_range"] += " dB"
         tags_new["replaygain_reference_loudness"] += " LUFS"
 
+        if writeSkipTag:
+            tags_new["liq_cue_skip"] = True
+            tags_new["liq_cue_file"] = True
+            tags_new["liq_blankskip"] = 0.0
+
         if replaygain:
             # delete unwanted tags
             if filename.suffix.casefold() == ".opus":
@@ -925,7 +946,7 @@ def write_tags(filename, tags={}, replaygain=False):
             if f.tags is None:
                 f.add_tags()
             for k, v in tags_new.items():
-                f[f'----:com.apple.iTunes:{k}'] = bytes(v, 'utf-8')
+                f[f'----:com.apple.iTunes:{k}'] = bytes(str(v), 'utf-8')
             f.save()
 
         elif MUTAGEN_AVAILABLE and filename.suffix.casefold() in id3_ext:
@@ -1192,9 +1213,21 @@ parser.add_argument(
     default=False,
     action='store_true')
 parser.add_argument(
+    "-p",
+    "--skip",
+    help="Force Skip of re-analysis and skip write if tags exist, overrides --force option",
+    default=False,
+    action='store_true')
+parser.add_argument(
     "-n",
     "--nice",
     help="Linux/MacOS only: Use nice? Will run analysis at nice level 18.",
+    default=False,
+    action='store_true')
+parser.add_argument(
+    "-z",
+    "--debug",
+    help="Debug mode with addtional messages",
     default=False,
     action='store_true')
 parser.add_argument(
@@ -1221,7 +1254,28 @@ if args.json:
 skip_analysis, tags_found = read_tags(
     args.file, tags_json, args.target, args.blankskip, args.noclip)
 
-if args.force or not skip_analysis:
+if args.debug:
+    print(tags_found)
+    
+if not "liq_cue_skip" in tags_found:
+    NO_SKIP_TAGS = True
+    
+if args.debug:
+    print('Before args.skip: ' + str(args.skip) + ' | skip_analysis: ' + str(skip_analysis) + ' - if true because no tag change')
+
+if args.skip:
+    if "liq_cue_skip" in tags_found and tags_found["liq_cue_skip"] == True:
+        skip_analysis = True
+
+if "liq_cue_file" in tags_found and tags_found["liq_cue_file"] == True:
+    skip_analysis = True
+
+if args.debug and args.skip:
+    print('args.skip is enabled: ' + str(args.skip))
+if args.debug:
+    print('After args.skip: ' + str(args.skip) + ' | skip_analysis: ' + str(skip_analysis))
+
+if args.force or skip_analysis != True:
     result = analyse(
         filename=args.file,
         target=args.target,
@@ -1240,13 +1294,21 @@ if args.force or not skip_analysis:
     # override duration, seems ffprobe can be more exact
     if "duration" in tags_found:
         result["duration"] = tags_found["duration"]
+
 else:
     result = add_missing(tags_found, args.target, args.blankskip, args.noclip)
 
 # eprint(result)
 
-if args.write:
-    write_tags(args.file, result, args.replaygain)
+if not args.skip:
+    NO_SKIP_TAGS = True
+
+if args.write and NO_SKIP_TAGS:
+    if args.debug:
+        print('START: writing autocue tags for '+args.file)
+    write_tags(args.file, result, args.replaygain, NO_SKIP_TAGS) #args.skip
+    if args.debug:
+        print('FINISHED: autocue tags written for '+args.file)
 
 # prepare JSON result
 # we use "dB" instead of "LU" units, because LS & others don’t understand "LU"
