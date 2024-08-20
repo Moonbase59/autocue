@@ -253,7 +253,6 @@ def semver(s) =
   if r.test(s) then
     v = r.exec(s)
     #print(v)
-    #print(v)
     (
       {
         version=v[0],
