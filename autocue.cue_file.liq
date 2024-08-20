@@ -50,29 +50,16 @@
 #                           - false = don’t autocue (still use metadata if present)
 #                           - true = cue_file results override metadata
 # 2024-08-05 - Moonbase59 - v4.1.1 Sync with cue_file version
+# 2024-08-19 - Toots      - Fix compatibility with `2.3.x`.
 
 # Lots of debugging output for AzuraCast in this, will be removed eventually.
 
 # --- Copy-paste Azuracast LS Config, second input box BEGIN ---
 
+let version = "4.1.1"
+
 # Initialize settings for cue_file autocue implementation
 let settings.autocue.cue_file = ()
-
-# Internal only! Not a user setting.
-let settings.autocue.cue_file.version =
-  settings.make(
-    description=
-      "Software version of autocue.cue_file. Should coincide with `cue_file`.",
-    "4.1.1"
-  )
-
-# Internal only! Not a user setting.
-let settings.autocue.cue_file.version_external =
-  settings.make(
-    description=
-      "Software version of external `cue_file`.",
-    "(unknown)"
-  )
 
 let settings.autocue.cue_file.path =
   settings.make(
@@ -259,55 +246,47 @@ end
 
 # Deconstruct a SemVer version, return a record
 def semver(s) =
-  s = null.get(default="", s)
   # SemVer RegEx, see https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
   #r = r/(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/gm
-  r = r/(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<build>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/gm
-  v = r.exec(s)
-  #print(v)
-  {
-    version = v[0],
-    major = v.groups["major"],
-    minor = v.groups["minor"],
-    patch = v.groups["patch"],
-    prerelease = v.groups["prerelease"],
-    build = v.groups["build"]
-  }
-end
+  r = r/(?<major>0|[1-9]\d*)\.(?<minor>0|[1-9]\d*)\.(?<patch>0|[1-9]\d*)(?:-(?<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?<build>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/gm
 
-# Compare two SemVers
-# The return value is negative if ver1 < ver2,
-# zero if ver1 == ver2 and strictly positive if ver1 > ver2
-def semver_compare(s1, s2) =
-  s1 = null.get(default="", s1)
-  s2 = null.get(default="", s2)
-  v1 = semver(s1)
-  v2 = semver(s2)
-
-  if v1.major == v2.major and v1.minor == v2.minor and v1.patch == v2.patch then
-    0
-  elsif v1.major > v2.major then
-    1
-  elsif v1.major >= v2.major and v1.minor > v2.minor then
-    1
-  elsif v1.major >= v2.major and v1.minor >= v2.minor and v1.patch > v2.patch then
-    1
+  if r.test(s) then
+    v = r.exec(s)
+    #print(v)
+    (
+      {
+        version=v[0],
+        major=int_of_string(v.groups["major"]),
+        minor=int_of_string(v.groups["minor"]),
+        patch=int_of_string(v.groups["patch"]),
+        prerelease=v.groups["prerelease"],
+        build=v.groups["build"]
+      }
+    :
+      {
+        version: string,
+        major?: int,
+        minor?: int,
+        patch?: int,
+        prerelease?: string,
+        build?: string
+      }
+    )
   else
-    -1
+    {version=s}
   end
 end
 
 # Get version of a CLI command
-def file_semver(command) =
-  res =
-    list.hd(
-      default="",
-      process.read.lines(
-        #timeout=2.,
-        command ^ " --version"
-      )
+def cli_version(command) =
+  list.hd(
+    default="",
+    process.read.lines(
+      #timeout=2.,
+      command ^
+        " --version"
     )
-  semver(res)
+  )
 end
 
 # Check Autocue setup, shutdown if desired, print to terminal if desired
@@ -315,63 +294,49 @@ stdlib_shutdown = shutdown
 stdlib_print = print
 
 def check_autocue_setup(~shutdown=false, ~print=false) =
-  settings.autocue.cue_file.version_external := file_semver(settings.autocue.cue_file.path()).version
+  cli_version = cli_version(settings.autocue.cue_file.path())
 
-  if semver_compare(
-    settings.autocue.cue_file.version(),
-    settings.autocue.cue_file.version_external()
-  ) == 0
+  if
+    semver(version)?.major == semver(cli_version)?.major
   then
     # set this so annotations (priority 5) can still override autocue values
     settings.autocue.metadata.priority := 10
     settings.autocue.preferred := "cue_file"
     # use our values in any case
     settings.autocue.amplify_behavior := "keep"
-    # avoid dead air from reconcile, reset default 3.0s to our fade_out duration
-    settings.autocue.target_cross_duration := settings.autocue.cue_file.fade_out()
     # Let user know what version (s)he is running
     log(level=2, label="autocue.cue_file",
       'You are using autocue.cue_file version \
-       #{settings.autocue.cue_file.version()}.'
+       #{version}.'
     )
     log(level=2, label="autocue.cue_file",
       'The external "#{settings.autocue.cue_file.path()}" \
-       is version #{settings.autocue.cue_file.version_external()}'
-    )
-    log(level=2, label="autocue.cue_file",
-      'Setting `settings.autocue.target_cross_duration` to \
-       #{settings.autocue.cue_file.fade_out()} s, from \
-       `settings.autocue.cue_file.fade_out`.'
+       is version #{cli_version}'
     )
     if print then
       stdlib_print(
         'You are using autocue.cue_file version \
-         #{settings.autocue.cue_file.version()}.'
+         #{version}.'
       )
       stdlib_print(
         'The external "#{settings.autocue.cue_file.path()}" \
-         is version #{settings.autocue.cue_file.version_external()}'
-      )
-      stdlib_print(
-        'Setting `settings.autocue.target_cross_duration` to \
-         #{settings.autocue.cue_file.fade_out()} s, from \
-         `settings.autocue.cue_file.fade_out`.'
+         is version #{cli_version}'
       )
     end
     true
   else
     log(level=1, label="autocue.cue_file",
-      'ERROR: autocue.cue_file v#{settings.autocue.cue_file.version()} \
+      'ERROR: autocue.cue_file v#{version} \
        doesn’t match external "#{settings.autocue.cue_file.path()}" \
-       v#{settings.autocue.cue_file.version_external()}!\n\
+       v#{cli_version}!\n\
        Autocue NOT ACTIVATED!'
     )
     # repeat on console, so standalone can see it
     if print then
       stdlib_print(
-        'ERROR: autocue.cue_file v#{settings.autocue.cue_file.version()} \
+        'ERROR: autocue.cue_file v#{version} \
          doesn’t match external "#{settings.autocue.cue_file.path()}" \
-         v#{settings.autocue.cue_file.version_external()}!\n\
+         v#{cli_version}!\n\
          Autocue NOT ACTIVATED!'
       )
     end
@@ -987,8 +952,6 @@ settings.autocue.metadata.priority := 10
 settings.autocue.preferred := "cue_file"
 # use our values in any case
 settings.autocue.amplify_behavior := "keep"
-# avoid dead air from reconcile, reset default 3.0s to our fade_out duration
-settings.autocue.target_cross_duration := settings.autocue.cue_file.fade_out()
 autocue.register(name="cue_file", cue_file)
 
 # --- Copy-paste Azuracast LS Config, second input box END ---
