@@ -6,8 +6,8 @@ On-the-fly JSON song cue-in, cue-out, overlay, replaygain calculation for Liquid
 
 **Check out the [presentation](https://moonbase59.github.io/autocue/presentation/autocue.html) for an introduction, the [FAQ – Frequently Asked Questions](FAQ.md), and the [changelog](CHANGELOG.md) for latest information!**
 
-> [!NOTE]
-> **_During mid-July until mid-August 2024, I will generally not be available. I might check in from time to time, but cannot guarantee any answers._**
+> [!IMPORTANT]
+> **_Please read [IMPORTANT.md](IMPORTANT.md), an update on my personal situation and this project._**
 
 > [!WARNING]
 > **Autocue was made for Liquidsoap 2.2.5 and is not yet fully compatible with the new Liquidsoap 2.3.x rolling release, since some parameters have changed in Liquidsoap. I’ll start working on a new version when back.**
