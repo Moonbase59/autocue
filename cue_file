@@ -73,13 +73,24 @@
 #                         to avoid reprocessing by force, and fix Mutagen m4a python
 #                         TypeError: encoding without a string argument on Mac when
 #                         writing tags for m4a/mp4 files.
+# 2024-11-08 toots      - Renamed `cue_file_*` prefixes to `cue_file_*`
+# 2024-12-03 gAlleb     - Fixed issue with writing tags (`ffmpeg -> FFMPEG` in write_tags function)
+# 2025-04-16 t0mtaylor  - v4.3.0 merged changes with latest from github
+#							- https://github.com/AzuraCast/AzuraCast/discussions/7584
+# 2026-06-15 t0mtaylor  - v4.4.0 Also write AzuraCast `liq_*` override tags
+#                         (liq_cue_in/out, liq_amplify, liq_fade_in/out,
+#                         liq_cross_duration). Post-upgrade AzuraCast uses built-in
+#                         autocue.internal which reads `liq_*` (not `cue_file_*`)
+#                         and disables its own analysis when these are present, so
+#                         long syndicated files are no longer re-analysed at play
+#                         time. See settings.autocue.internal.metadata_override.
 #
 # Originally based on an idea and some code by John Warburton (@Warblefly):
 #   https://github.com/Warblefly/TrackBoundaries
 # Some collaborative work with RM-FM (@RM-FM): Sustained ending analysis.
 
 __author__ = 'Matthias C. Hormann'
-__version__ = '4.2.0'
+__version__ = '4.4.0'
 
 import os
 import sys
@@ -133,6 +144,12 @@ NICE = False  # use Linux/MacOS nice?
 SKIP = False  # force skip reprocessing of file if tags already exist
 NO_SKIP_TAGS = False  # allow new tags to be writen to file (when write enabled) unless skip tag exists and skip arg is set
 
+
+# Set json bools as strings lowercase
+STR_true = "true"
+STR_false = "false"
+
+
 # These file types can be handled correctly by ffmpeg
 safe_ext = [
     ".mp3",  # ID3
@@ -180,9 +197,9 @@ if MUTAGEN_AVAILABLE:
 # analysis
 tags_mandatory = set([
     "duration",
-    "liq_cue_in",
-    "liq_cue_out",
-    "liq_cross_start_next",
+    "cue_file_cue_in",
+    "cue_file_cue_out",
+    "cue_file_cross_start_next",
     "replaygain_track_gain",
 ])
 
@@ -196,7 +213,7 @@ def is_true(v):
     else:
         raise ValueError('must be bool or str')
 
-# Need to handle pre-version 3.0.0 `liq_blankskip`: was bool, is now float`
+# Need to handle pre-version 3.0.0 `cue_file_blankskip`: was bool, is now float`
 
 
 def float_blankskip(v):
@@ -217,41 +234,41 @@ def float_blankskip(v):
 # these are the tags to check when reading/writing tags from/to files
 tags_to_check = {
     "duration": float,
-    "liq_amplify_adjustment": float,
-    "liq_amplify": float,  # like replaygain_track_gain
-    "liq_blankskip": float_blankskip,  # backwards-compatibility, was bool
-    "liq_blank_skipped": is_true,
-    "liq_cross_duration": float,
-    "liq_cross_start_next": float,
-    "liq_cue_duration": float,
-    "liq_cue_file": is_true,
-    "liq_cue_skip": is_true,
-    "liq_cue_in": float,
-    "liq_cue_out": float,
-    "liq_fade_in": float,
-    "liq_fade_out": float,
-    "liq_longtail": is_true,
-    "liq_loudness": float,
-    "liq_loudness_range": float,  # like replaygain_track_range
-    "liq_reference_loudness": float,  # like replaygain_reference_loudness
-    "liq_sustained_ending": is_true,
-    "liq_true_peak_db": float,
-    "liq_true_peak": float,
+    "cue_file_amplify_adjustment": float,
+    "cue_file_amplify": float,  # like replaygain_track_gain
+    "cue_file_blankskip": float_blankskip,  # backwards-compatibility, was bool
+    "cue_file_blank_skipped": is_true,
+    "cue_file_cross_duration": float,
+    "cue_file_cross_start_next": float,
+    "cue_file_cue_duration": float,
+    "cue_file": is_true,
+    "cue_file_cue_skip": is_true,
+    "cue_file_cue_in": float,
+    "cue_file_cue_out": float,
+    "cue_file_fade_in": float,
+    "cue_file_fade_out": float,
+    "cue_file_longtail": is_true,
+    "cue_file_loudness": float,
+    "cue_file_loudness_range": float,  # like replaygain_track_range
+    "cue_file_reference_loudness": float,  # like replaygain_reference_loudness
+    "cue_file_sustained_ending": is_true,
+    "cue_file_true_peak_db": float,
+    "cue_file_true_peak": float,
     "r128_track_gain": int,
     "replaygain_reference_loudness": float,
     "replaygain_track_gain": float,
     "replaygain_track_peak": float,
     "replaygain_track_range": float,
     # reserved for future expansion
-    "liq_hook1_in": float,
-    "liq_hook1_out": float,
-    "liq_hook2_in": float,
-    "liq_hook2_out": float,
-    "liq_hook3_in": float,
-    "liq_hook3_out": float,
-    "liq_ramp1": float,
-    "liq_ramp2": float,
-    "liq_ramp3": float,
+    "cue_file_hook1_in": float,
+    "cue_file_hook1_out": float,
+    "cue_file_hook2_in": float,
+    "cue_file_hook2_out": float,
+    "cue_file_hook3_in": float,
+    "cue_file_hook3_out": float,
+    "cue_file_ramp1": float,
+    "cue_file_ramp2": float,
+    "cue_file_ramp3": float,
 }
 
 
@@ -273,12 +290,12 @@ def amplify_correct(target, loudness, true_peak_dB, noclip):
 # tags_found
 def remove_suffix(tags):
     suffixed_tags = [
-        "liq_amplify", "liq_amplify_adjustment",
-        "liq_loudness", "liq_loudness_range", "liq_reference_loudness",
+        "cue_file_amplify", "cue_file_amplify_adjustment",
+        "cue_file_loudness", "cue_file_loudness_range", "cue_file_reference_loudness",
         "replaygain_track_gain", "replaygain_track_range",
         "replaygain_reference_loudness",
-        "liq_true_peak_db",
-        "liq_true_peak",  # in case old " dBFS" values were stored in v1.2.3
+        "cue_file_true_peak_db",
+        "cue_file_true_peak",  # in case old " dBFS" values were stored in v1.2.3
     ]
     for tag in suffixed_tags:
         if tag in tags and isinstance(tags[tag], str):
@@ -312,11 +329,11 @@ def override_from_JSON(tags, tags_json={}):
     # get tags in JSON override file
     tags_in_json = convert_tags(tags_json)
 
-    # do NOT overwrite from JSON if `liq_cue_file` is true
-    if "liq_cue_file" in tags and tags["liq_cue_file"] == True:
+    # do NOT overwrite from JSON if `cue_file` is true
+    if "cue_file" in tags and tags["cue_file"] == True:
         pass
-    # do NOT overwrite from JSON if `liq_cue_skip` is true
-    elif "liq_cue_skip" in tags and tags["liq_cue_skip"] == True:
+    # do NOT overwrite from JSON if `cue_file_cue_skip` is true
+    elif "cue_file_cue_skip" in tags and tags["cue_file_cue_skip"] == True:
         pass
     else:
         # unify, right overwrites left if key in both
@@ -326,6 +343,7 @@ def override_from_JSON(tags, tags_json={}):
 
 def read_tags(
         filename,
+        ffprobe=FFPROBE,
         tags_json={},
         target=TARGET_LUFS,
         blankskip=0.0,
@@ -337,7 +355,7 @@ def read_tags(
     # filename
     r = subprocess.run(
         [
-            FFPROBE,
+            ffprobe,
             "-v",
             "quiet",
             "-show_entries",
@@ -391,10 +409,10 @@ def read_tags(
         rg = float(tags_found["r128_track_gain"]) / 256 + (target - -23.0)
         tags_found["replaygain_track_gain"] = rg
 
-    # add missing liq_amplify, if we have replaygain_track_gain
-    if ("liq_amplify" not in tags_found) and (
+    # add missing cue_file_amplify, if we have replaygain_track_gain
+    if ("cue_file_amplify" not in tags_found) and (
             "replaygain_track_gain" in tags_found):
-        tags_found["liq_amplify"] = tags_found["replaygain_track_gain"]
+        tags_found["cue_file_amplify"] = tags_found["replaygain_track_gain"]
 
     # Handle old RG1/mp3gain positive loudness reference
     # "89 dB" (SPL) should actually be -14 LUFS, but as a reference
@@ -403,17 +421,17 @@ def read_tags(
             and tags_found["replaygain_reference_loudness"] > 0.0):
         tags_found["replaygain_reference_loudness"] -= 107.0
 
-    # add missing liq_reference_loudness, if we have
+    # add missing cue_file_reference_loudness, if we have
     # replaygain_reference_loudness
-    if (("liq_reference_loudness" not in tags_found)
+    if (("cue_file_reference_loudness" not in tags_found)
             and ("replaygain_reference_loudness" in tags_found)):
-        tags_found["liq_reference_loudness"] = tags_found["replaygain_reference_loudness"]
+        tags_found["cue_file_reference_loudness"] = tags_found["replaygain_reference_loudness"]
 
-    # if both liq_cue_in & liq_cue_out available, we can calculate
-    # liq_cue_duration
-    if "liq_cue_in" in tags_found and "liq_cue_out" in tags_found:
-        tags_found["liq_cue_duration"] = tags_found["liq_cue_out"] - \
-            tags_found["liq_cue_in"]
+    # if both cue_file_cue_in & cue_file_cue_out available, we can calculate
+    # cue_file_cue_duration
+    if "cue_file_cue_in" in tags_found and "cue_file_cue_out" in tags_found:
+        tags_found["cue_file_cue_duration"] = tags_found["cue_file_cue_out"] - \
+            tags_found["cue_file_cue_in"]
 
     # see if we need a re-analysis
     skip_analysis = tags_mandatory.issubset(tags_found.keys())
@@ -422,46 +440,45 @@ def read_tags(
     # target
     if (
         skip_analysis
-        and "liq_amplify" in tags_found
-        and "liq_reference_loudness" in tags_found
+        and "cue_file_amplify" in tags_found
+        and "cue_file_reference_loudness" in tags_found
     ):
-        # adjust liq_amplify by loudness target difference, set reference
-        tags_found["liq_amplify"] += (target -
-                                      tags_found["liq_reference_loudness"])
-        tags_found["liq_reference_loudness"] = target
-        
+        # adjust cue_file_amplify by loudness target difference, set reference
+        tags_found["cue_file_amplify"] += (target -
+                                      tags_found["cue_file_reference_loudness"])
+        tags_found["cue_file_reference_loudness"] = target
     else:
-        # liq_amplify or liq_reference_loudness missing, must re-analyse
+        # cue_file_amplify or cue_file_reference_loudness missing, must re-analyse
         skip_analysis = False
 
-    # we need liq_true_peak_db if noclip is requested
+    # we need cue_file_true_peak_db if noclip is requested
     if (
         skip_analysis
-        and "liq_true_peak_db" in tags_found
-        and "liq_true_peak" in tags_found  # for RG tag writing
-        and "liq_loudness" in tags_found
+        and "cue_file_true_peak_db" in tags_found
+        and "cue_file_true_peak" in tags_found  # for RG tag writing
+        and "cue_file_loudness" in tags_found
     ):
-        tags_found["liq_amplify"], tags_found["liq_amplify_adjustment"] = \
+        tags_found["cue_file_amplify"], tags_found["cue_file_amplify_adjustment"] = \
             amplify_correct(
                 target,
-                tags_found["liq_loudness"],
-                tags_found["liq_true_peak_db"],
+                tags_found["cue_file_loudness"],
+                tags_found["cue_file_true_peak_db"],
                 noclip
         )
     else:
         skip_analysis = False
 
-    # if liq_blankskip different from requested, we need a re-analysis
+    # if cue_file_blankskip different from requested, we need a re-analysis
     if (skip_analysis
-            and "liq_blankskip" in tags_found
-            and (tags_found["liq_blankskip"] != blankskip)
+            and "cue_file_blankskip" in tags_found
+            and (tags_found["cue_file_blankskip"] != blankskip)
         ):
         skip_analysis = False
 
-    # liq_loudness_range is only informational but we want to show correct values
+    # cue_file_loudness_range is only informational but we want to show correct values
     # can’t blindly take replaygain_track_range—it might be in different unit
     if (skip_analysis
-            and "liq_loudness_range" not in tags_found
+            and "cue_file_loudness_range" not in tags_found
         ):
         skip_analysis = False
 
@@ -473,55 +490,56 @@ def add_missing(tags_found, target=TARGET_LUFS, blankskip=0.0, noclip=False):
     # we need not check those in tags_mandatory and those calculated by
     # read_tags
 
-    if "liq_longtail" not in tags_found:
-        tags_found["liq_longtail"] = False
+    if "cue_file_longtail" not in tags_found:
+        tags_found["cue_file_longtail"] = STR_false
 
-    if "liq_sustained_ending" not in tags_found:
-        tags_found["liq_sustained_ending"] = False
+    if "cue_file_sustained_ending" not in tags_found:
+        tags_found["cue_file_sustained_ending"] = STR_false
 
-    if not "liq_cue_file" in tags_found:
-        tags_found["liq_cue_file"] = True
+    if not "cue_file" in tags_found:
+        tags_found["cue_file"] = STR_true
 
-    if not "liq_cue_skip" in tags_found:
-        tags_found["liq_cue_skip"] = False
+    if not "cue_file_cue_skip" in tags_found:
+        tags_found["cue_file_cue_skip"] = STR_false
 
-    # if not "liq_cross_duration" in tags_found:
-    #    tags_found["liq_cross_duration"] = tags_found["liq_cue_out"] - tags_found["liq_cross_start_next"]
+    # if not "cue_file_cross_duration" in tags_found:
+    #    tags_found["cue_file_cross_duration"] = tags_found["cue_file_cue_out"] - tags_found["cue_file_cross_start_next"]
 
-    if "liq_amplify" not in tags_found:
-        tags_found["liq_amplify"] = tags_found["replaygain_track_gain"]
+    if "cue_file_amplify" not in tags_found:
+        tags_found["cue_file_amplify"] = tags_found["replaygain_track_gain"]
 
-    if "liq_amplify_adjustment" not in tags_found:
-        tags_found["liq_amplify_adjustment"] = 0.00  # dB
+    if "cue_file_amplify_adjustment" not in tags_found:
+        tags_found["cue_file_amplify_adjustment"] = 0.00  # dB
 
-    if "liq_loudness" not in tags_found:
-        tags_found["liq_loudness"] = target - \
+    if "cue_file_loudness" not in tags_found:
+        tags_found["cue_file_loudness"] = target - \
             tags_found["replaygain_track_gain"]
 
-    if "liq_blankskip" not in tags_found:
-        tags_found["liq_blankskip"] = blankskip
+    if "cue_file_blankskip" not in tags_found:
+        tags_found["cue_file_blankskip"] = blankskip
 
-    if "liq_blank_skipped" not in tags_found:
-        tags_found["liq_blank_skipped"] = False
+    if "cue_file_blank_skipped" not in tags_found:
+        tags_found["cue_file_blank_skipped"] = STR_false
 
-    if "liq_reference_loudness" not in tags_found:
-        tags_found["liq_reference_loudness"] = target
+    if "cue_file_reference_loudness" not in tags_found:
+        tags_found["cue_file_reference_loudness"] = target
 
     # for RG tag writing
     if "replaygain_track_gain" not in tags_found:
-        tags_found["replaygain_track_gain"] = tags_found["liq_amplify"]
+        tags_found["replaygain_track_gain"] = tags_found["cue_file_amplify"]
     if "replaygain_track_peak" not in tags_found:
-        tags_found["replaygain_track_peak"] = tags_found["liq_true_peak"]
+        tags_found["replaygain_track_peak"] = tags_found["cue_file_true_peak"]
     if "replaygain_track_range" not in tags_found:
-        tags_found["replaygain_track_range"] = tags_found["liq_loudness_range"]
+        tags_found["replaygain_track_range"] = tags_found["cue_file_loudness_range"]
     if "replaygain_reference_loudness" not in tags_found:
-        tags_found["replaygain_reference_loudness"] = tags_found["liq_reference_loudness"]
+        tags_found["replaygain_reference_loudness"] = tags_found["cue_file_reference_loudness"]
 
     return tags_found
 
 
 def analyse(
         filename,
+        ffmpeg=FFMPEG,
         target=TARGET_LUFS,
         overlay=OVERLAY_LU,
         silence=SILENCE,
@@ -545,7 +563,7 @@ def analyse(
     # lavfi.r128.true_peaks_ch1=1.632
 
     args = [
-        FFMPEG,
+        ffmpeg,
         "-v",
         "quiet",
         "-nostdin",
@@ -602,7 +620,7 @@ def analyse(
     # (100ms)
     duration = measure[end - 1][0] + 0.1
 
-    # get integrated song loudness from last frame, so we can calculate liq_amplify
+    # get integrated song loudness from last frame, so we can calculate cue_file_amplify
     # (the "ReplayGain") from it (difference to desired loudness target)
     loudness = measure[end - 1][2]
 
@@ -689,7 +707,7 @@ def analyse(
     cue_out_time = max(cue_out_time, duration - cue_out_time)
 
     # Adjust cue-out and "end" point if we're working with blank detection.
-    # Also set a flag (`liq_blank_skipped`) so we can later see if cue-out is
+    # Also set a flag (`cue_file_blank_skipped`) so we can later see if cue-out is
     # early.
     blank_skipped = False
     if blankskip:
@@ -834,30 +852,30 @@ def analyse(
 
     # We now also return start_next_time
 
-    # NOTE: Liquidsoap doesn’t currently accept `liq_cross_duration=0.`,
-    # or `liq_cross_start_next == liq_cue_out`, but this can happen.
+    # NOTE: Liquidsoap doesn’t currently accept `cue_file_cross_duration=0.`,
+    # or `cue_file_cross_start_next == cue_file_cue_out`, but this can happen.
     # We adjust for that in the Liquidsoap protocol, because other AutoDJ
     # applications might want the correct values.
 
     # return a dict
     return ({
         "duration": duration,
-        "liq_cue_duration": cue_duration,
-        "liq_cue_in": cue_in_time,
-        "liq_cue_out": cue_out_time,
-        "liq_cross_start_next": start_next_time,
-        "liq_longtail": longtail,
-        "liq_sustained_ending": sustained,
-        # "liq_cross_duration": cross_duration,
-        "liq_loudness": loudness,
-        "liq_loudness_range": loudness_range,
-        "liq_amplify": amplify,
-        "liq_amplify_adjustment": amplify_correction,
-        "liq_reference_loudness": target,
-        "liq_blankskip": blankskip,
-        "liq_blank_skipped": blank_skipped,
-        "liq_true_peak": true_peak,
-        "liq_true_peak_db": true_peak_dB,
+        "cue_file_cue_duration": cue_duration,
+        "cue_file_cue_in": cue_in_time,
+        "cue_file_cue_out": cue_out_time,
+        "cue_file_cross_start_next": start_next_time,
+        "cue_file_longtail": longtail,
+        "cue_file_sustained_ending": sustained,
+        # "cue_file_cross_duration": cross_duration,
+        "cue_file_loudness": loudness,
+        "cue_file_loudness_range": loudness_range,
+        "cue_file_amplify": amplify,
+        "cue_file_amplify_adjustment": amplify_correction,
+        "cue_file_reference_loudness": target,
+        "cue_file_blankskip": blankskip,
+        "cue_file_blank_skipped": blank_skipped,
+        "cue_file_true_peak": true_peak,
+        "cue_file_true_peak_db": true_peak_dB,
         # for RG writing
         "replaygain_track_gain": amplify,
         "replaygain_track_peak": true_peak,
@@ -867,7 +885,7 @@ def analyse(
 
 
 def write_tags(filename, tags={}, replaygain=False, writeSkipTag=False):
-    # Add the liq_* tags (and only these)
+    # Add the cue_file_* tags (and only these)
     # Only touch replaygain_track_gain or R128_TRACK_GAIN if so requested.
     # Only write tags to files if we can safely do so.
     filename = Path(filename)
@@ -886,38 +904,63 @@ def write_tags(filename, tags={}, replaygain=False, writeSkipTag=False):
             "replaygain_track_range",
             "replaygain_reference_loudness"
         ]
-        # copy only `liq_*`, float with 2 decimals, bools and strings lowercase
+        # copy only `cue_file_*`, float with 2 decimals, bools and strings lowercase
         tags_new = {k: "{:.2f}".format(v)
                     if isinstance(v, float) else str(v).lower()
                     for k, v in tags.items() if k in tags_to_check or k in rg_tags
                     }
-        # liq_true_peak & replaygain_track_peak have 6 decimals, fix it
-        if "liq_true_peak" in tags_new:
-            tags_new["liq_true_peak"] = "{:.6f}".format(tags["liq_true_peak"])
+        # cue_file_true_peak & replaygain_track_peak have 6 decimals, fix it
+        if "cue_file_true_peak" in tags_new:
+            tags_new["cue_file_true_peak"] = "{:.6f}".format(tags["cue_file_true_peak"])
         if "replaygain_track_peak" in tags_new:
             tags_new["replaygain_track_peak"] = "{:.6f}".format(
                 tags["replaygain_track_peak"])
 
         # pre-calculate Opus R128_TRACK_GAIN (ref: -23 LUFS), just in case
-        target = tags["liq_reference_loudness"]
-        og = str(int((tags["liq_amplify"] - (target - -23.0)) * 256))
+        target = tags["cue_file_reference_loudness"]
+        og = str(int((tags["cue_file_amplify"] - (target - -23.0)) * 256))
         tags_new["R128_TRACK_GAIN"] = og
 
         # add the units
-        tags_new["liq_amplify"] += " dB"
-        tags_new["liq_amplify_adjustment"] += " dB"
-        tags_new["liq_loudness"] += " LUFS"
-        tags_new["liq_loudness_range"] += " LU"
-        tags_new["liq_reference_loudness"] += " LUFS"
-        tags_new["liq_true_peak_db"] += " dBFS"
+        tags_new["cue_file_amplify"] += " dB"
+        tags_new["cue_file_amplify_adjustment"] += " dB"
+        tags_new["cue_file_loudness"] += " LUFS"
+        tags_new["cue_file_loudness_range"] += " LU"
+        tags_new["cue_file_reference_loudness"] += " LUFS"
+        tags_new["cue_file_true_peak_db"] += " dBFS"
         tags_new["replaygain_track_gain"] += " dB"
         tags_new["replaygain_track_range"] += " dB"
         tags_new["replaygain_reference_loudness"] += " LUFS"
 
+        # 2026-06-15 t0mtaylor - v4.4.0 Also write AzuraCast `liq_*` override tags.
+        # AzuraCast >= 0.21 uses its built-in autocue (autocue.internal), which
+        # reads `liq_*` (not `cue_file_*`) and, via
+        # settings.autocue.internal.metadata_override, DISABLES its own analysis
+        # when these are present. We emit them from the values cue_file already
+        # computed so pre-processed long/syndicated files are never re-analysed at
+        # play time (the top-of-the-hour fix). liq_amplify keeps the same -18 LUFS
+        # ReplayGain target as the rest of the library (no level jump vs music).
+        try:
+            _cue_in = float(tags["cue_file_cue_in"])
+            _cue_out = float(tags["cue_file_cue_out"])
+            _amplify = float(tags["cue_file_amplify"])
+            _xsn = float(tags.get("cue_file_cross_start_next", _cue_out))
+            _fade_out = _cue_out - _xsn
+            if not (0.0 < _fade_out <= 10.0):
+                _fade_out = 2.0
+            tags_new["liq_cue_in"] = "{:.2f}".format(_cue_in)
+            tags_new["liq_cue_out"] = "{:.2f}".format(_cue_out)
+            tags_new["liq_amplify"] = "{:.2f} dB".format(_amplify)
+            tags_new["liq_fade_in"] = "0.00"
+            tags_new["liq_fade_out"] = "{:.2f}".format(_fade_out)
+            tags_new["liq_cross_duration"] = "{:.2f}".format(_fade_out)
+        except (KeyError, ValueError, TypeError):
+            pass
+
         if writeSkipTag:
-            tags_new["liq_cue_skip"] = True
-            tags_new["liq_cue_file"] = True
-            tags_new["liq_blankskip"] = 0.0
+            tags_new["cue_file_cue_skip"] = STR_true
+            tags_new["cue_file"] = STR_true
+            tags_new["cue_file_blankskip"] = 0.0
 
         if replaygain:
             # delete unwanted tags
@@ -1194,7 +1237,7 @@ parser.add_argument(
 parser.add_argument(
     "-w",
     "--write",
-    help="Write Liquidsoap liq_* tags to file. Ensure you have enough "
+    help="Write Liquidsoap cue_file_* tags to file. Ensure you have enough "
     "free space to hold a copy of the original file.",
     default=False,
     action='store_true')
@@ -1238,6 +1281,14 @@ parser.add_argument(
     "values from their database here.",
     type=argparse.FileType('r'),
 )
+parser.add_argument(
+    "--ffmpeg",
+    default=FFMPEG,
+    help="Path to the ffmpeg command line binary")
+parser.add_argument(
+    "--ffprobe",
+    default=FFPROBE,
+    help="Path to the ffprobe command line binary")
 
 args = parser.parse_args()
 
@@ -1252,22 +1303,22 @@ if args.json:
     args.json.close()
 
 skip_analysis, tags_found = read_tags(
-    args.file, tags_json, args.target, args.blankskip, args.noclip)
+    args.file, args.ffprobe, tags_json, args.target, args.blankskip, args.noclip)
 
 if args.debug:
     print(tags_found)
     
-if not "liq_cue_skip" in tags_found:
+if not "cue_file_cue_skip" in tags_found:
     NO_SKIP_TAGS = True
     
 if args.debug:
     print('Before args.skip: ' + str(args.skip) + ' | skip_analysis: ' + str(skip_analysis) + ' - if true because no tag change')
 
 if args.skip:
-    if "liq_cue_skip" in tags_found and tags_found["liq_cue_skip"] == True:
+    if "cue_file_cue_skip" in tags_found and tags_found["cue_file_cue_skip"] == is_true:
         skip_analysis = True
 
-if "liq_cue_file" in tags_found and tags_found["liq_cue_file"] == True:
+if "cue_file" in tags_found and tags_found["cue_file"] == is_true:
     skip_analysis = True
 
 if args.debug and args.skip:
@@ -1278,6 +1329,7 @@ if args.debug:
 if args.force or skip_analysis != True:
     result = analyse(
         filename=args.file,
+        ffmpeg=args.ffmpeg,
         target=args.target,
         overlay=args.overlay,
         silence=args.silence,
@@ -1288,7 +1340,7 @@ if args.force or skip_analysis != True:
         nice=args.nice,
         noclip=args.noclip
     )
-    # allow to override even the analysis results (not if `liq_cue_file=true`)
+    # allow to override even the analysis results (not if `cue_file=true`)
     if args.json:
         result = override_from_JSON(result, tags_json)
     # override duration, seems ffprobe can be more exact
@@ -1312,26 +1364,26 @@ if args.write and NO_SKIP_TAGS:
 
 # prepare JSON result
 # we use "dB" instead of "LU" units, because LS & others don’t understand "LU"
-liq_result = {
+cue_file_result = {
     "duration": result['duration'],
-    "liq_cue_duration": result['liq_cue_duration'],
-    "liq_cue_in": result['liq_cue_in'],
-    "liq_cue_out": result['liq_cue_out'],
-    "liq_cross_start_next": result['liq_cross_start_next'],
-    "liq_longtail": result["liq_longtail"],
-    "liq_sustained_ending": result['liq_sustained_ending'],
-    # "liq_cross_duration": result['liq_cross_duration'],
-    "liq_loudness": f"{result['liq_loudness']:.2f} LUFS",
-    "liq_loudness_range": f"{result['liq_loudness_range']:.2f} LU",
-    "liq_amplify": f"{result['liq_amplify']:.2f} dB",
-    "liq_amplify_adjustment": f"{result['liq_amplify_adjustment']:.2f} dB",
-    "liq_reference_loudness": f"{result['liq_reference_loudness']:.2f} LUFS",
-    "liq_blankskip": result['liq_blankskip'],
-    "liq_blank_skipped": result['liq_blank_skipped'],
-    "liq_true_peak": result['liq_true_peak'],
-    "liq_true_peak_db": f"{result['liq_true_peak_db']:.2f} dBFS",
+    "cue_file_cue_duration": result['cue_file_cue_duration'],
+    "cue_file_cue_in": result['cue_file_cue_in'],
+    "cue_file_cue_out": result['cue_file_cue_out'],
+    "cue_file_cross_start_next": result['cue_file_cross_start_next'],
+    "cue_file_longtail": result["cue_file_longtail"],
+    "cue_file_sustained_ending": result['cue_file_sustained_ending'],
+    # "cue_file_cross_duration": result['cue_file_cross_duration'],
+    "cue_file_loudness": f"{result['cue_file_loudness']:.2f} LUFS",
+    "cue_file_loudness_range": f"{result['cue_file_loudness_range']:.2f} LU",
+    "cue_file_amplify": f"{result['cue_file_amplify']:.2f} dB",
+    "cue_file_amplify_adjustment": f"{result['cue_file_amplify_adjustment']:.2f} dB",
+    "cue_file_reference_loudness": f"{result['cue_file_reference_loudness']:.2f} LUFS",
+    "cue_file_blankskip": result['cue_file_blankskip'],
+    "cue_file_blank_skipped": result['cue_file_blank_skipped'],
+    "cue_file_true_peak": result['cue_file_true_peak'],
+    "cue_file_true_peak_db": f"{result['cue_file_true_peak_db']:.2f} dBFS",
 }
 
 # output compact (one line) JSON, for use in Liquidsoap "autocue:" protocol
-json_output = json.dumps(liq_result)
+json_output = json.dumps(cue_file_result)
 print(json_output)
