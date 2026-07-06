@@ -90,7 +90,7 @@
 # Some collaborative work with RM-FM (@RM-FM): Sustained ending analysis.
 
 __author__ = 'Matthias C. Hormann'
-__version__ = '4.4.0'
+__version__ = '4.5.0'
 
 import os
 import sys
@@ -139,6 +139,13 @@ OVERLAY_LU = -8.0  # LU below average for overlay trigger (start next song)
 LONGTAIL_SECONDS = 15.0
 LONGTAIL_EXTRA_LU = -12.0  # reduce 15 dB extra on long tail songs to find overlap point
 SUSTAINED_LOUDNESS_DROP = 40.0  # max. percent drop to be considered sustained
+# 2026-07-06 t0mtaylor v4.5.0 — TIGHT-ENDING GUARD (Hot-AC): a song/sting with a long
+# drawn-out tail should FADE from the point it comes off its peak, not play the whole outro
+# to near-silence. If the tail between the -8 LU overlay point (cross_start_next) and the
+# silence-based cue_out is longer than TIGHTEN_MIN_TAIL, we fade cleanly from that point over
+# TIGHTEN_FADE seconds. Hard/short endings (small tail) are left untouched.
+TIGHTEN_MIN_TAIL = 6.0   # LU-tail (s) beyond which the ending "drags" -> tighten
+TIGHTEN_FADE = 4.0       # clean fade length (s) applied from the -8 LU point
 BLANKSKIP = 5.0  # min. seconds silence to detect blank
 NICE = False  # use Linux/MacOS nice?
 SKIP = False  # force skip reprocessing of file if tags already exist
@@ -884,6 +891,24 @@ def analyse(
     })
 
 
+def tighten_end(cue_out, cross_start_next, cue_in,
+                min_tail=TIGHTEN_MIN_TAIL, fade=TIGHTEN_FADE):
+    """PURE / unit-testable. Decide the playout (liq) cue_out + fade_out for Hot-AC tight
+    endings. `cue_out` = the silence-based end (-42 LU), `cross_start_next` = the -8 LU point
+    the track comes off its peak. If the tail between them DRAGS (> min_tail), fade cleanly
+    FROM the -8 point over `fade` s instead of playing the whole outro. Otherwise keep cue_out
+    and fade over the natural (clamped) tail — i.e. identical to the pre-guard behaviour.
+    Returns (liq_cue_out, liq_fade_out). Never cuts back into the intro (cue_in + 5s floor)."""
+    try:
+        tail = float(cue_out) - float(cross_start_next)
+    except (TypeError, ValueError):
+        return round(float(cue_out), 2), 2.0
+    if tail > min_tail and (cross_start_next + fade) > (cue_in + 5.0):
+        return round(cross_start_next + fade, 2), round(fade, 2)
+    fo = tail if 0.0 < tail <= 10.0 else 2.0   # unchanged legacy fade for non-draggy endings
+    return round(float(cue_out), 2), round(fo, 2)
+
+
 def write_tags(filename, tags={}, replaygain=False, writeSkipTag=False):
     # Add the cue_file_* tags (and only these)
     # Only touch replaygain_track_gain or R128_TRACK_GAIN if so requested.
@@ -945,11 +970,12 @@ def write_tags(filename, tags={}, replaygain=False, writeSkipTag=False):
             _cue_out = float(tags["cue_file_cue_out"])
             _amplify = float(tags["cue_file_amplify"])
             _xsn = float(tags.get("cue_file_cross_start_next", _cue_out))
-            _fade_out = _cue_out - _xsn
-            if not (0.0 < _fade_out <= 10.0):
-                _fade_out = 2.0
+            # v4.5.0 TIGHT-ENDING GUARD: fade from the -8 LU point when the tail drags,
+            # else identical to the legacy (clamped-tail) fade. cue_file_cue_out stays the
+            # raw silence value (analysis); only the liq_* PLAYOUT tags are tightened.
+            _liq_out, _fade_out = tighten_end(_cue_out, _xsn, _cue_in)
             tags_new["liq_cue_in"] = "{:.2f}".format(_cue_in)
-            tags_new["liq_cue_out"] = "{:.2f}".format(_cue_out)
+            tags_new["liq_cue_out"] = "{:.2f}".format(_liq_out)
             tags_new["liq_amplify"] = "{:.2f} dB".format(_amplify)
             tags_new["liq_fade_in"] = "0.00"
             tags_new["liq_fade_out"] = "{:.2f}".format(_fade_out)
